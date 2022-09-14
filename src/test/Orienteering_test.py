@@ -5,7 +5,7 @@ from src.OrienteeringScenarios.TSP_OP_solution import *
 from src.OrienteeringScenarios.VisualGraphPath import *
 
 def start_test():
-    graph_generate = GraphGeneration(8, rnd_seed=451,nodes_probability="uniform")
+    graph_generate = GraphGeneration(n_customer=8, rnd_seed=451,nodes_probability="uniform")
     graph_generate.drawGraph(node_label="name+availability")
 
     permutation = SolutionPermutation(graph_generate)

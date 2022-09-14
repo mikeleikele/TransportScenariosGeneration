@@ -5,6 +5,9 @@ def geo_simul_test():
     GeoGraph_test.start_test()
     SUMO_test.start_test()
 
+def simul_test():
+    SUMO_test.start_test_grid()
+
 def orient_test():
     Orienteering_test.start_test()
 
@@ -14,9 +17,10 @@ def ml_test():
 if __name__ == "__main__":
     args = sys.argv[1:]
     if args[0] == "--simulation" or args[0] == "--s":
+        simul_test()
+    elif args[0] ==  "--geosimulation" or args[0] == "--gs":
         geo_simul_test()
     elif args[0] ==  "--orienteering" or args[0] == "--o":
         orient_test()
-    
     elif args[0] ==  "--prediction" or args[0] == "--p":
         ml_test()

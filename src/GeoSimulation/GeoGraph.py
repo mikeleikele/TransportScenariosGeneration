@@ -10,7 +10,7 @@ class OSMgeometry:
 
     
     def getOptions():
-        option = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military"]
+        option = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
         return option
 
     def getFilter():
