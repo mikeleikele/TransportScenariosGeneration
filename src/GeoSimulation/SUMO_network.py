@@ -1,5 +1,4 @@
 import os 
-import xml.etree.cElementTree as ET
 from .GeoGraph import *
 from tqdm.auto import tqdm
 
@@ -26,15 +25,17 @@ class SUMO_network():
         osm_maps_name
         remove_geometry
     """
-    def __init__(self, folder_simulationName, name_simulationFile, network_settings, verbose=False):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, verbose=False):
         self.folder_simulationName = folder_simulationName
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
+        self.sumo_tool_folder = sumo_tool_folder
         
         self.network_type = network_settings['network_type']
         network_type_settings = self.check_isKey(network_settings,self.network_type)
         
         if  self.network_type == "generate":
+            self.geometry_settings =None
             self.geometry = self.check_isKey(network_type_settings,"geometry")
             geometry_settings = self.check_isKey(network_type_settings,self.geometry)
             
@@ -73,16 +74,28 @@ class SUMO_network():
             else:
                 return None
 
+
+    def get_networkFile(self):
+        if self.network_file is None:
+            raise SUMO_network_Exception__FileNotInit("Network")
+        return self.network_file
+
+    def get_geometrykFile(self,raiseExc):
+        if self.geometry_file is None and raiseExc==True:
+            raise SUMO_network_Exception__FileNotInit("Geometry")
+        return self.geometry_file
+
+
     def network_generation(self, verbose=False):           
         if  self.network_type == "generate": 
             if self.geometry == "grid":
-                self.network_file = f"{self.name_simulationFile}_network__grid_{self.number}_{self.length}.xml"
+                self.network_file = f"{self.name_simulationFile}_network__grid_{self.number}_{self.length}.net.xml"
                 sumo_cmd = f"netgenerate --grid --grid.number={self.number} --grid.length={self.length} --output-file={self.folder_simulationName}/{self.network_file}"
             elif self.geometry == "spider":
-                self.network_file = f"{self.name_simulationFile}_network__spider_{self.arm_number}_{self.circle_number}_{self.space_radius}_{self.omit_center}.xml"
+                self.network_file = f"{self.name_simulationFile}_network__spider_{self.arm_number}_{self.circle_number}_{self.space_radius}_{self.omit_center}.net.xml"
                 sumo_cmd = f"netgenerate --spider  --spider.arm-number={self.arm_number} --spider.circle-number={self.circle_number} --spider.space-radius={self.space_radius} --spider.omit-center={self.omit_center}  --output-file={self.folder_simulationName}/{self.network_file}"
             elif self.geometry == "rand":
-                self.network_file = f"{self.name_simulationFile}_network__spider_{self.iterations}_{self.bidi_probability}_{self.rand_connectivity}.xml"
+                self.network_file = f"{self.name_simulationFile}_network__spider_{self.iterations}_{self.bidi_probability}_{self.rand_connectivity}.net.xml"
                 sumo_cmd = f"netgenerate --rand  --rand.iterations={self.iterations} --bidi-probability={self.bidi_probability} --rand.connectivity={self.rand_connectivity}  --output-file={self.folder_simulationName}/{self.network_file}"
             
             if verbose:
@@ -98,7 +111,7 @@ class SUMO_network():
             if not os.path.isfile(f"{self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm"):
                 raise SUMO_simulation_Exception__FileMapNotFound(self.osm_maps_name,self.osm_maps_GEO_filepath)
             
-            self.network_file = f"{self.name_simulationFile}_network__osm_{self.osm_maps_name}.xml"
+            self.network_file = f"{self.name_simulationFile}_network__osm_{self.osm_maps_name}.net.xml"
             if self.remove_geometry:
                 sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file} --geometry.remove --remove-edges.isolated --roundabouts.guess  --ramps.guess --junctions.join --tls.guess-signals --tls.join --tls.default-type actuated"
             else:
@@ -134,18 +147,19 @@ class SUMO_network():
                 
                 geometric_lists.append(self.geometry_keymap_generation( f"POI__{key}__{self.osm_maps_name}", force_overwrite, verbose))
                 
-            return ','.join(geometric_lists) 
+            self.geometry_file = ','.join(geometric_lists) 
+            return self.geometry_file
         
 
     def geometry_keymap_generation(self, osm_map_name, force_overwrite, verbose=False):
-        self.geometry_file = f"{self.name_simulationFile}_geometry__{osm_map_name}.xml"
-        if not os.path.isfile(f"{self.folder_simulationName}/{self.geometry_file}") or force_overwrite:
-            sumo_cmd = f"polyconvert --net-file {self.folder_simulationName}/{self.network_file} --output-file={self.folder_simulationName}/{self.geometry_file} --osm-files {self.osm_maps_folder}/{osm_map_name}.osm  --all-attributes"
+        key_geometry_file = f"{self.name_simulationFile}_geometry__{osm_map_name}.poi.xml"
+        if not os.path.isfile(f"{self.folder_simulationName}/{key_geometry_file}") or force_overwrite:
+            sumo_cmd = f"polyconvert --net-file {self.folder_simulationName}/{self.network_file} --output-file={self.folder_simulationName}/{key_geometry_file} --osm-files {self.osm_maps_folder}/{osm_map_name}.osm  --all-attributes"
             #--ignore-errors
             if verbose:
                 print("\ngeometry generation\t>>\t",sumo_cmd,"")
             os.system(sumo_cmd)
-        return self.geometry_file
+        return key_geometry_file
 
 
 class SUMO_network_Exception__NetworkTypeNotFound(Exception):
@@ -163,6 +177,17 @@ class SUMO_network_Exception__NetworkKeyNotFound(Exception):
 
     def __str__(self):
         return f"A '{self.network_type}' network require a '{self.key}' key in the network's settings dict."
+
+
+
+
+class SUMO_network_Exception__FileNotInit(Exception):
+    def __init__(self,key):
+        self.key = key
+
+    def __str__(self):
+        return f"{key} not inizialized."
+
 
 class SUMO_simulation_Exception__FileMapNotFound(Exception):
     """Exception raised for error no training modality recognized"""

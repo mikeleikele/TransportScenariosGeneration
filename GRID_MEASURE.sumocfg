@@ -1,0 +1,15 @@
+<configuration>
+	<input>
+		<net-file value="GRID_MEASURE_network__grid_5_200.net.xml" />
+		<route-files value="GRID_MEASURE_routes__beg0_end3600.xml" />
+		<additional-files value="GRID_MEASURE_continuous_rerouting_generation__beg0_end3600.xml" />
+	</input>
+	<time>
+		<begin value="0" />
+		<end value="10000" />
+	</time>
+	<output>
+		<fcd-output value="GRID_MEASURE.out_trace.xml" />
+		<netstate-dump value="GRID_MEASURE.out_dump.xml" />
+	</output>
+</configuration>

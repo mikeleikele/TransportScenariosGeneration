@@ -2,120 +2,82 @@ import os
 import xml.etree.cElementTree as ET
 from .GeoGraph import *
 from .SUMO_network import *
+from .SUMO_routes import *
 
 class SUMO_simulation():
 
-    def __init__(self, sumo_tool_folder, folder_name, name_file, network_settings, osm_map_name, simulation_route_mode="random",  verbose=True):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, networkObj, routesObj, verbose=False):
+        self.folder_simulationName = folder_simulationName
+        self.name_simulationFile = name_simulationFile
+        self.verbose = verbose
         self.sumo_tool_folder = sumo_tool_folder
-        if not os.path.exists(self.sumo_tool_folder):
-            raise SUMO_INSTALL_Exception__ToolFolder(self.sumo_tool_folder)
-        
-        self.folder_name = folder_name
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
-        self.name_file = name_file
-        
-        self.net_simulation = SUMO_network(folder_simulationName = folder_name, name_simulationFile=name_file, network_settings=network_settings, verbose=verbose)
-        
-        if simulation_route_mode not in ["random","demand"]:
-            raise SUMO_simulation_Exception__ModeNotRecognized(simulation_route_mode)
+
+        if isinstance(networkObj, SUMO_network):
+            self.network_file = networkObj.get_networkFile()
+            self.geometry_file = networkObj.get_geometrykFile(raiseExc=False)
         else:
-            self.simulation_route_mode = simulation_route_mode
-
-    def generate_simulation(self, verbose=False):
-        self.network_file = self.net_simulation.network_generation(verbose)
-        self.geometry_file = self.net_simulation.geometry_generation(verbose)
-
-        self.simulation_network_mode = "maps"
-        if self.simulation_network_mode == "grid":
-            self.grid_generate_simulation(verbose)
-        elif self.simulation_network_mode == "openstreenmap" or self.simulation_network_mode == "maps":
-            if self.simulation_route_mode == "random":
-                self.osm_generate_simulation_random(verbose)
-            elif self.simulation_route_mode == "demand":
-                self.osm_generate_simulation_demand(verbose)
-
-    def grid_generate_simulation(self, verbose=False):
+            raise SUMO_simulation_Exception__SUMO_Instance(networkObj,SUMO_network)
         
-        #self.network_file = self.net_simulation.network_generation(verbose=True)
-        self.vehicles_file = self.vehicles_generation_random(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file,  begin_time=0, end_time=1, period=1, vehicles=200,verbose=verbose)
-        self.routes_file = self.routes_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, vehicles_file=self.vehicles_file, begin_time=0, end_time=10000, verbose=verbose)
-        #self.geometry_file = None
-        self.continuos_reroutes_file = self.continuous_rerouting_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, end_time=10000, verbose=verbose)
-        self.write_sumo_config_file(folder_name=self.folder_name, name_file=self.name_file)
+        if isinstance(routesObj, SUMO_routes):
+            self.routes_file = routesObj.get_routesFile()
+            self.continuos_reroutes_file = routesObj.get_continuous_reroutingFile()
+        else:
+            raise SUMO_simulation_Exception__SUMO_Instance(routesObj,SUMO_routes)
 
-    def osm_generate_simulation_random(self, verbose=False):
-        #self.network_file = self.net_simulation.network_generation(verbose=True)
-        #self.geometry_file = self.geometry_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, geometric_maps_options=['all'], osm_map_name=self.osm_map_name, verbose=verbose)        
-        self.vehicles_file = self.vehicles_generation_random(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file,  begin_time=0, end_time=1, period=1, vehicles=2000,verbose=verbose)
-        self.routes_file = self.routes_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, vehicles_file=self.vehicles_file, begin_time=0, end_time=10000, verbose=verbose)
-        self.continuos_reroutes_file = self.continuous_rerouting_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, end_time=10000, verbose=verbose)
-        self.write_sumo_config_file(folder_name=self.folder_name, name_file=self.name_file)
-   
-    def osm_generate_simulation_demand(self, verbose=False):
-        #self.network_file = self.net_simulation.network_generation(verbose=True)
-        #self.geometry_file = self.geometry_generation(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, geometric_maps_options=['all'], osm_map_name=self.osm_map_name, verbose=verbose)        
-        #activitygen-example.stat.xml \
-        #vehicles_generation_cityDemand
-        self.stats_file = f"{self.osm_map_name}_statistics_files.xml"
-        self.citiesdemand_file = self.vehicles_generation_cityDemand(folder_name=self.folder_name, name_file=self.name_file, network_file=self.network_file, stats_file=self.stats_file, verbose=verbose)
-        
+    def get_configFile(self):
+        if self.sumoConfig_file is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoConfig")
+        return self.sumoConfig_file
 
-      
-    def vehicles_generation_random(self, folder_name, name_file, network_file, vehicles,begin_time, end_time, period, verbose=False):
-        #https://sumo.dlr.de/docs/Tools/Trip.html
-        vehicles_file = f"{name_file}_vehicles__beg{begin_time}_end{end_time}_per{period}_veh{vehicles}.xml"
-        sumo_cmd = f'python "{self.sumo_tool_folder}/randomTrips.py" -n {folder_name}/{network_file} -o {folder_name}/{vehicles_file} --begin {begin_time} --end {end_time} --period {period} --flows {vehicles}'
-        if verbose:
-            print("\nvehicles generation\t>>\t",sumo_cmd,"")
-        os.system(sumo_cmd)
-        return vehicles_file
+    def get_traceFile(self):
+        if self.sumoTrace_file is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoTrace")
+        return self.sumoTrace_file
 
-    def vehicles_generation_cityDemand(self, folder_name, name_file, network_file, stats_file, verbose=False):
-        #https://sumo.dlr.de/docs/Tools/Trip.html
-        citydemand_file = f"{name_file}_demand__trips.xml"
-        sumo_cmd = f"activitygen --net-file {folder_name}/{network_file} --stat-file {folder_name}/{stats_file} --output-file {folder_name}/{citydemand_file} --random"
-        if verbose:
-            print("\ndemand generation\t>>\t",sumo_cmd,"")
-        os.system(sumo_cmd)
-        return citydemand_file
-
+    def get_dumpFile(self):
+        if self.sumoDump_file is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoDump")
+        return self.sumoDump_file
+    
+    def get_emissionFile(self):
+        if self.sumoEmission_file is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoEmission")
+        return self.sumoEmission_file
+    
+    def get_laneChangeFile(self):
+        if self.sumoLaneChange_file is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoLaneChange")
+        return self.sumoLaneChange_file
     
 
-    def routes_generation(self, folder_name, name_file, network_file, vehicles_file, begin_time, end_time, verbose=False):
-        #https://sumo.dlr.de/docs/jtrrouter.html
-        routes_file = f"{name_file}_routes__beg{begin_time}_end{end_time}.xml"
-        sumo_cmd = f"jtrrouter --route-files={folder_name}/{vehicles_file} --net-file={folder_name}/{network_file} --output-file={folder_name}/{routes_file} --begin {begin_time}  --end {end_time} --accept-all-destinations"        
-        if verbose:
-            print("\nroutes generation\t>>\t",sumo_cmd,"")
-        os.system(sumo_cmd)
-        return routes_file
-    
-    def routes_generation_duarouter(self, folder_name, name_file, network_file, citiesdemand_file, begin_time, end_time, verbose=False):
-        #https://sumo.dlr.de/docs/Demand/Activity-based_Demand_Generation.html
-        duarouter_file = f"{name_file}_duarouter__routes.xml"
-        sumo_cmd = f"duarouter --route-files={folder_name}/{citiesdemand_file} --net-file={folder_name}/{network_file} --output-file={folder_name}/{duarouter_file} --ignore-errors"        
-        if verbose:
-            print("\nduarouter_file generation\t>>\t",sumo_cmd,"")
-        os.system(sumo_cmd)
-        return duarouter_file
-
-    def continuous_rerouting_generation(self, folder_name, name_file, network_file, end_time, verbose=False):
-        #https://sumo.dlr.de/docs/Tools/Misc.html#generatecontinuousrerouterspy
-        continuos_reroutes_file = f"{name_file}_continuous_rerouting_generation__end{end_time}.xml"
-        sumo_cmd = f'python "{self.sumo_tool_folder}/generateContinuousRerouters.py" -n {folder_name}/{network_file} -o {folder_name}/{continuos_reroutes_file} --end {end_time}'
-        if verbose:
-            print("\ncontinuous rerouting generation\t>>\t",sumo_cmd)
-        os.system(sumo_cmd)
-        return continuos_reroutes_file    
-
-    def download_simulation(self,verbose=False):
-        zip_cmd = f"zip -r zip_{self.folder_name}.zip {self.folder_name}"
-        os.system(zip_cmd)
-
-    def write_sumo_config_file(self, folder_name, name_file):
-        filepath = f"{folder_name}/{name_file}.sumocfg"
+    def esecute_simulation(self, trace=False, dump=False, emission=False, lanechange=False, vtk=False, verbose=False):
+        self.write_sumoconfig(verbose=verbose)
+        self.exe_sumo_simulation(trace=trace, dump=dump, verbose=verbose)
         
+    def exe_sumo_simulation(self, trace, dump, verbose=False):
+        sumo_cmd = f"sumo -c {self.folder_simulationName}\\{self.sumoConfig_file}"
+        if trace:
+            self.sumoTrace_file = f"{self.name_simulationFile}.out_trace.xml"
+            sumo_cmd = sumo_cmd+ f" --fcd-output {self.folder_simulationName}\\{self.sumoTrace_file}"
+        if dump:
+            self.sumoDump_file = f"{self.name_simulationFile}.out_dump.xml"
+            sumo_cmd = sumo_cmd+ f" --netstate-dump {self.folder_simulationName}\\{self.sumoDump_file}"
+        if dump:
+            self.sumoEmission_file = f"{self.name_simulationFile}.out_emission.xml"
+            sumo_cmd = sumo_cmd+ f" --emission-output {self.folder_simulationName}\\{self.sumoEmission_file}"
+        if lanechange:
+            self.sumoLaneChange_file =  f"{self.name_simulationFile}.out_laneChange.xml"
+            sumo_cmd = sumo_cmd+ f" --lanechange-output {self.folder_simulationName}\\{self.sumoLaneChange_file}"
+        if vtk:
+            self.sumoVTK_file =  f"{self.name_simulationFile}.out_vtk.xml"
+            sumo_cmd = sumo_cmd+ f" --vtk-output {self.folder_simulationName}\\{self.sumoVTK_file}"
+        if verbose:
+            print("\nflows generation\t>>\t",sumo_cmd,"")
+        os.system(sumo_cmd)
+        
+
+    def write_sumoconfig(self, trace=False, dump=False, emission=False, verbose=False):
+        self.sumoConfig_file = f"{self.name_simulationFile}.sumocfg"
         configuration = ET.Element("configuration")
         k_input = ET.SubElement(configuration, "input")
         ET.SubElement(k_input, "net-file", value=f"{self.network_file}")
@@ -130,17 +92,31 @@ class SUMO_simulation():
         ET.SubElement(k_time, "end", value="10000")
 
         k_output = ET.SubElement(configuration, "output")
-        ET.SubElement(k_output, "fcd-output", value=f"{name_file}_simul_output.xml")
+        if trace:
+            ET.SubElement(k_output, "fcd-output", value=f"{self.name_simulationFile}.out_trace.xml")
+        if dump:
+            ET.SubElement(k_output, "netstate-dump", value=f"{self.name_simulationFile}.out_dump.xml")
+        if emission:
+            ET.SubElement(k_output, "emission", value=f"{self.name_simulationFile}.out_emission.xml")
         
         tree = ET.ElementTree(configuration)
         ET.indent(tree, space="\t", level=0)
-        tree.write(filepath, encoding="utf-8")
+        tree.write(f"{self.folder_simulationName}\\{self.sumoConfig_file}", encoding="utf-8")
 
 
-class SUMO_INSTALL_Exception__ToolFolder(Exception):
+class SUMO_simulation_Exception__SUMO_Instance(Exception):
     """Exception raised for error no training modality recognized"""
-    def __init__(self,msg):
-        self.msg = msg
+    def __init__(self,instance,type_class):
+        self.instance = instance
+        self.type_class = type_class
           
     def __str__(self):
-        return f"SUMO tool folder '{self.msg}' not found."
+        return f"SUMO_simulation module require an instance '{type_class}' but receive an '{str(type(self.instance_type))}' object."
+
+
+class SUMO_simulation_Exception__FileNotInit(Exception):
+    def __init__(self,key):
+        self.key = key
+
+    def __str__(self):
+        return f"{key} not inizialized."

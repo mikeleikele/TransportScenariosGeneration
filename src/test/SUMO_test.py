@@ -1,4 +1,4 @@
-from src.GeoSimulation.SUMO_simulation import *
+from src.GeoSimulation.SUMO_computation import *
 
 def start_test():
     sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
@@ -34,8 +34,8 @@ def start_test_grid():
             "geometry_settings":['all']
         }
     }
-    sumo_obj = SUMO_simulation(sumo_tool_folder= sumo_tool_folder, 
-    folder_name="data\sumo_simulation_files\\maps_bassa", name_file="maps_bassa",
-    network_settings=net_maps_settings, simulation_route_mode="random",osm_map_name="bassa")
-    sumo_obj.generate_simulation(verbose=False)
-    #sumo_obj.download_simulation()
+    sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, 
+    folder_name="data\sumo_simulation_files\\GRID_MEASURE", name_file="GRID_MEASURE",
+    network_settings=net_grid_settings, simulation_route_mode="random")
+    sumo_obj.generate_simulation(verbose=True)
+    sumo_obj.esecute_simulation(verbose=True)
