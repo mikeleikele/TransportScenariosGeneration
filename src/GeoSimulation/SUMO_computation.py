@@ -8,7 +8,7 @@ from .SUMO_simulation import *
 
 class SUMO_computation():
 
-    def __init__(self, sumo_tool_folder, folder_name, name_file, network_settings, simulation_route_mode="random",  verbose=True):
+    def __init__(self, sumo_tool_folder, folder_name, name_file, network_settings, edgeStats_settings=None, simulation_route_mode="random",  verbose=True):
         self.sumo_tool_folder = sumo_tool_folder
         if not os.path.exists(self.sumo_tool_folder):
             raise SUMO_INSTALL_Exception__ToolFolder(self.sumo_tool_folder)
@@ -17,10 +17,10 @@ class SUMO_computation():
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
         self.name_file = name_file
-        
+        self.edgeStats_settings = edgeStats_settings
+
         self.net_simulation = SUMO_network(sumo_tool_folder=self.sumo_tool_folder,folder_simulationName = self.folder_name, name_simulationFile=self.name_file, network_settings=network_settings, verbose=verbose)
         
-
         if simulation_route_mode not in ["random","demand"]:
             raise SUMO_computation_Exception__ModeNotRecognized(simulation_route_mode)
         else:
@@ -43,16 +43,14 @@ class SUMO_computation():
                 
     
     def generate_routes(self, n_vehicle, verbose=False):
-        
         self.flows_file = self.routes_simulation.flows_generation_random(n_vehicle=n_vehicle,verbose=verbose)
         self.routes_file = self.routes_simulation.routes_generation(verbose=verbose)
         self.continuos_reroutes_file = self.routes_simulation.continuous_rerouting_generation(verbose=verbose)
 
     def esecute_simulation(self, verbose=False):
-        self.sumo_simulation = SUMO_simulation(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_name, name_simulationFile=self.name_file, networkObj=self.net_simulation, routesObj=self.routes_simulation)
-        self.sumo_simulation.esecute_simulation(trace=True, dump=True, emission=True, verbose=False)
+        self.sumo_simulation = SUMO_simulation(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_name, name_simulationFile=self.name_file, networkObj=self.net_simulation, routesObj=self.routes_simulation, edgeStats_settings=self.edgeStats_settings, verbose=verbose)
+        self.sumo_simulation.esecute_simulation(verbose=verbose)
         self.config_file = self.sumo_simulation.get_configFile()
-        self.trace_file = self.sumo_simulation.get_traceFile()
 
     
     """

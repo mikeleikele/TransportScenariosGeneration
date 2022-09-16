@@ -6,7 +6,7 @@ from .SUMO_routes import *
 
 class SUMO_simulation():
 
-    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, networkObj, routesObj, verbose=False):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, networkObj, routesObj, edgeStats_settings=None, verbose=False):
         self.folder_simulationName = folder_simulationName
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
@@ -23,6 +23,25 @@ class SUMO_simulation():
             self.continuos_reroutes_file = routesObj.get_continuous_reroutingFile()
         else:
             raise SUMO_simulation_Exception__SUMO_Instance(routesObj,SUMO_routes)
+        if edgeStats_settings is not None:
+            self.write_statsEdgeFile(edgeStats_settings)
+
+    def write_statsEdgeFile(self,edgeStats_settings):
+        print(edgeStats_settings)
+        self.sumoEdgeStats_additionalFile = f"{self.name_simulationFile}.edgeDataSettings.xml"
+        additional = ET.Element("additional")
+        for file_st in edgeStats_settings["stats"]:
+            
+            if "type" in file_st:
+                file_name = f"{self.name_simulationFile}.{file_st['id']}.{file_st['type']}.out_edgeData.xml"
+                ET.SubElement(additional, "edgeData", id=f"{file_st['id']}", type=f"{file_st['type']}", file=f"{file_name}")
+            else:
+                file_name = f"{self.name_simulationFile}.{file_st['id']}.out_edgeData.xml"
+                ET.SubElement(additional, "edgeData", id=f"{file_st['id']}", file=f"{file_name}")
+        
+        tree = ET.ElementTree(additional)
+        ET.indent(tree, space="\t", level=0)
+        tree.write(f"{self.folder_simulationName}\\{self.sumoEdgeStats_additionalFile}", encoding="utf-8")
 
     def get_configFile(self):
         if self.sumoConfig_file is None:
@@ -49,56 +68,76 @@ class SUMO_simulation():
             raise SUMO_simulation_Exception__FileNotInit("sumoLaneChange")
         return self.sumoLaneChange_file
     
+    def get_edgeStatsAdditionalFile(self):
+        if self.sumoEdgeStats_additionalFile is None:
+            raise SUMO_simulation_Exception__FileNotInit("sumoEdgeStats_additionalFile")
+        return self.sumoEdgeStats_additionalFile
+    
 
-    def esecute_simulation(self, trace=False, dump=False, emission=False, lanechange=False, vtk=False, verbose=False):
+    def esecute_simulation(self, lanechange=False, vtk=False,  verbose=False):
         self.write_sumoconfig(verbose=verbose)
-        self.exe_sumo_simulation(trace=trace, dump=dump, verbose=verbose)
+        self.exe_sumo_simulation(lanechange=lanechange, vtk=vtk, verbose=verbose)
         
-    def exe_sumo_simulation(self, trace, dump, verbose=False):
-        sumo_cmd = f"sumo -c {self.folder_simulationName}\\{self.sumoConfig_file}"
-        if trace:
-            self.sumoTrace_file = f"{self.name_simulationFile}.out_trace.xml"
-            sumo_cmd = sumo_cmd+ f" --fcd-output {self.folder_simulationName}\\{self.sumoTrace_file}"
-        if dump:
-            self.sumoDump_file = f"{self.name_simulationFile}.out_dump.xml"
-            sumo_cmd = sumo_cmd+ f" --netstate-dump {self.folder_simulationName}\\{self.sumoDump_file}"
-        if dump:
-            self.sumoEmission_file = f"{self.name_simulationFile}.out_emission.xml"
-            sumo_cmd = sumo_cmd+ f" --emission-output {self.folder_simulationName}\\{self.sumoEmission_file}"
+    def exe_sumo_simulation(self, lanechange, vtk, verbose=False):
+        sumo_cmd = f"sumo --configuration-file {self.folder_simulationName}\\{self.sumoConfig_file}"
+        
         if lanechange:
             self.sumoLaneChange_file =  f"{self.name_simulationFile}.out_laneChange.xml"
             sumo_cmd = sumo_cmd+ f" --lanechange-output {self.folder_simulationName}\\{self.sumoLaneChange_file}"
         if vtk:
             self.sumoVTK_file =  f"{self.name_simulationFile}.out_vtk.xml"
             sumo_cmd = sumo_cmd+ f" --vtk-output {self.folder_simulationName}\\{self.sumoVTK_file}"
+        
+        sumo_cmd = sumo_cmd+ f" --no-warnings"
         if verbose:
-            print("\nflows generation\t>>\t",sumo_cmd,"")
+            print("\nSUMO SIMULATION generated\t>>\t",sumo_cmd,"")
+            #sumo_cmd = sumo_cmd+ f" --verbose"
+        #else:
+            #sumo_cmd = sumo_cmd+ f" --no-warnings"
         os.system(sumo_cmd)
         
 
-    def write_sumoconfig(self, trace=False, dump=False, emission=False, verbose=False):
+    def write_sumoconfig(self, trace=False, dump=False, emission=False,  verbose=False):
         self.sumoConfig_file = f"{self.name_simulationFile}.sumocfg"
         configuration = ET.Element("configuration")
         k_input = ET.SubElement(configuration, "input")
         ET.SubElement(k_input, "net-file", value=f"{self.network_file}")
         ET.SubElement(k_input, "route-files", value=f"{self.routes_file}")
-        if self.geometry_file is None:
-            ET.SubElement(k_input, "additional-files", value=f"{self.continuos_reroutes_file}")
-        else:
-            ET.SubElement(k_input, "additional-files", value=f"{self.continuos_reroutes_file},{self.geometry_file}")
+        additional_list = []
+
+        if self.continuos_reroutes_file is not None:
+            additional_list.append(self.continuos_reroutes_file)
+        if self.geometry_file is not None:
+            additional_list.append(self.geometry_file)
+        if self.sumoEdgeStats_additionalFile is not None:
+            additional_list.append(self.sumoEdgeStats_additionalFile)
+
+        if len(additional_list)>0:
+            add_filelist = ','.join(additional_list) 
+            ET.SubElement(k_input, "additional-files", value=f"{add_filelist}")
 
         k_time = ET.SubElement(configuration, "time")
         ET.SubElement(k_time, "begin", value="0")
         ET.SubElement(k_time, "end", value="10000")
 
         k_output = ET.SubElement(configuration, "output")
+        ET.SubElement(k_output, "summary-output", value=f"{self.name_simulationFile}.out.xml")
         if trace:
-            ET.SubElement(k_output, "fcd-output", value=f"{self.name_simulationFile}.out_trace.xml")
+            self.sumoTrace_file = f"{self.name_simulationFile}.out_trace.xml"
+            ET.SubElement(k_output, "fcd-output", value=self.sumoTrace_file)
         if dump:
-            ET.SubElement(k_output, "netstate-dump", value=f"{self.name_simulationFile}.out_dump.xml")
+            self.sumoDump_file = f"{self.name_simulationFile}.out_dump.xml"
+            ET.SubElement(k_output, "netstate-dump", value=self.sumoDump_file)
         if emission:
-            ET.SubElement(k_output, "emission", value=f"{self.name_simulationFile}.out_emission.xml")
-        
+            self.sumoEmission_file = f"{self.name_simulationFile}.out_emission.xml"
+            ET.SubElement(k_output, "emission-output", value=self.sumoEmission_file)
+        """
+        if edgeStats:            
+            self.sumoEdgeStats_file =  f"{self.name_simulationFile}.out_edgeStats.xml"
+            k_out_output = T.SubElement(k_output, "output", value=self.sumoEmission_file)
+            k_out_output = T.SubElement(k_out_output, "edgeData", value=self.sumoEmission_file)
+        """
+
         tree = ET.ElementTree(configuration)
         ET.indent(tree, space="\t", level=0)
         tree.write(f"{self.folder_simulationName}\\{self.sumoConfig_file}", encoding="utf-8")

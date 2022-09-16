@@ -34,8 +34,20 @@ def start_test_grid():
             "geometry_settings":['all']
         }
     }
+
+
+    edgeStats_settings={
+        "stats":[
+            {"id":"all","type":"emissions"},
+            {"id":"all","type":"harmonoise"},
+            {"id":"all"},
+        ]
+    }
+
     sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, 
     folder_name="data\sumo_simulation_files\\GRID_MEASURE", name_file="GRID_MEASURE",
-    network_settings=net_grid_settings, simulation_route_mode="random")
+    network_settings=net_grid_settings, simulation_route_mode="random", edgeStats_settings=edgeStats_settings)
     sumo_obj.generate_simulation(verbose=True)
+    print("---exe")
     sumo_obj.esecute_simulation(verbose=True)
+    print(("--END EXE"))
