@@ -7,6 +7,8 @@ def geo_simul_test():
 
 def simul_test():
     SUMO_test.start_test_grid()
+def simul_vis_test():
+    SUMO_test.start_test_grid()
 
 def orient_test():
     Orienteering_test.start_test()
@@ -18,6 +20,9 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if args[0] == "--simulation" or args[0] == "--s":
         simul_test()
+    if args[0] == "--simulation" or args[0] == "--sv":
+        simul_vis_test()
+
     elif args[0] ==  "--geosimulation" or args[0] == "--gs":
         geo_simul_test()
     elif args[0] ==  "--orienteering" or args[0] == "--o":
