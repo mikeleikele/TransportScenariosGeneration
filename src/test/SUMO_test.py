@@ -11,8 +11,8 @@ def start_test():
 def start_test_grid():
     #https://sumo.dlr.de/docs/netgenerate.html
     sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
-    name_simulationFile = "GRID_MEASURE"
-    folder_simulationName = "data\sumo_simulation_files\\GRID_MEASURE"
+    name_simulationFile = "Bassa_MEASURE"
+    folder_simulationName = "data\sumo_simulation_files\\Bassa_MEASURE"
 
     net_grid_settings={
         "network_type":"generate",
@@ -40,6 +40,7 @@ def start_test_grid():
         }
     }
 
+    network_settings=net_maps_settings
 
     edgeStats_settings={
         "stats":[
@@ -49,16 +50,18 @@ def start_test_grid():
         ]
     }
 
-    sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile, network_settings=net_grid_settings, edgeStats_settings=edgeStats_settings,
-    simulation_route_mode="random")
+    sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile, 
+    network_settings=network_settings, simulation_route_mode="random", edgeStats_settings=edgeStats_settings)
     sumo_obj.generate_simulation(verbose=True)
     simulObj = sumo_obj.esecute_simulation(stop=True, fcd=True, verbose=True)
 
     sumo_viz = SUMO_visualization(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile)
+    
+
     #sumo_viz.plotTrajectories(filename_output="plot_time-speed.png", simulObj=simulObj)
     
-    filein = "GRID_MEASURE.all.out.edgeData.xml"
-    networkFile = "GRID_MEASURE_network__grid_5_200.net.xml"
+    filein = f"{name_simulationFile}.all.out.edgeData.xml"
+    networkFile = f"{name_simulationFile}_network__osm_bassa.net.xml"
 
-    sumo_viz.plotNet(filename_output="plot_netSspeed.png", networkFile=networkFile, fileinput=filein, key_colors="speed", key_widths="density", color_map="#0:#00c000,.25:#408040,.5:#808080,.75:#804040,1:#c00000")
+    sumo_viz.plotNet(filename_output="plot_netSspeed.png", networkFile=networkFile, fileinput=filein, key_colors="speed", key_widths="density", color_map="viridis")
     

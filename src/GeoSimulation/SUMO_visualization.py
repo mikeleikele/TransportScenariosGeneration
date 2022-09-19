@@ -3,6 +3,8 @@ import xml.etree.cElementTree as ET
 from .GeoGraph import *
 from .SUMO_network import *
 from .SUMO_routes import *
+from ..tool.utils_matplot import UtilsMatplot
+
 
 class SUMO_visualization():
 
@@ -11,11 +13,13 @@ class SUMO_visualization():
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
         self.sumo_tool_folder = sumo_tool_folder
+        
     
     def plotAttributes(self):
         #https://sumo.dlr.de/docs/Tools/Visualization.html
         raise NotImplementedError()
     
+
     """
     attr_code::
         t: Time in s
@@ -45,8 +49,20 @@ class SUMO_visualization():
         os.system(sumo_cmd)
     
     def plotNet(self, filename_output, networkFile, fileinput, key_colors, key_widths, color_map, verbose=True):
+        if not UtilsMatplot.isColorMap(color_map):
+            raise SUMO_visualization_Exception__ColorMapNotExist(color_map)
         sumo_cmd = f'python "{self.sumo_tool_folder}/visualization\plot_net_dump.py" --net {self.folder_simulationName}/{networkFile} --dump-inputs {self.folder_simulationName}/{fileinput} --measures {key_colors},{key_widths} --colormap {color_map} --min-color-value -.1 --max-color-value .1 --max-width-value .1  --max-width 3 --min-width .5 --output {self.folder_simulationName}/{filename_output}'
         
         if verbose:
             print("\nnetTrajectories\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
+
+
+
+class SUMO_visualization_Exception__ColorMapNotExist(Exception):
+    """Exception raised for error no training modality recognized"""
+    def __init__(self,msg):
+        self.msg = msg
+          
+    def __str__(self):
+        return f"'{self.msg}' is not a color map."

@@ -27,7 +27,7 @@ class SUMO_computation():
             self.simulation_route_mode = simulation_route_mode
 
 
-    def generate_simulation(self, n_vehicle=200, verbose=False):
+    def generate_simulation(self, n_vehicle=2000, verbose=False):
         self.network_file = self.net_simulation.network_generation(verbose=verbose)
         self.geometry_file = self.net_simulation.geometry_generation(verbose=verbose)
         
