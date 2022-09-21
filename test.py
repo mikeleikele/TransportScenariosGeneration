@@ -1,5 +1,6 @@
 from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
 import sys
+from src.tool import utils_maps as mu
 
 def geo_simul_test():
     GeoGraph_test.start_test()
@@ -16,6 +17,13 @@ def orient_test():
 def ml_test():
     ML.start_test()
     
+def statsNet(name_netFile):
+    netreader = mu.StatsOSM(name_netFile)
+    netreader.statsFromOSM()
+    netreader.showStats()
+
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if args[0] == "--simulation" or args[0] == "--s":
@@ -31,5 +39,9 @@ if __name__ == "__main__":
         orient_test()
     elif args[0] ==  "--prediction" or args[0] == "--p":
         ml_test()
+    elif args[0] ==  "--statsNetwork" or args[0] == "--stats":
+        name_netFile = args[1]
+        #data\maps\GEO__bassa.osm
+        statsNet(name_netFile)
     else:
         print(0)

@@ -42,12 +42,19 @@ def start_test_grid(name_simulationFile):
         }
     }
 
-    network_settings=net_rand_settings
+    net_maps_settings_noGeom={
+        "network_type":"maps",
+        "maps":{
+            "osm_maps_name":"bassa", "osm_maps_folder":None, "remove_geometry":True,            
+        }
+    }
+
+    network_settings=net_maps_settings_noGeom
 
     routes_settings_random5000={
         "routes_type":"random",
         "options":{
-            "begin_time":0, "end_time":3600, "period":1,"vehicle":500
+            "begin_time":0, "end_time":3600, "period":1,"vehicle":5000
         },
         "simulation_opt":{
             "continuos_reroutes": True,
