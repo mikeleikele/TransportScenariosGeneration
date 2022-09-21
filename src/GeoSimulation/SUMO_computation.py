@@ -8,7 +8,7 @@ from .SUMO_simulation import *
 
 class SUMO_computation():
 
-    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, edgeStats_settings=None, simulation_route_mode="random",  verbose=True):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, routes_settings, edgeStats_settings=None, verbose=True):
         self.sumo_tool_folder = sumo_tool_folder
         if not os.path.exists(self.sumo_tool_folder):
             raise SUMO_INSTALL_Exception__ToolFolder(self.sumo_tool_folder)
@@ -17,44 +17,38 @@ class SUMO_computation():
         if not os.path.exists(self.folder_simulationName):
             os.makedirs(self.folder_simulationName)
         self.name_simulationFile = name_simulationFile
+        self.network_settings = network_settings
+        self.routes_settings = routes_settings
         self.edgeStats_settings = edgeStats_settings
 
         self.net_simulation = SUMO_network(sumo_tool_folder=self.sumo_tool_folder,folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, network_settings=network_settings, verbose=verbose)
         
-        if simulation_route_mode not in ["random","demand"]:
-            raise SUMO_computation_Exception__ModeNotRecognized(simulation_route_mode)
-        else:
-            self.simulation_route_mode = simulation_route_mode
-
-
-    def generate_simulation(self, n_vehicle=2000, verbose=False):
+        
+    def generate_simulation(self, verbose=False):
         self.network_file = self.net_simulation.network_generation(verbose=verbose)
         self.geometry_file = self.net_simulation.geometry_generation(verbose=verbose)
         
-        #TO DO: refactoring !
-        if self.simulation_route_mode == "random":
-            self.routes_simulation = SUMO_routes(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, networkObj=self.net_simulation, verbose=verbose)
-            self.generate_routes(n_vehicle=n_vehicle,verbose=verbose)
-        elif self.simulation_route_mode == "demand":
-            return 0
-            #self.osm_generate_simulation_demand(verbose)
-        else:
-            return 0
+        self.routes_simulation = SUMO_routes(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, routes_settings=self.routes_settings, networkObj=self.net_simulation, verbose=verbose)
+        self.generate_routes(verbose=verbose)
+        #if demain self.osm_generate_simulation_demand(verbose)
                 
     
-    def generate_routes(self, n_vehicle, verbose=False):
-        self.flows_file = self.routes_simulation.flows_generation_random(n_vehicle=n_vehicle,verbose=verbose)
-        self.routes_file = self.routes_simulation.routes_generation(verbose=verbose)
-        self.continuos_reroutes_file = self.routes_simulation.continuous_rerouting_generation(verbose=verbose)
+    def generate_routes(self, verbose=False):
+        self.routes_simulation.routes_generation(verbose=verbose)
+        
+        self.flows_file = self.routes_simulation.get_flowsFile()
+        self.routes_file = self.routes_simulation.get_routesFile()
+        self.continuos_reroutes_file = self.routes_simulation.get_continuous_reroutingFile()
 
-    def esecute_simulation(self, fcd=False, stop=False, verbose=False):
+    def esecute_simulation(self, fcd=False, dump=False, emission=False, lanechange=False, vtk=False, stop=False, tripsInfo=False, verbose=False):
         self.sumo_simulation = SUMO_simulation(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, networkObj=self.net_simulation, routesObj=self.routes_simulation, edgeStats_settings=self.edgeStats_settings, verbose=verbose)
-        self.sumo_simulation.esecute_simulation(fcd=fcd, stop=stop, verbose=verbose)
+        self.sumo_simulation.esecute_simulation(fcd=fcd, dump=dump, emission=emission, lanechange=lanechange, vtk=False, stop=stop, tripsInfo=tripsInfo, verbose=verbose)
         self.config_file = self.sumo_simulation.get_configFile()
         return self.sumo_simulation
     
     def get_networkObj():
         return self.net_simulation
+    
     """
     TO DO
 
