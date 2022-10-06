@@ -32,6 +32,7 @@ class SUMO_routes():
             self.vehicle = routes_settings['options']['vehicle']
         else:
             self.vehicle = 200
+        print("vehicle\t\t",self.vehicle)
 
         if 'simulation_opt' in routes_settings:
             if 'continuos_reroutes' in routes_settings['simulation_opt']:

@@ -1,18 +1,21 @@
 import xml.etree.ElementTree as ET
 import ast
 
-class StatsOSM():
+class SUMO_mapsstats():
 
-    def __init__(self, filepath):
-        self.this = True
-        self.filepath = filepath
+    def __init__(self, maps_name):
+        self.filepath = f'data\maps\GEO__{maps_name}.osm'
         tree = ET.parse(self.filepath)
         self.root = tree.getroot()
         self.node_list = dict()
         self.way_list = dict()
-
         self.node_atts = dict()
         self.way_atts = dict()
+
+    def compute_mapsstats(self, value_unique=True, save=True, show_name=True):
+        self.statsFromOSM(value_unique)
+        if save:
+            self.showStats(show_name)
 
     def statsFromOSM(self, value_unique=True):
         for item in self.root:

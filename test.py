@@ -1,6 +1,10 @@
 from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
+from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
+from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 import sys
-from src.tool import utils_maps as mu
+
+def geo_test():
+    GeoGraph_test.start_test()
 
 def geo_simul_test():
     GeoGraph_test.start_test()
@@ -17,19 +21,22 @@ def orient_test():
 def ml_test():
     ML.start_test()
     
-def statsNet(name_netFile):
-    netreader = mu.StatsOSM(name_netFile)
-    netreader.statsFromOSM()
-    netreader.showStats()
+def statsMaps(maps_name):
+    mapsstats = SUMO_mapsstats(maps_name)
+    mapsstats.compute_mapsstats()
 
-
-
+def statsRoads(simulation_name):
+    roadstats = SUMO_roadstats(simulation_name)
+    roadstats.compute_roadstats()
+    
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args[0] == "--simulation" or args[0] == "--s":
+    if args[0] == "--geo" or args[0] == "--g":        
+        geo_test()
+    if args[0] == "--simulation" or args[0] == "--gs":
         name_simulationFile = args[1]
         simul_test(name_simulationFile)
-    if args[0] == "--simulation" or args[0] == "--sv":
+    if args[0] == "--visualsimulation" or args[0] == "--sv":
         name_simulationFile = args[1]
         simul_vis_test(name_simulationFile)
 
@@ -39,9 +46,13 @@ if __name__ == "__main__":
         orient_test()
     elif args[0] ==  "--prediction" or args[0] == "--p":
         ml_test()
-    elif args[0] ==  "--statsNetwork" or args[0] == "--stats":
-        name_netFile = args[1]
+    elif args[0] ==  "--statsMaps" or args[0] == "--sm":
+        maps_name = args[1]
         #data\maps\GEO__bassa.osm
-        statsNet(name_netFile)
+        statsMaps(maps_name)
+    elif args[0] ==  "--statsRoad" or args[0] == "--sr":
+        #python test.py --sr grid5
+        simulation_name = args[1]
+        statsRoads(simulation_name)
     else:
         print(0)

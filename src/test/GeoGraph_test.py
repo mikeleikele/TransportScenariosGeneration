@@ -2,10 +2,15 @@ from src.GeoSimulation.GeoGraph import *
 import matplotlib.pyplot as plt
 
 def start_test():
-    places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
+    """places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
         "campolongo tapogliano, Italy", "Gonars,Italy", "Visco,Italy", "San Vito al Torre,Italy", "Bagnaria arsa,Italy","Fiumicello Villa Vicentina,Italy", "Torviscosa,Italy",
         "Palmanova,Italy", ]
-    bassa_friuli = GeoGraph(places, maps_name="bassa", save=True,file_folder= 'data/maps/', file_name="bassa")
+    maps_name="bassa"""
+
+    places = ['Milano,Italy']
+    maps_name="Milan"
+
+    bassa_friuli = GeoGraph(places, maps_name=maps_name, save=True,file_folder= 'data/maps/', file_name=maps_name)
     #https://wiki.openstreetmap.org/wiki/Map_features   
     fig, ax = plt.subplots(figsize=(25,18))
     POI_bassa_friuli = bassa_friuli.getPOI()
