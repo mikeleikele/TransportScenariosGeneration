@@ -2,3 +2,4 @@ data/
 *.pyc
 GEO_README.txt
 a.txt
+*.json
