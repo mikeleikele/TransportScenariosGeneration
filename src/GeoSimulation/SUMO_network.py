@@ -86,15 +86,18 @@ class SUMO_network():
         return self.geometry_file
 
 
-    def network_generation(self, verbose=False):           
+    def network_generation(self, save_geojson=True, verbose=False):           
         if  self.network_type == "generate": 
             self.network_file = f"{self.name_simulationFile}.net.xml"
+            
+
+            
             if self.geometry == "grid":
-                sumo_cmd = f"netgenerate --grid --grid.number={self.number} --grid.length={self.length} --output-file={self.folder_simulationName}/{self.network_file}"
+                sumo_cmd = f"netgenerate --grid    --grid.number={self.number} --grid.length={self.length} --output-file={self.folder_simulationName}/{self.network_file}"
             elif self.geometry == "spider":
                 sumo_cmd = f"netgenerate --spider  --spider.arm-number={self.arm_number} --spider.circle-number={self.circle_number} --spider.space-radius={self.space_radius} --spider.omit-center={self.omit_center}  --output-file={self.folder_simulationName}/{self.network_file}"
             elif self.geometry == "rand":
-                sumo_cmd = f"netgenerate --rand  --rand.iterations={self.iterations} --bidi-probability={self.bidi_probability} --rand.connectivity={self.rand_connectivity}  --output-file={self.folder_simulationName}/{self.network_file}"
+                sumo_cmd = f"netgenerate --rand    --rand.iterations={self.iterations} --bidi-probability={self.bidi_probability} --rand.connectivity={self.rand_connectivity}  --output-file={self.folder_simulationName}/{self.network_file}"
             
             if verbose:
                 print("\nnetwork generation\t>>\t",sumo_cmd,"")
@@ -114,7 +117,7 @@ class SUMO_network():
                 sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file} --geometry.remove --remove-edges.isolated --roundabouts.guess  --ramps.guess --junctions.join --tls.guess-signals --tls.join --tls.default-type actuated"
             else:
                 sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file}  --ramps.guess --junctions.join --tls.guess-signals --tls.discard-simple --tls.join --tls.default-type actuated"
-            
+       
             if verbose:
                 print("\nnetwork convertion\t>>\t",sumo_cmd,"")
             else:
@@ -125,8 +128,16 @@ class SUMO_network():
             os.system(sumo_cmd)
             p_bar.update(10)
             p_bar.refresh()
-        
+        if save_geojson:
+            self.network2geojson(True)
         return self.network_file
+
+    def network2geojson(self, verbose=False):
+        self.network_geojson_file = f"{self.name_simulationFile}.net.geojson"
+        sumo_cmd = f'python "{self.sumo_tool_folder}/net/net2geojson.py" --net-file {self.folder_simulationName}/{self.network_file} --output-file {self.folder_simulationName}/{self.network_geojson_file}'
+        if verbose:
+            print("\nnetwork export to network2geojson\t>>\t",sumo_cmd,"")
+        os.system(sumo_cmd)
 
     def geometry_generation(self, force_overwrite=False, verbose=False):        
         if self.geometry_settings is None:

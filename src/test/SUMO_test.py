@@ -19,7 +19,7 @@ def start_test_grid(name_simulationFile):
     net_grid_settings={
         "network_type":"generate",
         "generate":{
-            "geometry":"grid", "grid":{"number":5,"length":200}
+            "geometry":"grid", "grid":{"number":7,"length":200}
         }
     }
     net_spider_settings={
@@ -54,7 +54,7 @@ def start_test_grid(name_simulationFile):
     routes_settings_random15={
         "routes_type":"random",
         "options":{
-            "begin_time":0, "end_time":3000, "period":20000,"vehicle":10
+            "begin_time":0, "end_time":3000, "period":2000,"vehicle":50
         },
         "simulation_opt":{
             "continuos_reroutes": True,

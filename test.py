@@ -33,7 +33,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if args[0] == "--geo" or args[0] == "--g":        
         geo_test()
-    if args[0] == "--simulation" or args[0] == "--gs":
+    if args[0] == "--simulation" or args[0] == "--s":
         name_simulationFile = args[1]
         simul_test(name_simulationFile)
     if args[0] == "--visualsimulation" or args[0] == "--sv":
