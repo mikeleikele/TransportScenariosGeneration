@@ -1,6 +1,6 @@
 from src.GeoSimulation.SUMO_computation import *
 from src.GeoSimulation.SUMO_visualization import *
-
+from src.GeoSimulation.SUMO_roadstats import *
 
 def start_test():
     sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
@@ -12,7 +12,6 @@ def start_test_grid(name_simulationFile):
 
     #https://sumo.dlr.de/docs/netgenerate.html
     sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
-    
     
     folder_simulationName = f"data\sumo_simulation_files\\{name_simulationFile}"
 
@@ -54,7 +53,7 @@ def start_test_grid(name_simulationFile):
     routes_settings_random15={
         "routes_type":"random",
         "options":{
-            "begin_time":0, "end_time":3000, "period":2000,"vehicle":50
+            "begin_time":0, "end_time":3000, "period":2000,"vehicle":500
         },
         "simulation_opt":{
             "continuos_reroutes": True,
@@ -74,7 +73,10 @@ def start_test_grid(name_simulationFile):
     network_settings=network_settings, routes_settings=routes_settings, edgeStats_settings=edgeStats_settings)
     sumo_obj.generate_simulation(verbose=True)
     simulObj = sumo_obj.esecute_simulation(stop=True, fcd=True, tripsInfo=True, verbose=True)
-
+    
+    roadstats = SUMO_roadstats(name_simulationFile, is_osm=False)
+    roadstats.compute_roadstats()
+    
     sumo_viz = SUMO_visualization(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile)
     
     
@@ -82,6 +84,8 @@ def start_test_grid(name_simulationFile):
     file_emissionEdgeData = [f"{name_simulationFile}.out.edgedata.all.emissions.xml",f"{name_simulationFile}.out.edgedata.all.emissions.xml"]
     file_tripInfo = f"{name_simulationFile}.out.all.tripinfo.xml"
     file_network = sumo_obj.network_file
+
+    
 
     sumo_viz.plotNet2Key(verbose=True, filename_output="plot_net_speed_density.png", networkFile=file_network, fileinput=file_edgeData, key_colors="speed", key_widths="density", color_map="viridis")
     sumo_viz.plotNet2Key(verbose=True, filename_output="plot_net_NOx_normed_traveltime.png", networkFile=file_network, fileinput=file_emissionEdgeData, key_colors="NOx_normed", key_widths="traveltime", color_map="cividis")

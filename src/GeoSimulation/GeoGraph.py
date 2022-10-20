@@ -12,6 +12,16 @@ class OSMgeometry:
     def getOptions():
         option = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
         return option
+    
+    def isFilter(name_filter):
+        option = OSMgeometry.getOptions()
+        filters = OSMgeometry.getFilter()
+        if name_filter in option:
+            key =  f"POI__{name_filter}__"
+            value = (key,filters[key])
+        else:
+            value = None
+        return value
 
     def getFilter():
         poi_filter = {
@@ -27,40 +37,56 @@ class OSMgeometry:
         return poi_filter
 
 class GeoGraph:
-    def __init__(self, places, maps_name, save=False, file_folder='graphml_files',  file_name=None):
-        """
-        query str: geo-codable query such as "Harlem, NY" or "Kigali, Rwanda"
-        save: bool:
-        """        
-        self.places = places
-        if file_name is None:
-            self.graph_name = ""
-            for i in range(len(self.places)):
-                _plane_cod =  self.places[i].lower().replace(',', '_').replace(' ', '-')
-                if i == 0:
-                  self.graph_name = _plane_cod
-                else:
-                    self.graph_name += "--"+ _plane_cod
-        else:
-            self.graph_name = file_name
-        self.save = save
-        self.maps_name = maps_name
+    def __init__(self, geo_maps_settings):
+        self.maps_name = geo_maps_settings["osm_maps_name"] 
 
-        self.file_folder = file_folder
+        if "file_folder" in geo_maps_settings:
+            if geo_maps_settings["file_folder"] is None:
+                self.file_folder = "data/maps"
+            else:
+                self.file_folder = geo_maps_settings["file_folder"]
+        else:
+            self.file_folder = "data/maps"
         if not os.path.exists(self.file_folder):
             os.makedirs(self.file_folder)
         
-        self.map_folder = "data/osm_maps"
-        if not os.path.exists(self.map_folder):
-            os.makedirs(self.map_folder)
+        if "map_folder" in geo_maps_settings:
+            if geo_maps_settings["map_folder"] is None:
+                self.file_folder = "data/osm_maps"
+            else:
+                self.file_folder = geo_maps_settings["map_folder"]
+        else:
+            self.file_folder = "data/osm_maps"
+        if not os.path.exists(self.file_folder):
+            os.makedirs(self.file_folder)
 
-        self.graph_filename = self.graph_name
+
+
+        self.places = geo_maps_settings["options"]["places"]
+        simplification = geo_maps_settings["options"]["simplification"]
+        self.geograph = self.request_graph(self.places, simplification)
+        #deprecated
+        """if file_name is None:
+            self.maps_name = ""
+            for i in range(len(self.places)):
+                _plane_cod =  self.places[i].lower().replace(',', '_').replace(' ', '-')
+                if i == 0:
+                  self.maps_name = _plane_cod
+                else:
+                    self.maps_name += "--"+ _plane_cod
+        else:
+            self.maps_name = file_name"""
         
-        self.geograph = self.request_graph(self.places)
-        self.poigraph = self.geometries_from_place(self.places,save=True)
-
-        self.fig, self.axis = None, None
-        #self.ax, self.G = self.graph_axis()
+        if geo_maps_settings["options"]["poi_geometry"]:
+            list_filter = geo_maps_settings["options"]["poi_geometry"]["poi_option"]["filter"]
+            if list_filter == "all":
+                self.filter_poi = OSMgeometry.getFilter()
+            else:
+                self.filter_poi = dict()
+                for filter_name in list_filter:
+                    filter_tuple = OSMgeometry.isFilter(filter_name)   
+                    self.filter_poi[filter_tuple[0]] = filter_tuple[1]
+            self.poigraph = self.geometries_from_place(self.places,save=True)
 
 
     def getGEO(self):
@@ -69,7 +95,7 @@ class GeoGraph:
     def getPOI(self):
         return self.poigraph
 
-    def request_graph(self,query):
+    def request_graph(self,query,simplification=False):
         """
         Negotiates a query to OSMNX if no local stored file else loads local file
         :return: result:
@@ -77,10 +103,10 @@ class GeoGraph:
         if "GEO__"+self.maps_name+ '.graphml' in os.listdir(self.file_folder):
             geograph = ox.load_graphml(self.file_folder + '/' + "GEO__"+self.maps_name+ '.graphml' ) 
         else:
-            geograph = self.graph_from_place(query)
+            geograph = self.graph_from_place(query,simplification)
         return geograph
 
-    def graph_from_place(self, place, simplify=True,network_type='all'):
+    def graph_from_place(self, place, simplify=True,network_type='all', simplification=False, save=True):
         """
         Request a graph from OSMNX
         network_type : "all_private", "all", "bike", "drive", "drive_service", "walk"
@@ -95,7 +121,10 @@ class GeoGraph:
             G = ox.graph_from_place(place, simplify=simplify, network_type=network_type)
             p_bar.update(10)
             p_bar.refresh()
-            if self.save:
+            if simplification:
+                G = ox.simplification.simplify_graph(G, strict=True, remove_rings=True)
+        
+            if save:
                 geo_filepath = f"{self.file_folder}/GEO__{self.maps_name}"
                 ox.save_graphml(G, filepath=f"{geo_filepath}.graphml")
                 ox.save_graph_xml(G, filepath=f"{geo_filepath}.osm")
@@ -105,10 +134,8 @@ class GeoGraph:
 
 
     def geometries_from_place(self, places, tags={'natural':True,'place':True},save=False):
-        filter_poi = OSMgeometry.getFilter()
-
         POI_list_all = []
-        for key in filter_poi:
+        for key in self.filter_poi:
             tags = filter_poi[key]
             POI_list = []
             for i in tqdm(range(len(places))):
@@ -120,6 +147,7 @@ class GeoGraph:
                     POI_list_all.append(_poifile)
                 else:
                     try:
+                        ox.config(timeout=10000)
                         _poifile = ox.geometries_from_place(_place,tags=tags)
                         POI_list.append(_poifile)
                         POI_list_all.append(_poifile)
@@ -157,7 +185,7 @@ class GeoGraph:
                                 bgcolor='#FFFFFF')
         # set the axis title and grab the dimensions of the figure
         self.fig = fig
-        ax.set_title(self.graph_name)
+        ax.set_title(self.maps_name)
         self.axis = ax.axis()
         return ax, graph
 

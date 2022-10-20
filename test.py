@@ -6,9 +6,9 @@ import sys
 def geo_test():
     GeoGraph_test.start_test()
 
-def geo_simul_test():
+def geo_simul_test(name_simulationFile):
     GeoGraph_test.start_test()
-    SUMO_test.start_test()
+    SUMO_test.start_test_grid(name_simulationFile=name_simulationFile)
 
 def simul_test(name_simulationFile):
     SUMO_test.start_test_grid(name_simulationFile=name_simulationFile)
@@ -26,33 +26,44 @@ def statsMaps(maps_name):
     mapsstats.compute_mapsstats()
 
 def statsRoads(simulation_name):
-    roadstats = SUMO_roadstats(simulation_name)
+    roadstats = SUMO_roadstats(simulation_name, is_osm=False)
     roadstats.compute_roadstats()
     
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args[0] == "--geo" or args[0] == "--g":        
-        geo_test()
-    if args[0] == "--simulation" or args[0] == "--s":
+    
+    if args[0] ==  "--orienteering" or args[0] == "--o":
+        orient_test()
+        print(1)
+    elif args[0] == "--geo" or args[0] == "--g":        
+        geo_test()    
+        print(2)
+    
+    elif args[0] == "--simulation" or args[0] == "--s":        
         name_simulationFile = args[1]
         simul_test(name_simulationFile)
-    if args[0] == "--visualsimulation" or args[0] == "--sv":
+        print(3)
+    elif args[0] == "--visualsimulation" or args[0] == "--sv":
         name_simulationFile = args[1]
         simul_vis_test(name_simulationFile)
-
+        print(4)
     elif args[0] ==  "--geosimulation" or args[0] == "--gs":
-        geo_simul_test()
-    elif args[0] ==  "--orienteering" or args[0] == "--o":
-        orient_test()
+        name_simulationFile = args[1]
+        print(name_simulationFile)
+        geo_simul_test(name_simulationFile)
+        print(5)
     elif args[0] ==  "--prediction" or args[0] == "--p":
         ml_test()
+        print(6)
     elif args[0] ==  "--statsMaps" or args[0] == "--sm":
         maps_name = args[1]
         #data\maps\GEO__bassa.osm
         statsMaps(maps_name)
+        print(7)
     elif args[0] ==  "--statsRoad" or args[0] == "--sr":
         #python test.py --sr grid5
         simulation_name = args[1]
         statsRoads(simulation_name)
+        print(8)
     else:
         print(0)

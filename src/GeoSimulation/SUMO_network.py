@@ -113,7 +113,7 @@ class SUMO_network():
                 raise SUMO_simulation_Exception__FileMapNotFound(self.osm_maps_name,self.osm_maps_GEO_filepath)
             
             self.network_file = f"{self.name_simulationFile}.net.xml"
-            if self.remove_geometry:
+            if self.r:
                 sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file} --geometry.remove --remove-edges.isolated --roundabouts.guess  --ramps.guess --junctions.join --tls.guess-signals --tls.join --tls.default-type actuated"
             else:
                 sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file}  --ramps.guess --junctions.join --tls.guess-signals --tls.discard-simple --tls.join --tls.default-type actuated"
@@ -134,7 +134,7 @@ class SUMO_network():
 
     def network2geojson(self, verbose=False):
         self.network_geojson_file = f"{self.name_simulationFile}.net.geojson"
-        sumo_cmd = f'python "{self.sumo_tool_folder}/net/net2geojson.py" --net-file {self.folder_simulationName}/{self.network_file} --output-file {self.folder_simulationName}/{self.network_geojson_file}'
+        sumo_cmd = f'python "{self.sumo_tool_folder}/net/net2geojson.py" --net-file {self.folder_simulationName}/{self.network_file} --output-file {self.folder_simulationName}/{self.network_geojson_file} --internal'
         if verbose:
             print("\nnetwork export to network2geojson\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
