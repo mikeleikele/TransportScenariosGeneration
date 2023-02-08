@@ -4,11 +4,11 @@ from .GeoGraph import *
 from .SUMO_network import *
 from .SUMO_routes import *
 from .SUMO_simulation import *
-
+from pathlib import Path
 
 class SUMO_computation():
 
-    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, routes_settings, edgeStats_settings=None, verbose=True):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, routes_settings, edgeStats_settings=None, python_cmd="Python3", verbose=True):
         self.sumo_tool_folder = sumo_tool_folder
         if not os.path.exists(self.sumo_tool_folder):
             raise SUMO_INSTALL_Exception__ToolFolder(self.sumo_tool_folder)
@@ -21,14 +21,14 @@ class SUMO_computation():
         self.routes_settings = routes_settings
         self.edgeStats_settings = edgeStats_settings
 
-        self.net_simulation = SUMO_network(sumo_tool_folder=self.sumo_tool_folder,folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, network_settings=network_settings, verbose=verbose)
+        self.net_simulation = SUMO_network(sumo_tool_folder=self.sumo_tool_folder,folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, network_settings=self.network_settings, python_cmd=python_cmd, verbose=verbose)
         
         
-    def generate_simulation(self, verbose=False):
+    def generate_simulation(self, python_cmd="Python3", verbose=False):
         self.network_file = self.net_simulation.network_generation(verbose=verbose)
         self.geometry_file = self.net_simulation.geometry_generation(verbose=verbose)
         
-        self.routes_simulation = SUMO_routes(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, routes_settings=self.routes_settings, networkObj=self.net_simulation, verbose=verbose)
+        self.routes_simulation = SUMO_routes(sumo_tool_folder=self.sumo_tool_folder, folder_simulationName = self.folder_simulationName, name_simulationFile=self.name_simulationFile, routes_settings=self.routes_settings, networkObj=self.net_simulation, python_cmd=python_cmd, verbose=verbose)
         self.generate_routes(verbose=verbose)
         #if demain self.osm_generate_simulation_demand(verbose)
                 

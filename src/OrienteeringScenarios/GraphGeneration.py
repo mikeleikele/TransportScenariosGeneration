@@ -1,4 +1,3 @@
-from networkx.readwrite.nx_shp import edges_from_line
 import math
 import networkx as nx
 import matplotlib.pyplot as plt

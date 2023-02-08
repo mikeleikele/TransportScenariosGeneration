@@ -4,6 +4,7 @@ import geopandas
 import pandas as pd
 from tqdm.auto import tqdm
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 class OSMgeometry:
     options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
@@ -17,7 +18,7 @@ class OSMgeometry:
         option = OSMgeometry.getOptions()
         filters = OSMgeometry.getFilter()
         if name_filter in option:
-            key =  f"POI__{name_filter}__"
+            key =  f"{name_filter}"
             value = (key,filters[key])
         else:
             value = None
@@ -25,14 +26,14 @@ class OSMgeometry:
 
     def getFilter():
         poi_filter = {
-            "POI__nature__":{'natural':True,'geological':True},#'place':True,
-            "POI__landuse__":{'landuse':True},
-            "POI__artificial_1__":{'aeroway':True,'aerialway':True,'cycleway':True,'bus_bay':True},
-            "POI__artificial_2__":{'public_transport':True,'railway':True,'bridge':True,'tunnel':True,'waterway':True},
-            "POI__public_1__":{'amenity':True,'building':True,'emergency':True,'lifeguard':True,'historic':True},
-            "POI__public_2__":{'leisure':True,'office':True,'shop':True,'sport':True,'tourism':True},
-            "POI__highway__":{'highway':True,'route':True},
-            "POI__military__":{'military':True,},            
+            "nature":{'natural':True,'geological':True},#'place':True,
+            "landuse":{'landuse':True},
+            "artificial_1":{'aeroway':True,'aerialway':True,'cycleway':True,'bus_bay':True},
+            "artificial_2":{'public_transport':True,'railway':True,'bridge':True,'tunnel':True,'waterway':True},
+            "public_1":{'amenity':True,'building':True,'emergency':True,'lifeguard':True,'historic':True},
+            "public_2":{'leisure':True,'office':True,'shop':True,'sport':True,'tourism':True},
+            "highway":{'highway':True,'route':True},
+            "military":{'military':True,},            
         }
         return poi_filter
 
@@ -40,45 +41,34 @@ class GeoGraph:
     def __init__(self, geo_maps_settings):
         self.maps_name = geo_maps_settings["osm_maps_name"] 
 
-        if "file_folder" in geo_maps_settings:
-            if geo_maps_settings["file_folder"] is None:
-                self.file_folder = "data/maps"
-            else:
-                self.file_folder = geo_maps_settings["file_folder"]
-        else:
-            self.file_folder = "data/maps"
-        if not os.path.exists(self.file_folder):
-            os.makedirs(self.file_folder)
-        
         if "map_folder" in geo_maps_settings:
             if geo_maps_settings["map_folder"] is None:
-                self.file_folder = "data/osm_maps"
+                self.map_folder = Path('data', 'maps',self.maps_name)
             else:
-                self.file_folder = geo_maps_settings["map_folder"]
+                self.map_folder = geo_maps_settings["map_folder"]
         else:
-            self.file_folder = "data/osm_maps"
-        if not os.path.exists(self.file_folder):
-            os.makedirs(self.file_folder)
+            self.map_folder =  Path('data', 'maps',self.maps_name)
+        if not os.path.exists(self.map_folder):
+            os.makedirs(self.map_folder)
+        
+        if "poi_folder" in geo_maps_settings:
+            if geo_maps_settings["poi_folder"] is None:
+                self.poi_folder = Path('data', 'osm_maps')
+            else:
+                self.poi_folder = geo_maps_settings["poi_folder"]
+        else:
+            self.poi_folder =  Path('data', 'osm_maps')
+        if not os.path.exists(self.poi_folder):
+            os.makedirs(self.poi_folder)
 
 
 
         self.places = geo_maps_settings["options"]["places"]
         simplification = geo_maps_settings["options"]["simplification"]
         self.geograph = self.request_graph(self.places, simplification)
-        #deprecated
-        """if file_name is None:
-            self.maps_name = ""
-            for i in range(len(self.places)):
-                _plane_cod =  self.places[i].lower().replace(',', '_').replace(' ', '-')
-                if i == 0:
-                  self.maps_name = _plane_cod
-                else:
-                    self.maps_name += "--"+ _plane_cod
-        else:
-            self.maps_name = file_name"""
-        
+                
         if geo_maps_settings["options"]["poi_geometry"]:
-            list_filter = geo_maps_settings["options"]["poi_geometry"]["poi_option"]["filter"]
+            list_filter = geo_maps_settings["options"]["poi_option"]["filter"]
             if list_filter == "all":
                 self.filter_poi = OSMgeometry.getFilter()
             else:
@@ -100,10 +90,10 @@ class GeoGraph:
         Negotiates a query to OSMNX if no local stored file else loads local file
         :return: result:
         """
-        if "GEO__"+self.maps_name+ '.graphml' in os.listdir(self.file_folder):
-            geograph = ox.load_graphml(self.file_folder + '/' + "GEO__"+self.maps_name+ '.graphml' ) 
+        if self.maps_name+ '.geo.graphml' in os.listdir(self.map_folder):
+            geograph = ox.load_graphml(Path(self.map_folder, ""+self.maps_name, '.geo.graphml'))
         else:
-            geograph = self.graph_from_place(query,simplification)
+            geograph = self.graph_from_place(query, simplification)
         return geograph
 
     def graph_from_place(self, place, simplify=True,network_type='all', simplification=False, save=True):
@@ -123,11 +113,10 @@ class GeoGraph:
             p_bar.refresh()
             if simplification:
                 G = ox.simplification.simplify_graph(G, strict=True, remove_rings=True)
-        
             if save:
-                geo_filepath = f"{self.file_folder}/GEO__{self.maps_name}"
-                ox.save_graphml(G, filepath=f"{geo_filepath}.graphml")
-                ox.save_graph_xml(G, filepath=f"{geo_filepath}.osm")
+                geo_filename = Path(self.map_folder, self.maps_name)
+                ox.save_graphml(G, filepath=Path(geo_filename.with_suffix(".geo.geojson")))
+                ox.save_graph_xml(G, filepath=Path(geo_filename.with_suffix(".geo.osm") ))
         except Exception:
             raise GeoGraph_Exception__Param(place)
         return G
@@ -136,13 +125,14 @@ class GeoGraph:
     def geometries_from_place(self, places, tags={'natural':True,'place':True},save=False):
         POI_list_all = []
         for key in self.filter_poi:
-            tags = filter_poi[key]
+            tags = self.filter_poi[key]
             POI_list = []
             for i in tqdm(range(len(places))):
                 _place = places[i]
                 place = _place.lower().replace(',', '_').replace(' ', '-')
-                if f"{self.map_folder}/{key}{place}.geojson" in os.listdir(self.map_folder):
-                    _poifile = geopandas.read_file(f"{self.map_folder}/{key}{place}.geojson")
+                poi_filepath = Path(self.poi_folder, (place+"."+key+".poi.geojson"))
+                if poi_filepath in os.listdir(self.map_folder):
+                    _poifile = geopandas.read_file(poi_filepath)
                     POI_list.append(_poifile)
                     POI_list_all.append(_poifile)
                 else:
@@ -152,22 +142,22 @@ class GeoGraph:
                         POI_list.append(_poifile)
                         POI_list_all.append(_poifile)
                         if save:
-                            with open(f"{self.map_folder}/{key}{place}.geojson", "w") as f:
+                            with open(poi_filepath, "w") as f:
                                 f.write(_poifile.to_json())
                     except Exception:
                         raise GeoGraph_Exception__POI(_place)
             poi_geodf = geopandas.GeoDataFrame(pd.concat(POI_list,ignore_index=True))
             if save:
-                global_poi_filepath = f"{self.file_folder}/{key}{self.maps_name}"
-                with open(f"{global_poi_filepath}.geojson", "w") as f:
+                global_poi_filepath = Path(self.map_folder, (self.maps_name+".poi."+key))
+                with open(global_poi_filepath.with_suffix(global_poi_filepath.suffix+".geojson"), "w") as f:
                     f.write(poi_geodf.to_json())
                 
                 sumo_cmd = f"ogr2osm {global_poi_filepath}.geojson --output={global_poi_filepath}.osm --force"
                 os.system(sumo_cmd)
         if save:
             poi_all_geodf = geopandas.GeoDataFrame(pd.concat(POI_list_all,ignore_index=True))
-            global_poi_filepath_all = f"{self.file_folder}/POI__all__{self.maps_name}"
-            with open(f"{global_poi_filepath_all}.geojson", "w") as f:
+            global_poi_filepath_all = Path(self.map_folder, (self.maps_name+".poi.all"))
+            with open(global_poi_filepath_all.with_suffix(global_poi_filepath_all.suffix+".geojson"), "w") as f:
                 f.write(poi_all_geodf.to_json())                
             sumo_cmd = f"ogr2osm {global_poi_filepath_all}.geojson --output={global_poi_filepath_all}.osm --force"
             os.system(sumo_cmd)

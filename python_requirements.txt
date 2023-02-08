@@ -1,0 +1,9 @@
+osmnx
+ogr2osm
+sklearn
+shapely
+geopandas
+dict2xml 
+networkx
+scikit-learn
+xmltodict

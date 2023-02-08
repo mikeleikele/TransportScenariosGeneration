@@ -1,5 +1,0 @@
-osmnx
-ogr2osm
-sklearn
-shapely
-dict2xml 

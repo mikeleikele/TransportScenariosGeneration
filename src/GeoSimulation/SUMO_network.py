@@ -1,6 +1,8 @@
 import os 
 from .GeoGraph import *
 from tqdm.auto import tqdm
+from pathlib import Path
+import shutil
 
 class SUMO_network():
 
@@ -25,12 +27,13 @@ class SUMO_network():
         osm_maps_name
         remove_geometry
     """
-    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, verbose=False):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, network_settings, python_cmd, verbose=False):
         self.folder_simulationName = folder_simulationName
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
         self.sumo_tool_folder = sumo_tool_folder
-        
+        self.python_cmd = python_cmd
+
         self.network_type = network_settings['network_type']
         network_type_settings = self.check_isKey(network_settings,self.network_type)
         
@@ -61,7 +64,7 @@ class SUMO_network():
             self.geometry_settings = self.check_isKey(network_type_settings,"geometry_settings", False)
             
             if self.osm_maps_folder is None:
-                self.osm_maps_folder = f"data\maps"
+                self.osm_maps_folder = Path('data', 'maps')
         else:
             raise SUMO_network_Exception__NetworkTypeNotFound(self.network_type)
 
@@ -87,17 +90,15 @@ class SUMO_network():
 
 
     def network_generation(self, save_geojson=True, verbose=False):           
+        self.network_file = Path(self.name_simulationFile+'.net.xml')
+        network_path = Path(self.folder_simulationName, self.network_file)
         if  self.network_type == "generate": 
-            self.network_file = f"{self.name_simulationFile}.net.xml"
-            
-
-            
             if self.geometry == "grid":
-                sumo_cmd = f"netgenerate --grid    --grid.number={self.number} --grid.length={self.length} --output-file={self.folder_simulationName}/{self.network_file}"
+                sumo_cmd = f"netgenerate --grid   --grid.number={self.number} --grid.length={self.length} --output-file={network_path}"
             elif self.geometry == "spider":
-                sumo_cmd = f"netgenerate --spider  --spider.arm-number={self.arm_number} --spider.circle-number={self.circle_number} --spider.space-radius={self.space_radius} --spider.omit-center={self.omit_center}  --output-file={self.folder_simulationName}/{self.network_file}"
+                sumo_cmd = f"netgenerate --spider --spider.arm-number={self.arm_number} --spider.circle-number={self.circle_number} --spider.space-radius={self.space_radius} --spider.omit-center={self.omit_center}  --output-file={network_path}"
             elif self.geometry == "rand":
-                sumo_cmd = f"netgenerate --rand    --rand.iterations={self.iterations} --bidi-probability={self.bidi_probability} --rand.connectivity={self.rand_connectivity}  --output-file={self.folder_simulationName}/{self.network_file}"
+                sumo_cmd = f"netgenerate --rand   --rand.iterations={self.iterations} --bidi-probability={self.bidi_probability} --rand.connectivity={self.rand_connectivity}  --output-file={network_path}"
             
             if verbose:
                 print("\nnetwork generation\t>>\t",sumo_cmd,"")
@@ -109,14 +110,23 @@ class SUMO_network():
             p_bar.update(10)
             p_bar.refresh()
         elif self.network_type == "maps" or self.network_type == "map":
-            if not os.path.isfile(f"{self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm"):
-                raise SUMO_simulation_Exception__FileMapNotFound(self.osm_maps_name,self.osm_maps_GEO_filepath)
+            osm_path = Path(self.osm_maps_folder, self.osm_maps_name,(self.osm_maps_name+'.geo.osm'))
+
+            if not os.path.isfile(osm_path):
+                raise SUMO_simulation_Exception__FileMapNotFound(self.osm_maps_name,osm_path)
             
+            osm_path_copy = Path(self.folder_simulationName, (self.name_simulationFile+'.geo.osm'))
+            shutil.copyfile(osm_path, osm_path_copy)
+
+
             self.network_file = f"{self.name_simulationFile}.net.xml"
-            if self.r:
-                sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file} --geometry.remove --remove-edges.isolated --roundabouts.guess  --ramps.guess --junctions.join --tls.guess-signals --tls.join --tls.default-type actuated"
+            self.netplain_file = f"{self.name_simulationFile}.netplain"
+            netplain_file = Path(self.folder_simulationName, self.netplain_file)
+            osmNetType = "${SUMO_HOME}/data/typemap/osmNetconvert.typ.xml,${SUMO_HOME}/data/typemap/osmNetconvertUrbanDe.typ.xml"
+            if self.remove_geometry:
+                sumo_cmd = f"netconvert --osm-files {osm_path} --type-files {osmNetType} --output-file={network_path} --plain-output-prefix {netplain_file} --geometry.remove --remove-edges.isolated --roundabouts.guess  --ramps.guess --junctions.join --tls.guess-signals --tls.join --tls.default-type actuated"
             else:
-                sumo_cmd = f"netconvert --osm-files {self.osm_maps_folder}\GEO__{self.osm_maps_name}.osm --output-file={self.folder_simulationName}/{self.network_file}  --ramps.guess --junctions.join --tls.guess-signals --tls.discard-simple --tls.join --tls.default-type actuated"
+                sumo_cmd = f"netconvert --osm-files {osm_path} --type-files {osmNetType} --output-file={network_path} --plain-output-prefix {netplain_file}  --ramps.guess --junctions.join --tls.guess-signals --tls.discard-simple --tls.join --tls.default-type actuated"
        
             if verbose:
                 print("\nnetwork convertion\t>>\t",sumo_cmd,"")
@@ -133,8 +143,11 @@ class SUMO_network():
         return self.network_file
 
     def network2geojson(self, verbose=False):
-        self.network_geojson_file = f"{self.name_simulationFile}.net.geojson"
-        sumo_cmd = f'python "{self.sumo_tool_folder}/net/net2geojson.py" --net-file {self.folder_simulationName}/{self.network_file} --output-file {self.folder_simulationName}/{self.network_geojson_file} --internal'
+        self.network_geojson_file = Path( self.name_simulationFile +'.net.geojson')
+        network_geojson_path = Path(self.folder_simulationName, self.network_geojson_file)
+        network_path = Path( self.folder_simulationName, self.network_file)
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'net','net2geojson.py')
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}" --net-file {network_path} --output-file {network_geojson_path} --internal'
         if verbose:
             print("\nnetwork export to network2geojson\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -161,9 +174,13 @@ class SUMO_network():
         
 
     def geometry_keymap_generation(self, osm_map_name, force_overwrite, verbose=False):
-        key_geometry_file = f"{self.name_simulationFile}.geometry.{osm_map_name}.xml"
-        if not os.path.isfile(f"{self.folder_simulationName}/{key_geometry_file}") or force_overwrite:
-            sumo_cmd = f"polyconvert --net-file {self.folder_simulationName}/{self.network_file} --output-file={self.folder_simulationName}/{key_geometry_file} --osm-files {self.osm_maps_folder}/{osm_map_name}.osm  --all-attributes"
+        key_geometry_file = Path(self.name_simulationFile,'.geometry.',osm_map_name,'.xml')
+        key_geometry_path = Path(self.folder_simulationName,key_geometry_file)
+
+        if not os.path.isfile(key_geometry_path) or force_overwrite:
+            network_path = Path(self.folder_simulationName, self.network_file)
+            osm_path = Path(self.osm_maps_folder,osm_map_name,'.osm')
+            sumo_cmd = f"polyconvert --net-file {network_path} --output-file={key_geometry_path} --osm-files {osm_path}  --all-attributes"
             #--ignore-errors
             if verbose:
                 print("\ngeometry generation\t>>\t",sumo_cmd,"")

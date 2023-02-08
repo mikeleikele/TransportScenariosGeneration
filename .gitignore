@@ -3,3 +3,7 @@ data/
 GEO_README.txt
 a.txt
 *.json
+.VSCodeCounter/
+cache/
+.vscode/
+*.json

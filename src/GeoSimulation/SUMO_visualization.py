@@ -4,17 +4,17 @@ from .GeoGraph import *
 from .SUMO_network import *
 from .SUMO_routes import *
 from ..tool.utils_matplot import UtilsMatplot
-
+from pathlib import Path
 
 class SUMO_visualization():
 
-    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, verbose=False):
+    def __init__(self, sumo_tool_folder, folder_simulationName, name_simulationFile, python_cmd, verbose=False):
         self.folder_simulationName = folder_simulationName
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
         self.sumo_tool_folder = sumo_tool_folder
-        
-    
+        self.python_cmd = python_cmd
+            
     def plotAttributes(self):
         #https://sumo.dlr.de/docs/Tools/Visualization.html
         raise NotImplementedError()
@@ -33,12 +33,16 @@ class SUMO_visualization():
         g: gap to leader (requires --fcd-output.max-leader-distance)
     """
     def plotTrajectories(self, filename_output, simulObj, attr_code="ts", routeList=None, edgesList=None, verbose=False):
-        fcdFile = simulObj.get_fcdFile()
+        fcd_file = simulObj.get_fcdFile()
 
         for char_code in attr_code:
             if char_code not in ['t', 's', 'd', 'a', 'i', 'x', 'y', 'k']:
                 raise NotImplementedError()
-        sumo_cmd = f'python "{self.sumo_tool_folder}/plot_trajectories.py" {self.folder_simulationName}/{fcdFile} --trajectory-type {attr_code} --output {self.folder_simulationName}/{filename_output}'
+
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'plot_trajectories.py')
+        output_path = Path(self.folder_simulationName, filename_output)
+        fcd_path = Path(self.folder_simulationName, fcd_file)
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}" {fcd_path} --trajectory-type {attr_code} --output {output_path}'
         if edgesList is not None:
             sumo_cmd = sumo_cmd +f' --filter-edges {edgesList}'
         elif  routeList is not None:
@@ -52,7 +56,13 @@ class SUMO_visualization():
         if not UtilsMatplot.isColorMap(color_map):
             raise SUMO_visualization_Exception__ColorMapNotExist(color_map)
         dumpinputs = self.checkCountConcat(namePlot="plot_net_dump", type_value="plot", n_required=2, file_list=fileinput, sep=",")
-        sumo_cmd = f'python "{self.sumo_tool_folder}/visualization/plot_net_dump.py" --net {self.folder_simulationName}/{networkFile} --dump-inputs {dumpinputs} --measures {key_colors},{key_widths} --colormap {color_map} --min-color-value -.1 --max-color-value .1 --max-width-value .1  --max-width 3 --min-width .5 --output {self.folder_simulationName}/{filename_output} --blind'        
+        # dumpinputs : first is used for the edges' color, the second for their widths, in this case are the same
+
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'visualization', 'plot_net_dump.py')
+        network_path = Path(self.folder_simulationName, networkFile)
+        output_path = Path(self.folder_simulationName, filename_output)
+        
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}" --net {network_path} --dump-inputs {dumpinputs} --measures {key_colors},{key_widths} --colormap {color_map} --min-color-value -.1 --max-color-value .1 --max-width-value .1 --max-width 3 --min-width .5 --output {output_path} --blind'        
         if verbose:
             print("\nplotNet2Key\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -60,15 +70,36 @@ class SUMO_visualization():
     def plotNetSpeed(self, filename_output, networkFile, color_map, verbose=True):
         if not UtilsMatplot.isColorMap(color_map):
             raise SUMO_visualization_Exception__ColorMapNotExist(color_map)
-        sumo_cmd = f'python "{self.sumo_tool_folder}/visualization/plot_net_speeds.py"  --net {self.folder_simulationName}/{networkFile}  --edge-width .5 --output {self.folder_simulationName}/{filename_output}  --colormap {color_map} --blind'
+
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'visualization', 'plot_net_speeds.py')
+        network_path = Path(self.folder_simulationName, networkFile)
+        output_path = Path(self.folder_simulationName, filename_output)
+
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}"  --net {network_path}  --edge-width .5 --output {output_path}  --colormap {color_map} --blind'
 
         if verbose:
             print("\nplotNetSpeed\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
 
     def plotTripDistributions(self, filename_output, measure="duration", bins=10, verbose=True):
-        sumo_cmd = f'python "{self.sumo_tool_folder}/visualization/plot_tripinfo_distributions.py"  --tripinfos-inputs {self.folder_simulationName}/{fileinput} --output {self.folder_simulationName}/{filename_output} --measure {measure} --bins {bins} --blind'
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'visualization', 'plot_tripinfo_distributions.py')
+        input_path = Path(self.folder_simulationName, fileinput)
+        output_path = Path(self.folder_simulationName, filename_output)
 
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}"  --tripinfos-inputs {input_path} --output {output_path} --measure {measure} --bins {bins} --blind'
+
+        if verbose:
+            print("\nplotTripDistributions\t>>\t",sumo_cmd,"")
+        os.system(sumo_cmd)
+    
+    def plotAllTrajectories(self,  measure="duration", bins=10, verbose=True):
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'visualization', 'plotXMLAttributes.py')
+        fcd_path = Path(self.folder_simulationName, self.name_simulationFile+'.out.fcd.xml')
+
+        output_png_path = Path(self.folder_simulationName, self.name_simulationFile+'plot.allTrajectories.png')
+        output_csv_path = Path(self.folder_simulationName, self.name_simulationFile+'out.allTrajectories.csv')
+
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}"  -xattr x --yattr y --output {output_png_path} {fcd_path} --scatterplot --csv-output {output_csv_path}'         
         if verbose:
             print("\nplotTripDistributions\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -80,9 +111,11 @@ class SUMO_visualization():
         else:
             dumpinputs_list = []
             for _file in file_list:
-                dumpinputs_list.append(f'{self.folder_simulationName}/{_file}')
+                dumpinputs_list.append(str(Path(self.folder_simulationName,_file)))
             dumpinputs = sep.join(dumpinputs_list)
             return dumpinputs
+
+
 
 
 class SUMO_visualization_Exception__ColorMapNotExist(Exception):

@@ -1,19 +1,28 @@
 from src.GeoSimulation.SUMO_computation import *
 from src.GeoSimulation.SUMO_visualization import *
 from src.GeoSimulation.SUMO_roadstats import *
-
+from pathlib import PurePosixPath
 def start_test():
-    sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
-    sumo_obj = SUMO_simulation(sumo_tool_folder= sumo_tool_folder, name_file="bassa",folder_name="data\sumo_simulation_files\\bassa", simulation_network_mode="osm",simulation_route_mode="random",osm_map_name="bassa")
+    
+    #sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
+    #sumo_tool_folder = Path('/','usr','share','sumo','tools')
+    sumo_tool_folder = PurePosixPath('/usr','share','sumo','tools') 
+    print("Sumo_tool_folder :",sumo_tool_folder)
+    folder_name_path = Path('data', 'sumo_simulation_files', '-')
+    sumo_obj = SUMO_simulation(sumo_tool_folder= sumo_tool_folder, name_file="-",folder_name=folder_name_path, simulation_network_mode="osm",simulation_route_mode="random",osm_map_name="-")
     sumo_obj.generate_simulation(verbose=True)
     #sumo_obj.download_simulation()
 
-def start_test_grid(name_simulationFile):
+def start_SUMO_simulation(name_simulationFile):
 
     #https://sumo.dlr.de/docs/netgenerate.html
-    sumo_tool_folder = 'C:/Program Files (x86)/Eclipse/Sumo/tools'
+    #sumo_tool_folder = Path('C:/','Program Files (x86)','Eclipse','Sumo','tools')
+    #Python3 = "python"
+    sumo_tool_folder = PurePosixPath('/usr','share','sumo','tools') 
+    Python3 = "python3"
+    print("Sumo_tool_folder : ",sumo_tool_folder)
     
-    folder_simulationName = f"data\sumo_simulation_files\\{name_simulationFile}"
+    folder_simulationName = Path('data','sumo_simulation_files',name_simulationFile)
 
     net_grid_settings={
         "network_type":"generate",
@@ -36,7 +45,7 @@ def start_test_grid(name_simulationFile):
     net_maps_settings={
         "network_type":"maps",
         "maps":{
-            "osm_maps_name":"bassa", "osm_maps_folder":None, "remove_geometry":True,
+            "osm_maps_name":"cervi", "osm_maps_folder":None, "remove_geometry":True,
             "geometry_settings":['all']
         }
     }
@@ -44,16 +53,16 @@ def start_test_grid(name_simulationFile):
     net_maps_settings_noGeom={
         "network_type":"maps",
         "maps":{
-            "osm_maps_name":"bassa", "osm_maps_folder":None, "remove_geometry":True,            
+            "osm_maps_name":"cervi", "osm_maps_folder":None, "remove_geometry":False,            
         }
     }
 
-    network_settings=net_grid_settings
+    network_settings=net_maps_settings_noGeom
 
     routes_settings_random15={
         "routes_type":"random",
         "options":{
-            "begin_time":0, "end_time":3000, "period":2000,"vehicle":500
+            "begin_time":0, "end_time":1000, "period":1000,"vehicle":500
         },
         "simulation_opt":{
             "continuos_reroutes": True,
@@ -69,15 +78,14 @@ def start_test_grid(name_simulationFile):
         ]
     }
 
-    sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile, 
-    network_settings=network_settings, routes_settings=routes_settings, edgeStats_settings=edgeStats_settings)
-    sumo_obj.generate_simulation(verbose=True)
+    sumo_obj = SUMO_computation(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile, network_settings=network_settings, routes_settings=routes_settings, edgeStats_settings=edgeStats_settings, python_cmd=Python3)
+    sumo_obj.generate_simulation(python_cmd=Python3, verbose=True)
     simulObj = sumo_obj.esecute_simulation(stop=True, fcd=True, tripsInfo=True, verbose=True)
     
     roadstats = SUMO_roadstats(name_simulationFile, is_osm=False)
     roadstats.compute_roadstats()
     
-    sumo_viz = SUMO_visualization(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile)
+    sumo_viz = SUMO_visualization(sumo_tool_folder= sumo_tool_folder, folder_simulationName=folder_simulationName, name_simulationFile=name_simulationFile, python_cmd=Python3)
     
     
     file_edgeData = [f"{name_simulationFile}.out.edgedata.all.xml",f"{name_simulationFile}.out.edgedata.all.xml"]

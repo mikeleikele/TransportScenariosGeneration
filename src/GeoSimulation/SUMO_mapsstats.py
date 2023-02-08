@@ -1,18 +1,25 @@
 import xml.etree.ElementTree as ET
+from xml.dom import minidom
 import ast
+from pathlib import Path
+
+#OSM NETWORK STATS
+#e.g. type of roads, #roads, speed limits, etc 
 
 class SUMO_mapsstats():
 
     def __init__(self, maps_name):
-        self.filepath = f'data\maps\GEO__{maps_name}.osm'
-        tree = ET.parse(self.filepath)
-        self.root = tree.getroot()
+        self.filepath = Path('data', 'maps',maps_name, (maps_name+'.geo.osm'))
+        self.outFileNodes =  Path('data', 'maps',maps_name, (maps_name+'.out.mapsstat.nodes.osm'))        
+        self.outFileWays =  Path('data', 'maps',maps_name, (maps_name+'.out.mapsstat.ways.osm'))        
         self.node_list = dict()
         self.way_list = dict()
         self.node_atts = dict()
         self.way_atts = dict()
 
     def compute_mapsstats(self, value_unique=True, save=True, show_name=True):
+        tree = ET.parse(self.filepath)
+        self.root = tree.getroot()
         self.statsFromOSM(value_unique)
         if save:
             self.showStats(show_name)
@@ -84,13 +91,20 @@ class SUMO_mapsstats():
         return {k: v for k, v in sorted(x_dict.items(), key=lambda item: item[1], reverse=reverse)}
 
     def showStats(self, show_name=True):
-        print("NODE ATT\t\t")
+        nodes_root = ET.Element("nodes")
         for key in self.node_atts:
-            print(key,"\t\t\t\t", self.sortDict(self.node_atts[key]))
-        print("\n\n\n")
-        print("WAY ATT\t\t")
-        for key in self.way_atts:
-            if key!= "name":
-                print(key,"\t\t\t\t", self.sortDict(self.way_atts[key]),"\n\n")
-            elif show_name:
-                print(key,"\t\t\t\t", self.sortDict(self.way_atts[key]))
+            node = ET.SubElement(nodes_root, "node")
+            node.set("att_nn", self.sortDict(self.node_atts[key])) 
+        xmlstr = minidom.parseString(ET.tostring(nodes_root)).toprettyxml(indent="   ")
+        with open(f"{self.outFileNodes}", "w") as f:
+            f.write(xmlstr)
+            
+        ways_root = ET.Element("nodes")
+        for key in self.ways_root:
+            ways = ET.SubElement(ways_root, "ways")
+            ways.set("key", key) 
+            ways.set("att", self.sortDict(self.way_atts[key])) 
+
+        xmlstr = minidom.parseString(ET.tostring(ways_root)).toprettyxml(indent="   ")
+        with open(f"{self.outFileWays}", "w") as f:
+            f.write(xmlstr)

@@ -1,13 +1,15 @@
 import os 
 from .SUMO_network import *
+from pathlib import Path
 
 class SUMO_routes():
 
-    def __init__(self, sumo_tool_folder, folder_simulationName, routes_settings, name_simulationFile, networkObj,  verbose=False):
+    def __init__(self, sumo_tool_folder, folder_simulationName, routes_settings, name_simulationFile, networkObj, python_cmd, verbose=False):#="python"
         self.folder_simulationName = folder_simulationName
         self.name_simulationFile = name_simulationFile
         self.verbose = verbose
         self.sumo_tool_folder = sumo_tool_folder
+        self.python_cmd = python_cmd
 
         self.routes_type = routes_settings['routes_type']
         if self.routes_type not in ['random','demand']:
@@ -55,6 +57,8 @@ class SUMO_routes():
         return self.flows_file
 
     def get_continuous_reroutingFile(self):
+        if not self.continuos_reroutes_bool:
+            return None
         if self.continuos_reroutes_file is None:
             raise SUMO_routes_Exception__FileNotInit("Continuous_rerouting")
         return self.continuos_reroutes_file
@@ -71,8 +75,11 @@ class SUMO_routes():
 
     def flows_generation_random(self, verbose=False):
         #https://sumo.dlr.de/docs/Tools/Trip.html        
-        self.flows_file = f"{self.name_simulationFile}.flows.xml"        
-        sumo_cmd = f'python "{self.sumo_tool_folder}/randomTrips.py" --net-file {self.folder_simulationName}\\{self.network_file} --output-trip-file {self.folder_simulationName}\\{self.flows_file} --begin {self.begin_time} --end {self.end_time} --period {self.period} --flows {self.vehicle}'
+        self.flows_file = Path(self.name_simulationFile+'.flows.xml')
+        flows_path = Path(self.folder_simulationName, self.flows_file)
+        network_path = Path(self.folder_simulationName, self.network_file)
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'randomTrips.py')
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}" --net-file {network_path} --output-trip-file {flows_path} --begin {self.begin_time} --end {self.end_time} --period {self.period} --flows {self.vehicle}'
         if verbose:
             print("\nflows generation\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -80,8 +87,12 @@ class SUMO_routes():
 
     def routes_generation_jtrrouter(self, verbose=False):
         #https://sumo.dlr.de/docs/jtrrouter.html
-        self.routes_file = f"{self.name_simulationFile}.routes.xml"
-        sumo_cmd = f"jtrrouter --route-files={self.folder_simulationName}\\{self.flows_file} --net-file={self.folder_simulationName}\\{self.network_file} --output-file={self.folder_simulationName}\\{self.routes_file} --begin {self.begin_time}  --end {self.end_time} --accept-all-destinations"        
+        self.routes_file = Path(self.name_simulationFile+'.routes.xml')
+        routes_path = Path(self.folder_simulationName, self.routes_file)
+        network_path = Path(self.folder_simulationName, self.network_file)
+        flows_path = Path(self.folder_simulationName, self.flows_file)
+
+        sumo_cmd = f"jtrrouter --route-files={flows_path} --net-file={network_path} --output-file={routes_path} --begin {self.begin_time}  --end {self.end_time} --accept-all-destinations"        
         if verbose:
             print("\nroutes generation\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -90,7 +101,11 @@ class SUMO_routes():
     def routes_generation_duarouter(self, citiesdemand_file, verbose=False):
         #https://sumo.dlr.de/docs/Demand/Activity-based_Demand_Generation.html
         self.routes_file = f"{self.name_simulationFile}.routes.xml"
-        sumo_cmd = f"duarouter --route-files={self.folder_simulationName}\\{citiesdemand_file} --net-file={self.folder_simulationName}\\{self.network_file} --output-file={self.folder_simulationName}\\{self.routes_file} --ignore-errors"        
+        routes_path = Path(self.folder_simulationName, self.routes_file)
+        citiesdemand_path = Path(self.folder_simulationName, citiesdemand_file)
+        
+        network_path = Path(self.folder_simulationName, self.network_file)
+        sumo_cmd = f"duarouter --route-files={citiesdemand_path} --net-file={network_path} --output-file={routes_path} --ignore-errors"        
         if verbose:
             print("\nduarouter_file generation\t>>\t",sumo_cmd,"")
         os.system(sumo_cmd)
@@ -99,7 +114,11 @@ class SUMO_routes():
     def continuous_rerouting_generation(self, verbose=False):
         #https://sumo.dlr.de/docs/Tools/Misc.html#generatecontinuousrerouterspy
         self.continuos_reroutes_file = f"{self.name_simulationFile}.rerouting.xml"
-        sumo_cmd = f'python "{self.sumo_tool_folder}/generateContinuousRerouters.py" --net-file {self.folder_simulationName}\\{self.network_file} --output-file {self.folder_simulationName}\\{self.continuos_reroutes_file} --begin {self.begin_time} --end {self.end_time}'
+        continuos_reroutes_path = Path(self.folder_simulationName, self.continuos_reroutes_file)
+        network_path = Path(self.folder_simulationName, self.network_file)
+
+        path_cmd_sumo_py = Path( self.sumo_tool_folder, 'generateContinuousRerouters.py')
+        sumo_cmd = f'{self.python_cmd} "{path_cmd_sumo_py}" --net-file {network_path} --output-file {continuos_reroutes_path} --begin {self.begin_time} --end {self.end_time}'
         if verbose:
             print("\ncontinuous rerouting generation\t>>\t",sumo_cmd)
         os.system(sumo_cmd)
