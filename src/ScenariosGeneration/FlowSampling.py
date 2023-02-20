@@ -188,11 +188,11 @@ class FlowSampling():
         if save:
             adj_matrix = nx.adjacency_matrix(sampled_geograph)
             att_matrix = dict()
-            att_matrix['speed_mean'] = nx.adjacency_matrix(sampled_geograph,weight="speed_mean")
-            att_matrix['weighted_mean'] = nx.adjacency_matrix(sampled_geograph,weight="weighted_mean")
-            att_matrix['travel_time'] = nx.adjacency_matrix(sampled_geograph,weight="travel_time")
-            att_matrix['traveled'] = nx.adjacency_matrix(sampled_geograph,weight="traveled")
-            att_matrix['vehicles_id'] = nx.adjacency_matrix(sampled_geograph,weight="vehicles_id")
+            att_matrix['speed_mean'] = nx.adjacency_matrix(sampled_geograph, nodelist=sorted(sampled_geograph.nodes()), weight="speed_mean")
+            att_matrix['weighted_mean'] = nx.adjacency_matrix(sampled_geograph, nodelist=sorted(sampled_geograph.nodes()), weight="weighted_mean")
+            att_matrix['travel_time'] = nx.adjacency_matrix(sampled_geograph, nodelist=sorted(sampled_geograph.nodes()), weight="travel_time")
+            att_matrix['traveled'] = nx.adjacency_matrix(sampled_geograph, nodelist=sorted(sampled_geograph.nodes()), weight="traveled")
+            att_matrix['vehicles_id'] = nx.adjacency_matrix(sampled_geograph, nodelist=sorted(sampled_geograph.nodes()), weight="vehicles_id")
             
             self.sparsematrix_save(adj_matrix, sampled_dir, sample_id, 'matrix.network_adj')
             self.sparsematrix_save(att_matrix['speed_mean'], sampled_dir, sample_id, 'matrix.speed_mean')
