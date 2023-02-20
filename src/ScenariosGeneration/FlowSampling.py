@@ -89,7 +89,7 @@ class FlowSampling():
             random_roads_vehicles = self.create_sampled_flows(sample_id=sample_id, sampled_dir=folder_sample, save=save_flows)
             self.create_sampled_graph(random_roads_vehicles=random_roads_vehicles, sampled_dir=folder_sample, sample_id=sample_id, save=save_sample_graphmatrix, draw_graph=draw_graph)
 
-    def create_sampled_flows(self, sampled_dir, sample_id, save=False):
+    def create_sampled_flows(self, sampled_dir, sample_id, save=True):
         roads = list(self.df_samplingstats.index.unique(level='roads'))
         vehicles = list(self.df_samplingstats.index.unique(level='vehicles'))
         

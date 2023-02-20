@@ -6,6 +6,8 @@ import pandas as pd
 from tqdm.auto import tqdm
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import warnings
+warnings.filterwarnings("ignore")
 
 class OSMgeometry:
     options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
