@@ -40,6 +40,8 @@ class OSMgeometry:
 
 class GeoGraph:
     def __init__(self, geo_maps_settings):
+        ox.config(all_oneway=True, log_console=True, use_cache=True)
+
         self.maps_name = geo_maps_settings["osm_maps_name"] 
 
         if "map_folder" in geo_maps_settings:
@@ -97,7 +99,7 @@ class GeoGraph:
             geograph = self.graph_from_place(query, simplification)
         return geograph
 
-    def graph_from_place(self, place, simplify=True,network_type='all', simplification=False, save=True, consolidate_intersections=True):
+    def graph_from_place(self, place, simplify=True,network_type='drive', simplification=False, save=True, consolidate_intersections=False):
         """
         Request a graph from OSMNX
         network_type : "all_private", "all", "bike", "drive", "drive_service", "walk"
