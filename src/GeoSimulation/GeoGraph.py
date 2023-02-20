@@ -40,7 +40,7 @@ class OSMgeometry:
 
 class GeoGraph:
     def __init__(self, geo_maps_settings):
-        ox.config(all_oneway=True, log_console=True, use_cache=True)
+        ox.config(log_console=False, use_cache=True)
 
         self.maps_name = geo_maps_settings["osm_maps_name"] 
 
