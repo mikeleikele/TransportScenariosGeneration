@@ -12,6 +12,8 @@ import shutil
 import json
 import warnings
 warnings.filterwarnings("ignore")
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 from .FlowVisualization import *
 
 
@@ -125,7 +127,24 @@ class FlowSampling():
         if save:
             self.flowsSampled = Path(sampled_dir,self.simulation_name+'.'+sample_id+'.out.flowsSampled.pkl')
             random_roads_vehicles.to_pickle(self.flowsSampled)
+
+            flowsSampled_ExcludedFile = Path(sampled_dir,self.simulation_name+'.'+sample_id+'.out.flowsSampled_excluded.txt')
+            excluded_root = ET.Element("Excluded")
+            excl_road = ET.SubElement(excluded_root, "Roads")
+            for _road in roads:
+                r = ET.SubElement(excl_road, "Road") 
+                r.set("id",_road)
+            excl_street = ET.SubElement(excl_street, "Street") 
+            for _veh in vehicles:
+                r = ET.SubElement(_road, "Vehicle") 
+                r.set("id",_veh)
+            xmlstr = minidom.parseString(ET.tostring(excluded_root)).toprettyxml(indent="   ")
+            with open(flowsSampled_ExcludedFile, "w") as f:
+                f.write(xmlstr)
+            
+            
         return random_roads_vehicles
+
 
     def create_sampled_graph(self, random_roads_vehicles, sampled_dir, sample_id, save=False, draw_graph=False):
         edge_data = {}
