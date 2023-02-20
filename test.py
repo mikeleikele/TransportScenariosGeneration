@@ -33,7 +33,7 @@ def statsRoads(simulation_name):
 
 def flowgen(simulation_name, number_samples):
     flows = FlowSampling(is_simulation=True, simulation_name=simulation_name)
-    flows.generate_samples(number_samples, draw_graph=True)
+    flows.generate_samples(number_samples, draw_graph=True, save_flows=True)
 
 def flowview(simulation_name, number_sample):
     flowviewer = FlowVisualization(simulation_name, "randomgraph", number_sample, load_data=True)
