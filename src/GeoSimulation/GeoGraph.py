@@ -114,16 +114,15 @@ class GeoGraph:
             if simplification:
                 G = ox.simplification.simplify_graph(G, strict=True, remove_rings=True, clean_periphery =True)
             if consolidate_intersections:
-                G2 = ox.consolidate_intersections(G, rebuild_graph=True, tolerance=15, dead_ends=True)
-            else:
-                G2 = G
+                G_consolidated = ox.consolidate_intersections(G, rebuild_graph=True, tolerance=15, dead_ends=True)
+                G = ox.project_graph(G_consolidated, to_crs='epsg:4326')
             if save:
                 geo_filename = Path(self.map_folder, self.maps_name)
-                ox.save_graphml(G2, filepath=Path(geo_filename.with_suffix(".geo.geojson")))
-                ox.save_graph_xml(G2, filepath=Path(geo_filename.with_suffix(".geo.osm") ))
+                ox.save_graphml(G, filepath=Path(geo_filename.with_suffix(".geo.geojson")))
+                ox.save_graph_xml(G, filepath=Path(geo_filename.with_suffix(".geo.osm") ))
         except Exception:
             raise GeoGraph_Exception__Param(place)
-        return G2
+        return G
 
 
     def geometries_from_place(self, places, tags={'natural':True,'place':True},save=False):
