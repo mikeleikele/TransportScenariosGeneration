@@ -134,9 +134,9 @@ class FlowSampling():
             for _road in roads:
                 r = ET.SubElement(excl_road, "Road") 
                 r.set("id",str(_road))
-            excl_street = ET.SubElement(excl_street, "Street") 
+            excl_street = ET.SubElement(excluded_root, "Street") 
             for _veh in vehicles:
-                r = ET.SubElement(_road, "Vehicle") 
+                r = ET.SubElement(excl_street, "Vehicle") 
                 r.set("id",str(_veh))
             xmlstr = minidom.parseString(ET.tostring(excluded_root)).toprettyxml(indent="   ")
             with open(flowsSampled_ExcludedFile, "w") as f:
