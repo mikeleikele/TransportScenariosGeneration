@@ -125,10 +125,10 @@ class FlowSampling():
                 for xroad in visited_road_list:
                     roads.remove(xroad)
         if save:
-            self.flowsSampled = Path(sampled_dir,self.simulation_name+'.'+sample_id+'.out.flowsSampled.pkl')
+            self.flowsSampled = Path(sampled_dir,self.simulation_name+'.'+str(sample_id)+'.out.flowsSampled.pkl')
             random_roads_vehicles.to_pickle(self.flowsSampled)
 
-            flowsSampled_ExcludedFile = Path(sampled_dir,self.simulation_name+'.'+sample_id+'.out.flowsSampled_excluded.txt')
+            flowsSampled_ExcludedFile = Path(sampled_dir,self.simulation_name+'.'+str(sample_id)+'.out.flowsSampled_excluded.txt')
             excluded_root = ET.Element("Excluded")
             excl_road = ET.SubElement(excluded_root, "Roads")
             for _road in roads:
