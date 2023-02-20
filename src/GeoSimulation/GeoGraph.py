@@ -1,4 +1,5 @@
 import osmnx as ox
+import networkx as nx
 import os 
 import geopandas
 import pandas as pd
@@ -115,7 +116,8 @@ class GeoGraph:
                 G = ox.simplification.simplify_graph(G, strict=True, remove_rings=True, clean_periphery =True)
             if consolidate_intersections:
                 G_consolidated = ox.consolidate_intersections(G, rebuild_graph=True, tolerance=15, dead_ends=True)
-                G = ox.project_graph(G_consolidated, to_crs='epsg:4326')
+                #G = ox.project_graph(G_consolidated, to_crs='epsg:4326')
+                G = nx.convert_node_labels_to_integers(G_consolidated)
             if save:
                 geo_filename = Path(self.map_folder, self.maps_name)
                 ox.save_graphml(G, filepath=Path(geo_filename.with_suffix(".geo.geojson")))
