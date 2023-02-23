@@ -64,7 +64,7 @@ def start_SUMO_simulation(name_simulationFile):
     routes_settings_random15={
         "routes_type":"random",
         "options":{
-            "begin_time":0, "end_time":1000, "period":1000,"vehicle":500
+            "begin_time":0, "end_time":1000, "period":1000,"vehicle":5000
         },
         "simulation_opt":{
             "continuos_reroutes": True,

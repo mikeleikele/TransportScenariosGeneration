@@ -2,8 +2,8 @@ from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
 from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
 from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 import sys
-from src.ScenariosGeneration.FlowSampling  import FlowSampling
-from src.ScenariosGeneration.FlowVisualization  import FlowVisualization
+from src.SamplesGeneration.FlowSampling  import FlowSampling
+from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 
 def geo_test():
     GeoGraph_test.start_test()
