@@ -16,10 +16,12 @@ def start_test():
 def start_SUMO_simulation(name_simulationFile):
 
     #https://sumo.dlr.de/docs/netgenerate.html
-    #sumo_tool_folder = Path('C:/','Program Files (x86)','Eclipse','Sumo','tools')
+    sumo_tool_folder = Path('C:/','Program Files (x86)','Eclipse','Sumo','tools')
     #Python3 = "python"
-    sumo_tool_folder = PurePosixPath('/usr','share','sumo','tools') 
-    Python3 = "python3"
+    #
+    # 
+    # sumo_tool_folder = PurePosixPath('/usr','share','sumo','tools') 
+    Python3 = "python"
     print("Sumo_tool_folder : ",sumo_tool_folder)
     
     folder_simulationName = Path('data','sumo_simulation_files',name_simulationFile)

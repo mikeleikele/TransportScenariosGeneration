@@ -37,9 +37,9 @@ def flowgen(simulation_name, number_samples):
 
 def flowview(simulation_name, number_sample):
     flowviewer = FlowVisualization(simulation_name, "randomgraph", number_sample, load_data=True)
-    flows.draw_sampledgraph("travel_time")
-    flows.draw_sampledgraph("weighted_mean")
-
+    #flowviewer.draw_sampledgraph("travel_time")
+    #flowviewer.draw_sampledgraph("weighted_mean")
+    flowviewer.draw_sampledgraph("vehicles_id")
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -98,7 +98,6 @@ if __name__ == "__main__":
         flowgen(simulation_name,number_samples)
         print(9)
     elif args[0] ==  "--flowView" or args[0] == "--fv":
-        
         simulation_name = args[1]
         number_sample = args[2]                   
         flowview(simulation_name,number_sample)

@@ -146,7 +146,7 @@ class FlowSampling():
         return random_roads_vehicles
 
 
-    def create_sampled_graph(self, random_roads_vehicles, sampled_dir, sample_id, save=False, draw_graph=False):
+    def create_sampled_graph(self, random_roads_vehicles, sampled_dir, sample_id, save=True, draw_graph=False):
         edge_data = {}
         for idx, data in random_roads_vehicles.groupby(level=0):
             _id_road = list(data.index)[0][0]
@@ -230,6 +230,7 @@ class FlowSampling():
                 sampledgraph_visual = FlowVisualization(self.simulation_name, sampled_dir, sample_id, load_data=False, sampled_geograph=sampled_geograph, edge_stats=edge_stats)
                 sampledgraph_visual.draw_sampledgraph(attr="travel_time")
                 sampledgraph_visual.draw_sampledgraph(attr="weighted_mean")
+                sampledgraph_visual.draw_sampledgraph(attr="vehicles_id")
 
 
         
