@@ -28,11 +28,11 @@ class FlowVisualization():
         sample_id_str = f'{sample_id}'
         self.sampled_dir = sampled_dir
         if load_data:
-            edge_stats_path = Path("data","sumo_simulation_files",self.simulation_name,self.sampled_dir,sample_id_str,self.simulation_name+'.random.'+sample_id_str+'.edgestats.json')  
+            edge_stats_path = Path(self.sampled_dir,sample_id_str,self.simulation_name+'.random.'+sample_id_str+'.edgestats.json')  
             with open(edge_stats_path) as json_file:
                 self.edge_stats = json.load(json_file)
             
-            sampled_geograph_path = Path("data","sumo_simulation_files",self.simulation_name,self.sampled_dir,sample_id_str,self.simulation_name+'.random.'+sample_id_str+'.graph.graphml')
+            sampled_geograph_path = Path(self.sampled_dir,sample_id_str,self.simulation_name+'.random.'+sample_id_str+'.graph.graphml')
             self.sampled_geograph = ox.load_graphml(sampled_geograph_path)
         else:
             self.sampled_geograph = sampled_geograph

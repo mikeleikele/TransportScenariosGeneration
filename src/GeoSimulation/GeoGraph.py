@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
+import matplotlib.pyplot as plt
 
 class OSMgeometry:
     options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
@@ -41,7 +42,7 @@ class OSMgeometry:
         return poi_filter
 
 class GeoGraph:
-    def __init__(self, geo_maps_settings):
+    def __init__(self, geo_maps_settings, plotGraph=True):
         ox.config(log_console=False, use_cache=True)
 
         self.maps_name = geo_maps_settings["osm_maps_name"] 
@@ -70,9 +71,19 @@ class GeoGraph:
 
         self.places = geo_maps_settings["options"]["places"]
         simplification = geo_maps_settings["options"]["simplification"]
+        if "placetype" in geo_maps_settings["options"]:
+            self.placetype = geo_maps_settings["options"]["placetype"]
+            if "dist_point" in geo_maps_settings["options"]:
+                self.dist_point = geo_maps_settings["options"]["dist_point"]
+            else:
+                self.dist_point = 500
+        else:
+            self.placetype = "place"
+        
         self.geograph = self.request_graph(self.places, simplification)
                 
         if geo_maps_settings["options"]["poi_geometry"]:
+            self.POI_maps= True
             list_filter = geo_maps_settings["options"]["poi_option"]["filter"]
             if list_filter == "all":
                 self.filter_poi = OSMgeometry.getFilter()
@@ -82,7 +93,10 @@ class GeoGraph:
                     filter_tuple = OSMgeometry.isFilter(filter_name)   
                     self.filter_poi[filter_tuple[0]] = filter_tuple[1]
             self.poigraph = self.geometries_from_place(self.places,save=True)
-
+        else:
+            self.POI_maps= False
+        if plotGraph:
+            self.drawGraph()
 
     def getGEO(self):
         return self.geograph
@@ -101,7 +115,13 @@ class GeoGraph:
             geograph = self.graph_from_place(query, simplification)
         return geograph
 
-    def graph_from_place(self, place, simplify=True,network_type='drive', simplification=False, save=True, consolidate_intersections=False):
+
+
+    ##
+    ## placetype="place","point"
+    ## dist_point in meters
+    ##po
+    def graph_from_place(self, place,  simplify=True,network_type='drive', simplification=False, save=True, consolidate_intersections=False):
         """
         Request a graph from OSMNX
         network_type : "all_private", "all", "bike", "drive", "drive_service", "walk"
@@ -113,7 +133,15 @@ class GeoGraph:
             p_bar = tqdm(range(10))
             p_bar.update(1)
             p_bar.refresh()
-            G = ox.graph_from_place(place, simplify=simplify, network_type=network_type)
+            if self.placetype=="place":
+                G = ox.graph_from_place(place, simplify=simplify, network_type=network_type)
+            elif self.placetype=="point":
+                if len(place)==2:
+                    G = ox.graph_from_point(place, dist=self.dist_point, simplify=True)
+                else:
+                    raise GeoGraph_Exception__Place_Coordinates(place)
+            else:
+                raise GeoGraph_Exception__Placetype_NotRecognize(self.placetype)
             p_bar.update(10)
             p_bar.refresh()
             if simplification:
@@ -172,6 +200,17 @@ class GeoGraph:
             os.system(sumo_cmd)
         return poi_geodf
 
+    def drawGraph(self):
+        fig, ax = plt.subplots(figsize=(25,18))
+        if self.POI_maps:
+            POI_geo = self.getPOI()
+            POI_geo.plot(ax=ax, facecolor='khaki', alpha=0.7)
+        GEO_geo = self.getGEO()           
+        ox.plot_graph(GEO_geo, ax=ax, node_size=0, edge_linewidth=0.5,show=False)
+        mapsploth_filename = Path(self.map_folder, self.maps_name+".geo.png")
+        fig.savefig(mapsploth_filename)
+
+
     def graph_axis(self,show=False):
         """
         projects graph geometry and plots figure, retrieving an axis
@@ -204,3 +243,21 @@ class GeoGraph_Exception__POI(Exception):
           
     def __str__(self):
         return f"No POI-DATA found for '{self.instance}' location. Please try a geo-codable place from OpenStreetMaps."
+
+class GeoGraph_Exception__Placetype_NotRecognize(Exception):
+    """Exception raised for error no training modality recognized"""
+    def __init__(self,placetype):
+        self.placetype = placetype
+          
+    def __str__(self):
+        return f"No placetype found for '{self.placetype}' location. Placetype can be 'place' or 'point'."
+    
+
+class GeoGraph_Exception__Place_Coordinates(Exception):
+    """Exception raised for error no training modality recognized"""
+    def __init__(self,place):
+        self.place = place
+          
+    def __str__(self):
+        return f"Place shoul be a geo coordinate (x,y)."
+    

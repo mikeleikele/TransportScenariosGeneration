@@ -4,16 +4,20 @@ from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 import sys
 from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
+from pathlib import Path
 
 def geo_test():
     GeoGraph_test.start_test()
+
+def geo_test_point():
+    GeoGraph_test.start_test_point(draw_maps=True)
 
 def geo_simul_test(name_simulationFile):
     GeoGraph_test.start_test()
     SUMO_test.start_SUMO_simulation(name_simulationFile=name_simulationFile)
 
 def simul_test(name_simulationFile):
-    SUMO_test.start_SUMO_simulation(name_simulationFile=name_simulationFile)
+    SUMO_test.start_SUMO_pointsimulation(name_simulationFile=name_simulationFile)
 def simul_vis_test(name_simulationFile):
     SUMO_test.start_SUMO_simulation(name_simulationFile=name_simulationFile)
 
@@ -36,7 +40,8 @@ def flowgen(simulation_name, number_samples):
     flows.generate_samples(number_samples, draw_graph=True, save_flows=True)
 
 def flowview(simulation_name, number_sample):
-    flowviewer = FlowVisualization(simulation_name, "randomgraph", number_sample, load_data=True)
+    sampled_dir = Path("data","sumo_simulation_files",self.simulation_name,"randomgraph")
+    flowviewer = FlowVisualization(simulation_name, sampled_dir, number_sample, load_data=True)
     #flowviewer.draw_sampledgraph("travel_time")
     #flowviewer.draw_sampledgraph("weighted_mean")
     flowviewer.draw_sampledgraph("vehicles_id")
@@ -57,15 +62,14 @@ if __name__ == "__main__":
     elif args[0] == "--geo" or args[0] == "--g":        
         geo_test()    
         print(2)
+    elif args[0] == "--geopoint" or args[0] == "--gp":        
+        geo_test_point()
     
     elif args[0] == "--simulation" or args[0] == "--s":        
         name_simulationFile = args[1]
         simul_test(name_simulationFile)
         print(3)
-    elif args[0] == "--visualsimulation" or args[0] == "--sv":
-        name_simulationFile = args[1]
-        simul_vis_test(name_simulationFile)
-        print(4)
+    
     elif args[0] ==  "--geosimulation" or args[0] == "--gs":
         name_simulationFile = args[1]
         print(name_simulationFile)

@@ -35,7 +35,29 @@ def start_test(POI_maps=False, draw_maps=False):
     if draw_maps:
         if POI_maps:
             POI_geo = geo_settings.getPOI()
-        GEO_geo = bassa_friuli.getGEO()    
+        GEO_geo = geo_settings.getGEO()    
         if POI_maps:
             POI_geo.plot(ax=ax, facecolor='khaki', alpha=0.7)
         ox.plot_graph(GEO_geo, ax=ax, node_size=0, edge_linewidth=0.5,show=True)
+
+
+
+def start_test_point(POI_maps=False, draw_maps=False):
+    
+    
+    maps_name='point_test'
+
+    geo_maps_settings={
+        "osm_maps_name":maps_name,
+        "map_folder":None,
+        "poi_folder":None,
+        "options":{
+            "places":(45.52374, 9.21959),
+            "placetype":"point",
+            "dist_point": 1200,
+            "simplification":True,
+            "poi_geometry":False, 
+        }
+    }
+    geo_settings = GeoGraph(geo_maps_settings=geo_maps_settings)
+    POI_geo = geo_settings.drawGraph()
