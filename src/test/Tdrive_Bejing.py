@@ -322,7 +322,7 @@ class Tdrive_Bejing():
             istance = self.positions_graph[user_id][id_istance]           
             ax.scatter(istance['lon'], istance['lat'], c='orangered', s=2, marker='x')
 
-        mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+"."+user_id+".scatter.png")
+        mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+f".{user_id}.scatter.png")
         fig.savefig(mapsploth_filename)
        
         for edge_data, edge_attr in ox.graph_to_gdfs(self.geograph, nodes=False).fillna('').iterrows():            
@@ -350,7 +350,7 @@ class Tdrive_Bejing():
                 c_y = node_attr['y']#-node_attr['y']*0.1
                 text_node = f"{nodes_dict[node]}"
                 ax.annotate(text_node, (c_x, c_y), c='royalblue')
-        mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+"."+user_id+".speed.png")
+        mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+f".{user_id}.speed.png")
         fig.savefig(mapsploth_filename)
     
     def check_itemTuple(self, item, in_list, pos):
