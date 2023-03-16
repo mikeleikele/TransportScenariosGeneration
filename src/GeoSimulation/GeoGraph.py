@@ -9,6 +9,7 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
+from collections import OrderedDict
 
 class OSMgeometry:
     options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
@@ -67,20 +68,27 @@ class GeoGraph:
         if not os.path.exists(self.poi_folder):
             os.makedirs(self.poi_folder)
 
-
-
-        self.places = geo_maps_settings["options"]["places"]
         simplification = geo_maps_settings["options"]["simplification"]
+        if "road_type" in geo_maps_settings["options"]:
+            network_type = geo_maps_settings["options"]["road_type"]
+        else:
+            network_type = "drive"
+        
         if "placetype" in geo_maps_settings["options"]:
             self.placetype = geo_maps_settings["options"]["placetype"]
             if "dist_point" in geo_maps_settings["options"]:
                 self.dist_point = geo_maps_settings["options"]["dist_point"]
             else:
                 self.dist_point = 500
+        if geo_maps_settings["options"]["placetype"] == "cities":
+            self.places = geo_maps_settings["options"]["places"]
+        elif geo_maps_settings["options"]["placetype"] == "coordinates":
+            self.places = self.coordinates2cities(geo_maps_settings["options"]["places"])
+            self.placetype = "cities"
         else:
-            self.placetype = "place"
+            self.placetype = "cities"
         
-        self.geograph = self.request_graph(self.places, simplification)
+        self.geograph = self.request_graph(self.places, simplification, network_type=network_type)
                 
         if geo_maps_settings["options"]["poi_geometry"]:
             self.POI_maps= True
@@ -104,7 +112,7 @@ class GeoGraph:
     def getPOI(self):
         return self.poigraph
 
-    def request_graph(self,query,simplification=False):
+    def request_graph(self,query,simplification=False, network_type="drive"):
         """
         Negotiates a query to OSMNX if no local stored file else loads local file
         :return: result:
@@ -112,7 +120,7 @@ class GeoGraph:
         if self.maps_name+ '.geo.graphml' in os.listdir(self.map_folder):
             geograph = ox.load_graphml(Path(self.map_folder, ""+self.maps_name, '.geo.graphml'))
         else:
-            geograph = self.graph_from_place(query, simplification)
+            geograph = self.graph_from_place(query, simplification, network_type=network_type)
         return geograph
 
 
@@ -133,7 +141,7 @@ class GeoGraph:
             p_bar = tqdm(range(10))
             p_bar.update(1)
             p_bar.refresh()
-            if self.placetype=="place":
+            if self.placetype=="cities":
                 G = ox.graph_from_place(place, simplify=simplify, network_type=network_type)
             elif self.placetype=="point":
                 if len(place)==2:
@@ -226,6 +234,17 @@ class GeoGraph:
         ax.set_title(self.maps_name)
         self.axis = ax.axis()
         return ax, graph
+
+    def coordinates2cities(self, list_coordinates):
+        cities_list = []
+        for (lat,lon) in list_coordinates:
+            par = OrderedDict({'lat':str(lat),'lon':str(lon),"format": "json"})
+            nom_req = ox.downloader.nominatim_request(params =par, request_type="reverse")
+            city_name = f"{nom_req['address']['city']},{nom_req['address']['country']}"
+            if city_name not in cities_list:
+                cities_list.append(city_name)
+        print(cities_list)
+        return cities_list
 
 
 class GeoGraph_Exception__Param(Exception):

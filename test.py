@@ -6,8 +6,11 @@ from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 from pathlib import Path
 
-def geo_test():
-    GeoGraph_test.start_test()
+def geo_test(par):
+    if par is None:
+        GeoGraph_test.start_test()
+    elif par=="pechino":
+        GeoGraph_test.BejingDataset()
 
 def geo_test_point():
     GeoGraph_test.start_test_point(draw_maps=True)
@@ -52,7 +55,8 @@ if __name__ == "__main__":
     print(f"      Welcome - OSG      ")
     print(f"|------------------------")
     print(f"| Process: {args[0]}")
-    print(f"| Maps   : {args[1]}")
+    if len(args)>1:
+        print(f"| Maps   : {args[1]}")
     print(f"|------------------------")
     print(f" ")
     
@@ -60,8 +64,12 @@ if __name__ == "__main__":
         orient_test()
         print(1)
     elif args[0] == "--geo" or args[0] == "--g":        
-        geo_test()    
-        print(2)
+        
+        if len(args)>1:
+            par = args[1]
+        else:
+            par=None
+        geo_test(par)
     elif args[0] == "--geopoint" or args[0] == "--gp":        
         geo_test_point()
     

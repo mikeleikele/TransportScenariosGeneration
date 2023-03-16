@@ -1,14 +1,18 @@
 from src.GeoSimulation.GeoGraph import *
 import matplotlib.pyplot as plt
+from src.test.Tdrive_Bejing  import *
 
 def start_test(POI_maps=False, draw_maps=False):
     """places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
         "campolongo tapogliano, Italy", "Gonars,Italy", "Visco,Italy", "San Vito al Torre,Italy", "Bagnaria arsa,Italy","Fiumicello Villa Vicentina,Italy", "Torviscosa,Italy",
         "Palmanova,Italy", ]
     maps_name='bassa'
-    """
+
     places = ['Cervignano del Friuli,Italy']
     maps_name='cervi'
+    """
+    places = ['Beijing,China']
+    maps_name='Beijing'
     """
 
     places = ['Milano,Italy']
@@ -20,12 +24,11 @@ def start_test(POI_maps=False, draw_maps=False):
         "poi_folder":None,
         "options":{
             "places":places, 
+            "placetype":"cities",
             "simplification":True,
-            "poi_geometry":True, 
+            "poi_geometry":False, 
             "poi_option":{
-                "filter":[
-                    "nature","landuse","artificial_1","artificial_2",
-                    "public_1","public_2","highway","military"]
+                "filter":[]#"nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military"
             }
         }
     }
@@ -61,3 +64,15 @@ def start_test_point(POI_maps=False, draw_maps=False):
     }
     geo_settings = GeoGraph(geo_maps_settings=geo_maps_settings)
     POI_geo = geo_settings.drawGraph()
+
+
+def BejingDataset(users_list = range(1,2)):
+    maps_name="Bejing"
+    pathfolder = Path("data","realdataset",maps_name)
+    pathinput = Path("data","dataset","taxi_log_2008_by_id")    
+    download_maps = True
+    tBejing = Tdrive_Bejing(pathfolder=pathfolder, pathinput=pathinput, maps_name=maps_name, users_list=users_list, download_maps=download_maps)
+    tBejing.compute_roads(users_list)
+    for user_id in users_list:
+        print("plot - ", user_id)
+        tBejing.plot_point(user_id=user_id)

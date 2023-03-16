@@ -7,3 +7,4 @@ dict2xml
 networkx
 scikit-learn
 xmltodict
+scikit-mobility
