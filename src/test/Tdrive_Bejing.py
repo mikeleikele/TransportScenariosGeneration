@@ -3,14 +3,18 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from math import radians, cos, sin, asin, sqrt
 from pathlib import Path
+import networkx as nx
 import os 
 import json
-
-
+import skmob
+import pandas as pd
+from skmob.preprocessing import detection
+from ast import literal_eval as make_tuple
 
 class Tdrive_Bejing():
 
-    def __init__(self, pathfolder, pathinput, maps_name="pechino", users_list=[1], download_maps=False, line_break = None, all_city=True):
+
+    def __init__(self, pathfolder, pathinput, maps_name="Bejing", users_list=[1], download_maps=False, line_break = None, all_city=True):
         ox.config(log_console=True, use_cache=True)
         self.pathfolder = pathfolder
         self.pathinput = pathinput
@@ -30,8 +34,8 @@ class Tdrive_Bejing():
             self.from_bejing_files(places_list=self.positions_geo)
         
         self.geograph = self.loadGraph(self.maps_name)
-        
-    
+
+
     def from_bejing_files(self, places_list, POI_maps=False, draw_maps=False, all_bejing=True):    
         if all_bejing:
             geo_maps_settings={
@@ -76,33 +80,57 @@ class Tdrive_Bejing():
             mapsploth_filename = Path(self.pathfolder, self.maps_name+".geo.png")
             fig.savefig(mapsploth_filename)
 
-    
+
     def get_usersdata(self, userid_list, line_break=None):
         positions_geo = []
         positions_graph = {}
         for user_id in userid_list:
             positions_graph[user_id] = dict()
             inputfile = Path(self.pathinput, f"{user_id}.txt")
-            with open(inputfile, 'r') as f:            
-                for i, line in enumerate(f):
-                    if line_break is not None and i>line_break:
-                        break
-                    values = line[:-1].split(',')
-                    veh = values[0]
-                    time = datetime.strptime(values[1], "%Y-%m-%d %H:%M:%S")
-                    lat = values[3]
-                    lon = values[2]
-                        
-                    positions_geo.append((lat,lon))
+            
+            df = pd.read_csv(inputfile, sep=',',header=None, names=['user','datetime','lon','lat'])
+            tdf = skmob.TrajDataFrame(df, latitude='lat', longitude='lon', user_id='user', datetime='datetime')
+            stdf = detection.stay_locations(tdf, stop_radius_factor=0.5, minutes_for_a_stop=5.0, spatial_radius_km=0.2, leaving_time=True, no_data_for_minutes=10.0)
+            stdf = stdf.rename(columns={'datetime':'arriving_time','uid':'user','lng':'lon','leaving_datetime':'newpos_time'})
 
-                    positions_graph[user_id][i] = dict()
-                    positions_graph[user_id][i]['time'] = time
-                    positions_graph[user_id][i]['lat'] = float(lat)
-                    positions_graph[user_id][i]['lon'] = float(lon)
-                    positions_graph[user_id][i]['veh'] = veh
+            datetime_list =  tdf.sort_values(by=['datetime'])['datetime'].tolist()
+
+
+            last_seen = []
+
+
+            for index, row in stdf.iterrows():
+                if index>0 and index<len(stdf):
+                    lastseen_index = datetime_list.index(row['arriving_time'])-1
+                    last_seen.append(datetime_list[lastseen_index])
+                elif index==0:
+                    lastseen_index = datetime_list.index(row['arriving_time'])
+                    last_seen.append(datetime_list[lastseen_index])
+
+            stdf['last_seen'] = last_seen
+
+
+            for index, row in stdf.iterrows():
+                if line_break is not None and index>line_break:
+                    break
+                
+                veh = row['user']
+                arriving_time = datetime.strptime(str(row['arriving_time']), "%Y-%m-%d %H:%M:%S")
+                leaving_time = datetime.strptime(str(row['last_seen']), "%Y-%m-%d %H:%M:%S")
+                lat = row['lat']
+                lon = row['lon']
+                    
+                positions_geo.append((lat,lon))
+
+                positions_graph[user_id][index] = dict()
+                positions_graph[user_id][index]['arriving_time'] = arriving_time
+                positions_graph[user_id][index]['leaving_time'] = leaving_time
+                positions_graph[user_id][index]['lat'] = float(lat)
+                positions_graph[user_id][index]['lon'] = float(lon)
+                positions_graph[user_id][index]['veh'] = veh
 
         return [positions_geo,positions_graph]
-        
+
 
     def loadGraph(self, maps_name):
         geo_filename = Path("data","maps", maps_name, maps_name+".geo.geojson")
@@ -164,12 +192,15 @@ class Tdrive_Bejing():
             subedge_lat = self.positions_graph[user_id][0]['lat']
 
             nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
+
             eg = nx.ego_graph(G=self.geograph, n=nn, radius=radius_subgraph, distance='length')
+ 
 
             for id_istance in self.positions_graph[user_id]:
-                istance = self.positions_graph[user_id][id_istance]
-                lon = istance['lon']
-                lat = istance['lat']
+                
+                #istance = self.positions_graph[user_id][id_istance]
+                lon = self.positions_graph[user_id][id_istance]['lon']
+                lat = self.positions_graph[user_id][id_istance]['lat']
                 dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
                 
                 #if point over subgraph, make a new subgraph
@@ -187,6 +218,7 @@ class Tdrive_Bejing():
                 self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
                 self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
                 self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
+
 
     def compute_roads(self,users_list=None):
         self.coordinates2Nodes(users_list)
@@ -210,10 +242,10 @@ class Tdrive_Bejing():
             for id_istance in range(num_instance-1):
                 self.positions_graph[user_id][id_istance]['road'] = dict()
                 self.positions_graph[user_id][id_istance]['road']['node_orig'] = self.positions_graph[user_id][id_istance]["nn_id"] 
-                self.positions_graph[user_id][id_istance]['road']['time_orig'] = self.positions_graph[user_id][id_istance]["time"] 
+                self.positions_graph[user_id][id_istance]['road']['time_orig'] = self.positions_graph[user_id][id_istance]["leaving_time"] 
                 self.positions_graph[user_id][id_istance]['road']['node_dest'] = self.positions_graph[user_id][id_istance+1]["nn_id"] 
-                self.positions_graph[user_id][id_istance]['road']['time_dest'] = self.positions_graph[user_id][id_istance+1]["time"] 
-                time_interval = self.positions_graph[user_id][id_istance]["time"] 
+                self.positions_graph[user_id][id_istance]['road']['time_dest'] = self.positions_graph[user_id][id_istance+1]["arriving_time"] 
+                time_interval = self.positions_graph[user_id][id_istance]["leaving_time"] 
                 node_orig = self.positions_graph[user_id][id_istance]['road']['node_orig']
                 node_dest = self.positions_graph[user_id][id_istance]['road']['node_dest']
                 try:
@@ -247,9 +279,41 @@ class Tdrive_Bejing():
                     else:
                         self.road_speed[str(edge)] = [{"speed":str(path_speed),"time":str(time_interval),"userid":str(user_id), 'length':self.road_info[edge]['length']}]
         
-        filename = Path(self.pathfolder,self.maps_name+".roads_speed.json")
-        with open(filename, 'w') as f:
+        filename_json = Path(self.pathfolder,self.maps_name+".roads_speed.json")
+        with open(filename_json, 'w') as f:
             json.dump(self.road_speed, f,  indent=4)
+
+        
+        
+        dfObj = pd.DataFrame()
+        nodeA_list = list()
+        nodeB_list = list()
+        speed_list = list()
+        time_list = list()
+        userid_list = list()
+        length_list = list()
+
+        for road in self.road_speed:
+            edge = make_tuple(road)
+            for value in self.road_speed[road]:
+                
+                nodeA_list.append(edge[0])
+                nodeB_list.append(edge[1])
+                speed_list.append(value['speed'])
+                time_list.append(value['time'])
+                userid_list.append(value['userid'])
+                length_list.append(value['length'])
+
+        dfObj['nodeA'] = nodeA_list
+        dfObj['nodeB'] = nodeB_list
+        dfObj['speed'] = speed_list
+        dfObj['time'] = time_list
+        dfObj['userid'] = userid_list
+        dfObj['length'] = length_list
+
+
+        filename_pd = Path(self.pathfolder,self.maps_name+".roads_speed.json")
+        dfObj.to_csv(filename_pd, sep='\t', encoding='utf-8')
 
 
 
@@ -270,7 +334,7 @@ class Tdrive_Bejing():
             nodes_list.append(istance["nn_id"])
 
             nn_actual = istance["nn_id"]
-            nn_time = istance['time'].strftime("%Y-%m-%d %H:%M:%S")
+            nn_time = istance['leaving_time'].strftime("%Y-%m-%d %H:%M:%S")
             if nn_actual in nodes_dict:
                 _time = nodes_dict[nn_actual]
                 
@@ -287,7 +351,7 @@ class Tdrive_Bejing():
         edges_col = [] 
         edges_lnw = []
         for u, v, k in self.geograph.edges(keys=True):
-            if (u,v) in edges_list or (v,u) in edges_list:
+            if (u,v) in edges_list:# or (v,u) in edges_list:
                 edges_col.append('violet')
                 edges_lnw.append(2.0)
             elif (u,v) in self.road_speed:# or (v,u) in routes_nn_roads_list:
@@ -327,14 +391,14 @@ class Tdrive_Bejing():
        
         for edge_data, edge_attr in ox.graph_to_gdfs(self.geograph, nodes=False).fillna('').iterrows():            
             edge = (edge_data[0],edge_data[1])
-            if edge in self.road_speed:
+            if str(edge) in self.road_speed:
                 c = edge_attr['geometry'].centroid                
                 c_y_lenght = c.y - 0.0001
                 text_edge_length = f"{edge_attr['length']}"
                 ax.annotate(text_edge_length, (c.x, c_y_lenght), c='darkgreen')
 
 
-                text_edge_speed = ', '.join([str(round(_speed['speed'], 2)) for _speed in self.road_speed[edge]])
+                text_edge_speed = ', '.join([str(round(float(_speed['speed']), 2)) for _speed in self.road_speed[str(edge)]])
                 c_y_speed = c.y +  0.0001
                 ax.annotate(text_edge_speed, (c.x, c_y_speed), c='darkcyan')
                 
@@ -352,9 +416,11 @@ class Tdrive_Bejing():
                 ax.annotate(text_node, (c_x, c_y), c='royalblue')
         mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+f".{user_id}.speed.png")
         fig.savefig(mapsploth_filename)
-    
+
+
     def check_itemTuple(self, item, in_list, pos):
         for tuple in in_list:
             if tuple[pos] == item:
                 return True
         return False
+
