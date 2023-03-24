@@ -181,12 +181,13 @@ class Tdrive_Bejing():
 
 
     def coordinates2Nodes(self, users_list=None, radius_subgraph=6000):
-        
+        print("coordinates2Nodes")
         radius_check_subgraph = radius_subgraph*0.70 #70%
         if users_list is None:
             users_list = self.users_list
         
         for user_id in users_list:
+            print("id_user: ",user_id)
             
             subedge_lon = self.positions_graph[user_id][0]['lon']
             subedge_lat = self.positions_graph[user_id][0]['lat']
@@ -211,7 +212,7 @@ class Tdrive_Bejing():
                     eg = nx.ego_graph(G=self.geograph,  n=nn, radius=6000, distance="length")
                 
 
-                nodeInfo = self.point2Node(eg, lat, lon)
+                nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
                 self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
                 self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
                 self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
@@ -221,6 +222,7 @@ class Tdrive_Bejing():
 
 
     def compute_roads(self,users_list=None):
+        print("compute_roads")
         self.coordinates2Nodes(users_list)
         self.road_speed = dict()
         self.road_traveltime = dict()
@@ -330,7 +332,7 @@ class Tdrive_Bejing():
             istance = self.positions_graph[user_id][id_istance]
             
             edges_list.append((istance["ne_u_id"],istance["ne_v_id"]))
-            edges_list.append((istance["ne_v_id"],istance["ne_u_id"]))
+            #edges_list.append((istance["ne_v_id"],istance["ne_u_id"]))
             nodes_list.append(istance["nn_id"])
 
             nn_actual = istance["nn_id"]

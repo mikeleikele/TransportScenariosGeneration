@@ -13,7 +13,7 @@ def geo_test(par):
         GeoGraph_test.BejingDataset()
 
 def geo_test_point():
-    GeoGraph_test.start_test_point(draw_maps=True)
+    GeoGraph_test.start_test(draw_maps=True)
 
 def geo_simul_test(name_simulationFile):
     GeoGraph_test.start_test()
