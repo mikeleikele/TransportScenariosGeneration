@@ -382,7 +382,9 @@ class Tdrive_Bejing():
                 nodes_siz.append(0.5)
 
         fig, ax = ox.plot_graph(self.geograph, node_size=nodes_siz, node_color=nodes_col, edge_linewidth=edges_lnw, edge_color=edges_col, close=False, show=False, figsize= (150,150), dpi=300)
-        
+        mapsploth_filename = Path(self.pathfolder_plots, self.maps_name+f".{user_id}.trips.png")
+        fig.savefig(mapsploth_filename)
+
         for id_istance in range(num_instance):
             
             istance = self.positions_graph[user_id][id_istance]           
