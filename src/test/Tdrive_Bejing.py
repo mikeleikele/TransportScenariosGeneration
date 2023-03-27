@@ -90,45 +90,46 @@ class Tdrive_Bejing():
             
             df = pd.read_csv(inputfile, sep=',',header=None, names=['user','datetime','lon','lat'])
             tdf = skmob.TrajDataFrame(df, latitude='lat', longitude='lon', user_id='user', datetime='datetime')
-            stdf = detection.stay_locations(tdf, stop_radius_factor=0.5, minutes_for_a_stop=5.0, spatial_radius_km=0.2, leaving_time=True, no_data_for_minutes=10.0)
-            stdf = stdf.rename(columns={'datetime':'arriving_time','uid':'user','lng':'lon','leaving_datetime':'newpos_time'})
+            if len(tdf)>0:
+                stdf = detection.stay_locations(tdf, stop_radius_factor=0.5, minutes_for_a_stop=5.0, spatial_radius_km=0.2, leaving_time=True, no_data_for_minutes=10.0)
+                stdf = stdf.rename(columns={'datetime':'arriving_time','uid':'user','lng':'lon','leaving_datetime':'newpos_time'})
 
-            datetime_list =  tdf.sort_values(by=['datetime'])['datetime'].tolist()
-
-
-            last_seen = []
+                datetime_list =  tdf.sort_values(by=['datetime'])['datetime'].tolist()
 
 
-            for index, row in stdf.iterrows():
-                if index>0 and index<len(stdf):
-                    lastseen_index = datetime_list.index(row['arriving_time'])-1
-                    last_seen.append(datetime_list[lastseen_index])
-                elif index==0:
-                    lastseen_index = datetime_list.index(row['arriving_time'])
-                    last_seen.append(datetime_list[lastseen_index])
-
-            stdf['last_seen'] = last_seen
+                last_seen = []
 
 
-            for index, row in stdf.iterrows():
-                if line_break is not None and index>line_break:
-                    break
-                
-                veh = row['user']
-                arriving_time = datetime.strptime(str(row['arriving_time']), "%Y-%m-%d %H:%M:%S")
-                leaving_time = datetime.strptime(str(row['last_seen']), "%Y-%m-%d %H:%M:%S")
-                lat = row['lat']
-                lon = row['lon']
+                for index, row in stdf.iterrows():
+                    if index>0 and index<len(stdf):
+                        lastseen_index = datetime_list.index(row['arriving_time'])-1
+                        last_seen.append(datetime_list[lastseen_index])
+                    elif index==0:
+                        lastseen_index = datetime_list.index(row['arriving_time'])
+                        last_seen.append(datetime_list[lastseen_index])
+
+                stdf['last_seen'] = last_seen
+
+
+                for index, row in stdf.iterrows():
+                    if line_break is not None and index>line_break:
+                        break
                     
-                positions_geo.append((lat,lon))
+                    veh = row['user']
+                    arriving_time = datetime.strptime(str(row['arriving_time']), "%Y-%m-%d %H:%M:%S")
+                    leaving_time = datetime.strptime(str(row['last_seen']), "%Y-%m-%d %H:%M:%S")
+                    lat = row['lat']
+                    lon = row['lon']
+                        
+                    positions_geo.append((lat,lon))
 
-                positions_graph[user_id][index] = dict()
-                positions_graph[user_id][index]['arriving_time'] = arriving_time
-                positions_graph[user_id][index]['leaving_time'] = leaving_time
-                positions_graph[user_id][index]['lat'] = float(lat)
-                positions_graph[user_id][index]['lon'] = float(lon)
-                positions_graph[user_id][index]['veh'] = veh
-
+                    positions_graph[user_id][index] = dict()
+                    positions_graph[user_id][index]['arriving_time'] = arriving_time
+                    positions_graph[user_id][index]['leaving_time'] = leaving_time
+                    positions_graph[user_id][index]['lat'] = float(lat)
+                    positions_graph[user_id][index]['lon'] = float(lon)
+                    positions_graph[user_id][index]['veh'] = veh
+        print("end")
         return [positions_geo,positions_graph]
 
 

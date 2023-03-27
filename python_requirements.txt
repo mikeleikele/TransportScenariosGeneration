@@ -2,6 +2,7 @@ osmnx
 ogr2osm
 sklearn
 shapely
+pandas
 geopandas
 dict2xml 
 networkx
