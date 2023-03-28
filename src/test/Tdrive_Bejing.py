@@ -90,45 +90,45 @@ class Tdrive_Bejing():
             
             df = pd.read_csv(inputfile, sep=',',header=None, names=['user','datetime','lon','lat'])
             tdf = skmob.TrajDataFrame(df, latitude='lat', longitude='lon', user_id='user', datetime='datetime')
+            
             if len(tdf)>0:
                 stdf = detection.stay_locations(tdf, stop_radius_factor=0.5, minutes_for_a_stop=5.0, spatial_radius_km=0.2, leaving_time=True, no_data_for_minutes=10.0)
                 stdf = stdf.rename(columns={'datetime':'arriving_time','uid':'user','lng':'lon','leaving_datetime':'newpos_time'})
-
-                datetime_list =  tdf.sort_values(by=['datetime'])['datetime'].tolist()
-
-
-                last_seen = []
+                if len(stdf)>0:
+                    datetime_list =  tdf.sort_values(by=['datetime'])['datetime'].tolist()
 
 
-                for index, row in stdf.iterrows():
-                    if index>0 and index<len(stdf):
-                        lastseen_index = datetime_list.index(row['arriving_time'])-1
-                        last_seen.append(datetime_list[lastseen_index])
-                    elif index==0:
-                        lastseen_index = datetime_list.index(row['arriving_time'])
-                        last_seen.append(datetime_list[lastseen_index])
-
-                stdf['last_seen'] = last_seen
+                    last_seen = []
 
 
-                for index, row in stdf.iterrows():
-                    if line_break is not None and index>line_break:
-                        break
-                    
-                    veh = row['user']
-                    arriving_time = datetime.strptime(str(row['arriving_time']), "%Y-%m-%d %H:%M:%S")
-                    leaving_time = datetime.strptime(str(row['last_seen']), "%Y-%m-%d %H:%M:%S")
-                    lat = row['lat']
-                    lon = row['lon']
-                        
-                    positions_geo.append((lat,lon))
+                    for index, row in stdf.iterrows():
+                        if index>0 and index<len(stdf):
+                            lastseen_index = datetime_list.index(row['arriving_time'])-1
+                            last_seen.append(datetime_list[lastseen_index])
+                        elif index==0:
+                            lastseen_index = datetime_list.index(row['arriving_time'])
+                            last_seen.append(datetime_list[lastseen_index])
 
-                    positions_graph[user_id][index] = dict()
-                    positions_graph[user_id][index]['arriving_time'] = arriving_time
-                    positions_graph[user_id][index]['leaving_time'] = leaving_time
-                    positions_graph[user_id][index]['lat'] = float(lat)
-                    positions_graph[user_id][index]['lon'] = float(lon)
-                    positions_graph[user_id][index]['veh'] = veh
+                    stdf['last_seen'] = last_seen
+
+
+                    for index, row in stdf.iterrows():
+                        if line_break is not None and index>line_break:
+                            break
+                        veh = row['user']
+                        arriving_time = datetime.strptime(str(row['arriving_time']), "%Y-%m-%d %H:%M:%S")
+                        leaving_time = datetime.strptime(str(row['last_seen']), "%Y-%m-%d %H:%M:%S")
+                        lat = row['lat']
+                        lon = row['lon']
+                            
+                        positions_geo.append((lat,lon))
+
+                        positions_graph[user_id][index] = dict()
+                        positions_graph[user_id][index]['arriving_time'] = arriving_time
+                        positions_graph[user_id][index]['leaving_time'] = leaving_time
+                        positions_graph[user_id][index]['lat'] = float(lat)
+                        positions_graph[user_id][index]['lon'] = float(lon)
+                        positions_graph[user_id][index]['veh'] = veh
         print("end")
         return [positions_geo,positions_graph]
 
@@ -181,45 +181,45 @@ class Tdrive_Bejing():
         return m
 
 
-    def coordinates2Nodes(self, users_list=None, radius_subgraph=6000):
+    def coordinates2Nodes(self, users_list=None, radius_subgraph=10000):
         print("coordinates2Nodes")
         radius_check_subgraph = radius_subgraph*0.70 #70%
         if users_list is None:
             users_list = self.users_list
-        
         for user_id in users_list:
-            print("id_user: ",user_id)
-            
-            subedge_lon = self.positions_graph[user_id][0]['lon']
-            subedge_lat = self.positions_graph[user_id][0]['lat']
-
-            nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
-
-            eg = nx.ego_graph(G=self.geograph, n=nn, radius=radius_subgraph, distance='length')
- 
-
-            for id_istance in self.positions_graph[user_id]:
+            if len(self.positions_graph[user_id])>0:
+                print("id_user: ",user_id)
                 
-                #istance = self.positions_graph[user_id][id_istance]
-                lon = self.positions_graph[user_id][id_istance]['lon']
-                lat = self.positions_graph[user_id][id_istance]['lat']
-                dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
-                
-                #if point over subgraph, make a new subgraph
-                if dist>radius_check_subgraph:
-                    subedge_lon = lon
-                    subedge_lat = lat
-                    nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
-                    eg = nx.ego_graph(G=self.geograph,  n=nn, radius=6000, distance="length")
-                
+                subedge_lon = self.positions_graph[user_id][0]['lon']
+                subedge_lat = self.positions_graph[user_id][0]['lat']
 
-                nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
-                self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
-                self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
-                self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
-                self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
-                self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
-                self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
+                nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
+
+                eg = nx.ego_graph(G=self.geograph, n=nn, radius=radius_subgraph, distance='length')
+    
+
+                for id_istance in self.positions_graph[user_id]:
+                    
+                    #istance = self.positions_graph[user_id][id_istance]
+                    lon = self.positions_graph[user_id][id_istance]['lon']
+                    lat = self.positions_graph[user_id][id_istance]['lat']
+                    dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
+                    
+                    #if point over subgraph, make a new subgraph
+                    if dist>radius_check_subgraph:
+                        subedge_lon = lon
+                        subedge_lat = lat
+                        nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
+                        eg = nx.ego_graph(G=self.geograph,  n=nn, radius=10000, distance="length")
+                    
+
+                    nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
+                    self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
+                    self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
+                    self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
+                    self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
+                    self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
+                    self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
 
 
     def compute_roads(self,users_list=None):

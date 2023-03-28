@@ -38,7 +38,11 @@ class OSMgeometry:
             "public_1":{'amenity':True,'building':True,'emergency':True,'lifeguard':True,'historic':True},
             "public_2":{'leisure':True,'office':True,'shop':True,'sport':True,'tourism':True},
             "highway":{'highway':True,'route':True},
-            "military":{'military':True,},            
+
+            "military":{'military':True},  
+            "amenity":{'amenity':True},
+            "historic": {'historic':True},
+            "tourism":{'tourism':True},
         }
         return poi_filter
 

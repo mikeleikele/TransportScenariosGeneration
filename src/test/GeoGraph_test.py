@@ -9,8 +9,8 @@ def start_test(POI_maps=False, draw_maps=False):
     maps_name='bassa'
     """
 
-    places = ['Milano,Italy']
-    maps_name = 'milano'
+    places = ['Perugia,Italy']
+    maps_name = 'perugia'
     """
     places = ['Beijing,China']
     maps_name='Beijing'
@@ -30,7 +30,7 @@ def start_test(POI_maps=False, draw_maps=False):
             "simplification":True,
             "poi_geometry":True, 
             "poi_option":{
-                "filter":["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military"]
+                "filter":["amenity","historic","tourism"]
             }
         }
     }
@@ -68,7 +68,7 @@ def start_test_point(POI_maps=False, draw_maps=False):
     POI_geo = geo_settings.drawGraph()
 
 
-def BejingDataset(users_list = range(1,10357)):
+def BejingDataset(users_list = range(9,10)):
     maps_name="Bejing"
     pathfolder = Path("data","realdataset",maps_name)
     pathinput = Path("data","dataset","taxi_log_2008_by_id")    
