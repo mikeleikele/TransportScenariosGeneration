@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 
 class OSMgeometry:
-    options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
+    options = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","amenity", "historic", "tourism","all"]
 
     
     def getOptions():
-        option = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","all"]
+        option = ["nature","landuse","artificial_1","artificial_2","public_1","public_2","highway","military","amenity", "historic", "tourism","all"]
         return option
     
     def isFilter(name_filter):
