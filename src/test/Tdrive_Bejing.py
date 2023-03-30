@@ -196,30 +196,36 @@ class Tdrive_Bejing():
                 nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
 
                 eg = nx.ego_graph(G=self.geograph, n=nn, radius=radius_subgraph, distance='length')
-    
+                lin = 0
 
                 for id_istance in self.positions_graph[user_id]:
-                    
-                    #istance = self.positions_graph[user_id][id_istance]
-                    lon = self.positions_graph[user_id][id_istance]['lon']
-                    lat = self.positions_graph[user_id][id_istance]['lat']
-                    dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
-                    
-                    #if point over subgraph, make a new subgraph
-                    if dist>radius_check_subgraph:
-                        subedge_lon = lon
-                        subedge_lat = lat
-                        nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
-                        eg = nx.ego_graph(G=self.geograph,  n=nn, radius=10000, distance="length")
-                    
+                    print("----",lin)
+                    try:
+                        #istance = self.positions_graph[user_id][id_istance]
+                        lon = self.positions_graph[user_id][id_istance]['lon']
+                        lat = self.positions_graph[user_id][id_istance]['lat']
+                        dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
+                        
+                        #if point over subgraph, make a new subgraph
+                        if dist>radius_check_subgraph:
+                            subedge_lon = lon
+                            subedge_lat = lat
+                            nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
+                            eg = nx.ego_graph(G=self.geograph,  n=nn, radius=10000, distance="length")
+                        
 
-                    nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
-                    self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
-                    self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
-                    self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
-                    self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
-                    self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
-                    self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
+                        nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
+                        self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
+                        self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
+                        self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
+                        self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
+                        self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
+                        self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
+                        lin += 1
+                    except:
+                        pass
+
+
 
 
     def compute_roads(self,users_list=None):
