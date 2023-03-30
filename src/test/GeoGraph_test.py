@@ -68,7 +68,7 @@ def start_test_point(POI_maps=False, draw_maps=False):
     POI_geo = geo_settings.drawGraph()
 
 
-def BejingDataset(users_list = range(9,10)):
+def BejingDataset(users_list = range(1,10357)):
     maps_name="Bejing"
     pathfolder = Path("data","realdataset",maps_name)
     pathinput = Path("data","dataset","taxi_log_2008_by_id")    

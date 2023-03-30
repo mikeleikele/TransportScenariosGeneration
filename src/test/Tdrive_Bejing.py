@@ -29,6 +29,7 @@ class Tdrive_Bejing():
         users_data = self.get_usersdata(self.users_list, line_break=line_break)
         self.positions_geo = users_data[0]
         self.positions_graph = users_data[1]
+        self.positions_graph_count = dict()
 
         if download_maps:
             self.from_bejing_files(places_list=self.positions_geo)
@@ -202,8 +203,8 @@ class Tdrive_Bejing():
                     print("----",lin)
                     try:
                         #istance = self.positions_graph[user_id][id_istance]
-                        lon = self.positions_graph[user_id][id_istance]['lon']
-                        lat = self.positions_graph[user_id][id_istance]['lat']
+                        lon = self.positions_graph[user_id][lin]['lon']
+                        lat = self.positions_graph[user_id][lin]['lat']
                         dist = self.Haversine_distance(subedge_lon, subedge_lat, lon, lat)
                         
                         #if point over subgraph, make a new subgraph
@@ -215,13 +216,15 @@ class Tdrive_Bejing():
                         
 
                         nodeInfo = self.point2Node(eg, lat, lon, get_nearest_edges=True)
-                        self.positions_graph[user_id][id_istance]["nn_id"] = nodeInfo["nn_id"]
-                        self.positions_graph[user_id][id_istance]["nn_dist"] = nodeInfo["nn_dist"]
-                        self.positions_graph[user_id][id_istance]["ne_u_id"] = nodeInfo["ne_u_id"]
-                        self.positions_graph[user_id][id_istance]["ne_v_id"] = nodeInfo["ne_v_id"]
-                        self.positions_graph[user_id][id_istance]["ne_key"] = nodeInfo["ne_key"]
-                        self.positions_graph[user_id][id_istance]["ne_dist"] = nodeInfo["ne_dist"]
+                        self.positions_graph[user_id][lin]["nn_id"] = nodeInfo["nn_id"]
+                        self.positions_graph[user_id][lin]["nn_dist"] = nodeInfo["nn_dist"]
+                        self.positions_graph[user_id][lin]["ne_u_id"] = nodeInfo["ne_u_id"]
+                        self.positions_graph[user_id][lin]["ne_v_id"] = nodeInfo["ne_v_id"]
+                        self.positions_graph[user_id][lin]["ne_key"] = nodeInfo["ne_key"]
+                        self.positions_graph[user_id][lin]["ne_dist"] = nodeInfo["ne_dist"]
                         lin += 1
+                        self.positions_graph_count[user_id] = lin
+                        
                     except:
                         pass
 
@@ -246,9 +249,10 @@ class Tdrive_Bejing():
             users_list = self.users_list
         
         for user_id in users_list:
-            num_instance = len(self.positions_graph[user_id])            
+            num_instance = self.positions_graph_count[user_id]
         
             for id_istance in range(num_instance-1):
+                print(id_istance," - ",len(self.positions_graph[user_id]))
                 self.positions_graph[user_id][id_istance]['road'] = dict()
                 self.positions_graph[user_id][id_istance]['road']['node_orig'] = self.positions_graph[user_id][id_istance]["nn_id"] 
                 self.positions_graph[user_id][id_istance]['road']['time_orig'] = self.positions_graph[user_id][id_istance]["leaving_time"] 
@@ -332,7 +336,7 @@ class Tdrive_Bejing():
         nodes_dict = dict()
         #routes_nn_roads = list()
         #routes_nn_roads_list = list()
-        num_instance = len(self.positions_graph[user_id])
+        num_instance = self.positions_graph_count[user_id]
         
         for id_istance in range(num_instance-1):
             
@@ -360,10 +364,10 @@ class Tdrive_Bejing():
         edges_col = [] 
         edges_lnw = []
         for u, v, k in self.geograph.edges(keys=True):
-            if (u,v) in edges_list:# or (v,u) in edges_list:
+            if (u,v) in edges_list or (v,u) in edges_list:
                 edges_col.append('violet')
                 edges_lnw.append(2.0)
-            elif (u,v) in self.road_speed:# or (v,u) in routes_nn_roads_list:
+            elif (u,v) in self.road_speed or (v,u) in self.road_speed:
                 edges_col.append('palegreen')
                 edges_lnw.append(2.0)
             else:
