@@ -2,23 +2,25 @@ from src.GeoSimulation.GeoGraph import *
 import matplotlib.pyplot as plt
 from src.test.Tdrive_Bejing  import *
 
-def start_test(POI_maps=False, draw_maps=False):
-    """places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
+def downloadmaps_cities(case="perugia", POI_maps=False, draw_maps=False):
+    if case=="fvg":
+        places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
         "campolongo tapogliano, Italy", "Gonars,Italy", "Visco,Italy", "San Vito al Torre,Italy", "Bagnaria arsa,Italy","Fiumicello Villa Vicentina,Italy", "Torviscosa,Italy",
         "Palmanova,Italy", ]
-    maps_name='bassa'
-    """
+        maps_name='bassa'
+    elif case=="perugia":
+        places = ['Perugia,Italy']
+        maps_name = 'perugia'
+    elif case=="pechino":
+        places = ['Beijing,China']
+        maps_name='Beijing'
+    elif case=="milano":
 
-    places = ['Perugia,Italy']
-    maps_name = 'perugia'
-    """
-    places = ['Beijing,China']
-    maps_name='Beijing'
-    
-
-    places = ['Milano,Italy']
-    maps_name='Milan'
-    """
+        places = ['Milano,Italy']
+        maps_name='Milan'
+    else:
+        print("Unknown cities case")
+        return 0
 
     geo_maps_settings={
         "osm_maps_name":maps_name,
@@ -47,7 +49,7 @@ def start_test(POI_maps=False, draw_maps=False):
 
 
 
-def start_test_point(POI_maps=False, draw_maps=False):
+def downloadmaps_points(POI_maps=False, draw_maps=False):
     
     
     maps_name='point_test'

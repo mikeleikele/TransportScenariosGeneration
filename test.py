@@ -6,14 +6,16 @@ from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 from pathlib import Path
 
-def geo_test(par):
+def geographic_cities(par):
     if par is None:
-        GeoGraph_test.start_test()
+        GeoGraph_test.downloadmaps_cities(case="perugia")    
     elif par=="pechino":
         GeoGraph_test.BejingDataset()
+    else:
+        GeoGraph_test.downloadmaps_cities(case=par)
 
-def geo_test_point():
-    GeoGraph_test.start_test(draw_maps=True)
+def geographic_point():
+    GeoGraph_test.downloadmaps_points(draw_maps=True)
 
 def geo_simul_test(name_simulationFile):
     GeoGraph_test.start_test()
@@ -21,8 +23,6 @@ def geo_simul_test(name_simulationFile):
 
 def simul_test(name_simulationFile):
     SUMO_test.start_SUMO_pointsimulation(name_simulationFile=name_simulationFile)
-def simul_vis_test(name_simulationFile):
-    SUMO_test.start_SUMO_simulation(name_simulationFile=name_simulationFile)
 
 def orient_test():
     Orienteering_test.start_test()
@@ -62,16 +62,17 @@ if __name__ == "__main__":
     
     if args[0] ==  "--orienteering" or args[0] == "--o":
         orient_test()
-        print(1)
-    elif args[0] == "--geo" or args[0] == "--g":        
-        
+    
+    #geographic maps download
+    elif args[0] == "--geo" or args[0] == "--g":      
         if len(args)>1:
             par = args[1]
         else:
             par=None
-        geo_test(par)
+        geographic_cities(par)
     elif args[0] == "--geopoint" or args[0] == "--gp":        
         geo_test_point()
+
     
     elif args[0] == "--simulation" or args[0] == "--s":        
         name_simulationFile = args[1]
