@@ -10,11 +10,12 @@ import skmob
 import pandas as pd
 from skmob.preprocessing import detection
 from ast import literal_eval as make_tuple
+import pickle
 
 class Tdrive_Bejing():
 
 
-    def __init__(self, pathfolder, pathinput, maps_name="Bejing", users_list=[1], download_maps=False, line_break = None, all_city=True):
+    def __init__(self, pathfolder, pathinput, filename_save, maps_name="Bejing", users_list=[1], download_maps=False, line_break = None, all_city=True):
         ox.config(log_console=True, use_cache=True)
         self.pathfolder = pathfolder
         self.pathinput = pathinput
@@ -26,10 +27,23 @@ class Tdrive_Bejing():
         self.users_list = users_list
         self.maps_name = maps_name
         print(f"We are setted line_break to: ", line_break)
-        users_data = self.get_usersdata(self.users_list, line_break=line_break)
-        self.positions_geo = users_data[0]
-        self.positions_graph = users_data[1]
-        self.positions_graph_count = dict()
+        
+        self.filename_save = filename_save
+        filename_positions_graph = Path(self.pathfolder,(self.filename_save+"positions_graph.pkl"))
+        filename_positions_geo = Path(self.pathfolder,(self.filename_save+"positions_geo.pkl"))
+        
+        if os.path.exists(filename_positions_graph) and os.path.exists(filename_positions_geo):
+            with open(filename_positions_graph, 'rb') as f_pgr:
+                self.positions_graph = pickle.load(f_pgr)
+            with open(filename_positions_geo, 'rb') as f_pge:
+                self.positions_geo = pickle.load(f_pge)
+        else:
+            users_data = self.get_usersdata(self.users_list, line_break=line_break, save=True, filename=self.filename_save)
+            self.positions_geo = users_data[0]
+            self.positions_graph = users_data[1]
+        return [positions_geo,positions_graph]
+
+
 
         if download_maps:
             self.from_bejing_files(places_list=self.positions_geo)
@@ -82,7 +96,7 @@ class Tdrive_Bejing():
             fig.savefig(mapsploth_filename)
 
 
-    def get_usersdata(self, userid_list, line_break=None):
+    def get_usersdata(self, userid_list, line_break=None, save=True, filename=None):
         positions_geo = []
         positions_graph = {}
         for user_id in userid_list:
@@ -130,7 +144,19 @@ class Tdrive_Bejing():
                         positions_graph[user_id][index]['lat'] = float(lat)
                         positions_graph[user_id][index]['lon'] = float(lon)
                         positions_graph[user_id][index]['veh'] = veh
+        
         print("end")
+        if save:
+            filename_positions_graph = Path(self.pathfolder,(filename+"positions_graph.pkl"))
+            with open(filename_positions_graph, 'wb') as f:
+                pickle.dump(positions_graph, f, protocol=pickle.HIGHEST_PROTOCOL)  
+                print("pickle.dump - positions_graph")
+            
+            filename_positions_geo = Path(self.pathfolder,(filename+"positions_geo.pkl"))
+            with open(filename, 'wb') as f:
+                pickle.dump(positions_geo, f, protocol=pickle.HIGHEST_PROTOCOL)  
+                print("pickle.dump - positions_geo")
+
         return [positions_geo,positions_graph]
 
 
@@ -292,41 +318,41 @@ class Tdrive_Bejing():
                     else:
                         self.road_speed[str(edge)] = [{"speed":str(path_speed),"time":str(time_interval),"userid":str(user_id), 'length':self.road_info[edge]['length']}]
         
-        filename_json = Path(self.pathfolder,self.maps_name+".roads_speed.json")
-        with open(filename_json, 'w') as f:
-            json.dump(self.road_speed, f,  indent=4)
+            filename_json = Path(self.pathfolder,self.maps_name+"."+user_id+".roads_speed.json")
+            with open(filename_json, 'w') as f:
+                json.dump(self.road_speed, f,  indent=4)
 
         
         
-        dfObj = pd.DataFrame()
-        nodeA_list = list()
-        nodeB_list = list()
-        speed_list = list()
-        time_list = list()
-        userid_list = list()
-        length_list = list()
+            dfObj = pd.DataFrame()
+            nodeA_list = list()
+            nodeB_list = list()
+            speed_list = list()
+            time_list = list()
+            userid_list = list()
+            length_list = list()
 
-        for road in self.road_speed:
-            edge = make_tuple(road)
-            for value in self.road_speed[road]:
-                
-                nodeA_list.append(edge[0])
-                nodeB_list.append(edge[1])
-                speed_list.append(value['speed'])
-                time_list.append(value['time'])
-                userid_list.append(value['userid'])
-                length_list.append(value['length'])
+            for road in self.road_speed:
+                edge = make_tuple(road)
+                for value in self.road_speed[road]:
+                    
+                    nodeA_list.append(edge[0])
+                    nodeB_list.append(edge[1])
+                    speed_list.append(value['speed'])
+                    time_list.append(value['time'])
+                    userid_list.append(value['userid'])
+                    length_list.append(value['length'])
 
-        dfObj['nodeA'] = nodeA_list
-        dfObj['nodeB'] = nodeB_list
-        dfObj['speed'] = speed_list
-        dfObj['time'] = time_list
-        dfObj['userid'] = userid_list
-        dfObj['length'] = length_list
+            dfObj['nodeA'] = nodeA_list
+            dfObj['nodeB'] = nodeB_list
+            dfObj['speed'] = speed_list
+            dfObj['time'] = time_list
+            dfObj['userid'] = userid_list
+            dfObj['length'] = length_list
 
 
-        filename_pd = Path(self.pathfolder,self.maps_name+".roads_speed.json")
-        dfObj.to_csv(filename_pd, sep='\t', encoding='utf-8')
+            filename_pd = Path(self.pathfolder,self.maps_name+"."+user_id+".roads_speed.json")
+            dfObj.to_csv(filename_pd, sep='\t', encoding='utf-8')
 
 
 
