@@ -70,13 +70,13 @@ def downloadmaps_points(POI_maps=False, draw_maps=False):
     POI_geo = geo_settings.drawGraph()
 
 
-def BejingDataset(users_list = range(1,10357)):
+def BejingDataset(users_list = range(1,10),line_break=None):
     maps_name="Bejing"
     pathfolder = Path("data","realdataset",maps_name)
     pathinput = Path("data","dataset","taxi_log_2008_by_id")    
     download_maps = False
 
-    tBejing = Tdrive_Bejing(pathfolder=pathfolder, pathinput=pathinput, maps_name=maps_name, users_list=users_list, download_maps=download_maps,line_break=None, filename_save="Pechino")
+    tBejing = Tdrive_Bejing(pathfolder=pathfolder, pathinput=pathinput, maps_name=maps_name, users_list=users_list, download_maps=download_maps,line_break=line_break, filename_save="Pechino")
     tBejing.compute_roads(users_list)
     for user_id in users_list:
         print("plot - ", user_id)

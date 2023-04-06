@@ -41,9 +41,8 @@ class Tdrive_Bejing():
             users_data = self.get_usersdata(self.users_list, line_break=line_break, save=True, filename=self.filename_save)
             self.positions_geo = users_data[0]
             self.positions_graph = users_data[1]
-        return [positions_geo,positions_graph]
-
-
+        
+        self.positions_graph_count = dict()
 
         if download_maps:
             self.from_bejing_files(places_list=self.positions_geo)
@@ -150,12 +149,12 @@ class Tdrive_Bejing():
             filename_positions_graph = Path(self.pathfolder,(filename+"positions_graph.pkl"))
             with open(filename_positions_graph, 'wb') as f:
                 pickle.dump(positions_graph, f, protocol=pickle.HIGHEST_PROTOCOL)  
-                print("pickle.dump - positions_graph")
+                
             
             filename_positions_geo = Path(self.pathfolder,(filename+"positions_geo.pkl"))
             with open(filename, 'wb') as f:
                 pickle.dump(positions_geo, f, protocol=pickle.HIGHEST_PROTOCOL)  
-                print("pickle.dump - positions_geo")
+                
 
         return [positions_geo,positions_graph]
 
@@ -214,19 +213,31 @@ class Tdrive_Bejing():
         if users_list is None:
             users_list = self.users_list
         for user_id in users_list:
-            if len(self.positions_graph[user_id])>0:
+            print(user_id)
+            filename_positions_graph = Path(self.pathfolder,self.maps_name+"."+str(user_id)+".positions_graph.pickle")
+            filename_positions_graph_count = Path(self.pathfolder,self.maps_name+"."+str(user_id)+".positions_graph_count.pickle")
+            if os.path.exists(filename_positions_graph_count) and os.path.exists(filename_positions_graph_count):
+                
+                with open(filename_positions_graph, 'rb') as f_pgr:
+                    self.positions_graph[user_id] = pickle.load(f_pgr)
+                with open(filename_positions_graph_count, 'rb') as f_pge:
+                    self.positions_graph_count[user_id] = pickle.load(f_pge)
+                    save_pickle = False
+
+            elif len(self.positions_graph[user_id])>0:
                 print("id_user: ",user_id)
                 
                 subedge_lon = self.positions_graph[user_id][0]['lon']
                 subedge_lat = self.positions_graph[user_id][0]['lat']
-
                 nn = ox.nearest_nodes(G=self.geograph, X=subedge_lon, Y=subedge_lat, return_dist=False) 
 
                 eg = nx.ego_graph(G=self.geograph, n=nn, radius=radius_subgraph, distance='length')
                 lin = 0
+                print("positions_graph_count ",user_id)
+                self.positions_graph_count[user_id] = lin
 
                 for id_istance in self.positions_graph[user_id]:
-                    print("----",lin)
+                    
                     try:
                         #istance = self.positions_graph[user_id][id_istance]
                         lon = self.positions_graph[user_id][lin]['lon']
@@ -251,8 +262,21 @@ class Tdrive_Bejing():
                         lin += 1
                         self.positions_graph_count[user_id] = lin
                         
-                    except:
+                    except:                        
                         pass
+                save_pickle = True
+            else:
+                print("positions_graph_count ",user_id)
+                self.positions_graph_count[user_id] = 0
+                self.positions_graph[user_id] = {}
+                save_pickle = True
+            
+            if save_pickle:                        
+                with open(filename_positions_graph, 'wb') as f:
+                    pickle.dump(self.positions_graph[user_id], f)  
+
+                with open(filename_positions_graph_count, 'wb') as f:
+                    pickle.dump(self.positions_graph_count[user_id], f, protocol=pickle.HIGHEST_PROTOCOL)  
 
 
 
@@ -318,10 +342,9 @@ class Tdrive_Bejing():
                     else:
                         self.road_speed[str(edge)] = [{"speed":str(path_speed),"time":str(time_interval),"userid":str(user_id), 'length':self.road_info[edge]['length']}]
         
-            filename_json = Path(self.pathfolder,self.maps_name+"."+user_id+".roads_speed.json")
-            with open(filename_json, 'w') as f:
-                json.dump(self.road_speed, f,  indent=4)
-
+            filename_pickle = Path(self.pathfolder,self.maps_name+"."+str(user_id)+".roads_speed.pickle")
+            with open(filename_pickle, 'wb') as f:
+                pickle.dump(self.road_speed, f, protocol=pickle.HIGHEST_PROTOCOL)
         
         
             dfObj = pd.DataFrame()
@@ -351,7 +374,7 @@ class Tdrive_Bejing():
             dfObj['length'] = length_list
 
 
-            filename_pd = Path(self.pathfolder,self.maps_name+"."+user_id+".roads_speed.json")
+            filename_pd = Path(self.pathfolder,self.maps_name+"."+str(user_id)+".roads_speed.json")
             dfObj.to_csv(filename_pd, sep='\t', encoding='utf-8')
 
 

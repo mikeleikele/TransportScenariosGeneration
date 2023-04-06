@@ -6,11 +6,19 @@ from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 from pathlib import Path
 
-def geographic_cities(par):
+def geographic_cities(par,args):
     if par is None:
         GeoGraph_test.downloadmaps_cities(case="perugia")    
-    elif par=="pechino":
-        GeoGraph_test.BejingDataset()
+    elif par=="bejing":
+        if len(args)>=4:
+            min_range = int(args[2])
+            max_range = int(args[3])            
+        else:
+            min_range = 1
+            max_range = 10
+        print("Bejing range taxi:\t", min_range, max_range)
+        users_list_range = range(min_range, max_range)
+        GeoGraph_test.BejingDataset(users_list=users_list_range, line_break=None)
     else:
         GeoGraph_test.downloadmaps_cities(case=par)
 
@@ -67,9 +75,10 @@ if __name__ == "__main__":
     elif args[0] == "--geo" or args[0] == "--g":      
         if len(args)>1:
             par = args[1]
+            
         else:
             par=None
-        geographic_cities(par)
+        geographic_cities(par,args)
     elif args[0] == "--geopoint" or args[0] == "--gp":        
         geo_test_point()
 
