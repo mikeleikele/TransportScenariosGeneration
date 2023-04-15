@@ -2,15 +2,15 @@ from src.GeoSimulation.GeoGraph import *
 import matplotlib.pyplot as plt
 from src.test.Tdrive_Bejing  import *
 
-def downloadmaps_cities(case="perugia", POI_maps=False, draw_maps=False):
+def downloadmaps_cities(case="perugia", POI_maps=False, draw_maps=False, list_municipalities=None, map_name_file=None):
     if case=="fvg":
         places = ['Cervignano del Friuli,Italy', "Terzo d'Aquileia,Italy",'Aquileia,Italy','Ruda,Italy',"Grado,italy",'Aiello del Friuli,Italy',"San giorgio di Nogaro,Italy",
         "campolongo tapogliano, Italy", "Gonars,Italy", "Visco,Italy", "San Vito al Torre,Italy", "Bagnaria arsa,Italy","Fiumicello Villa Vicentina,Italy", "Torviscosa,Italy",
         "Palmanova,Italy", ]
         maps_name='bassa'
     elif case=="perugia":
-        places = ['Perugia,Italy']
-        maps_name = 'perugia'
+        places = list_municipalities
+        maps_name = map_name_file
     elif case=="pechino":
         places = ['Beijing,China']
         maps_name='Beijing'
