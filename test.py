@@ -1,10 +1,16 @@
 from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
 from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
 from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
-import sys
 from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
+from src.NeuroCorrelation.NeuroDistributions import NeuroDistributions
+from src.NeuroCorrelation.NeuralCore import NeuralCore
+
 from pathlib import Path
+import sys
+import torch
+
+
 
 def geographic_cities(par,args):
     if par is None:
@@ -56,6 +62,15 @@ def flowview(simulation_name, number_sample):
     #flowviewer.draw_sampledgraph("travel_time")
     #flowviewer.draw_sampledgraph("weighted_mean")
     flowviewer.draw_sampledgraph("vehicles_id")
+
+def neuroDist(name_case):
+    device = torch.device("cpu")
+    nc = NeuralCore(device)
+    nc.training_model()
+    nc.overfittingPlots()
+    neuroD = NeuroDistributions(name_case)
+
+    neuroD.plotDistributions()
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -124,5 +139,8 @@ if __name__ == "__main__":
         number_sample = args[2]                   
         flowview(simulation_name,number_sample)
         print(10)
+    elif args[0] ==  "--neuroD" or args[0] == "--n":
+        neuroDist(args[1])
+        print(11)
     else:
         print(0," no opt recognized")
