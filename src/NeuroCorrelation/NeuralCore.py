@@ -5,11 +5,11 @@ from src.NeuroCorrelation.NeuralModels import NeuralModels, GEN_fl
 
 class NeuralCore():
 
-    def __init__(self, device, model_case="fullyRectangle"):
+    def __init__(self, device, epoch = 100, model_case="fullyRectangle"):
         self.device = device
         #nm = GEN_fl()
         self.model = GEN_fl #mn.get_model()
-        self.epoch = 1000
+        self.epoch = epoch
         dataGenerator = DataSynteticGeneration(torch_device=device)
         self.data = dataGenerator.casualGraph(num_of_samples = 10000, size_random=78)
         self.gen_train = GenTraining(self.model, self.epoch, self.data)
