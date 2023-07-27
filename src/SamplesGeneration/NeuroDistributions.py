@@ -11,14 +11,14 @@ import os
 
 class NeuroDistributions():
 
-    def __init__(self, path_folder):
+    def __init__(self, path_folder, data, univ_id):
         # Load data from statsmodels datasets
-        data = pd.Series(sm.datasets.elnino.load_pandas().data.set_index('YEAR').values.ravel())
-        self.path_folder = Path('data','neuroCorrelation',path_folder)
+        self.data = pd.Series(data)
+        self.path_folder = Path(path_folder,"img_dist")
         if not os.path.exists(self.path_folder):
             os.makedirs(self.path_folder)
-        
-        self.data = data
+        self.univ_id = univ_id
+ 
 
     # Create models from data
     def best_fit_distribution(self, bins=200, ax=None):
@@ -59,7 +59,7 @@ class NeuroDistributions():
                     try:
                         if ax:
                             pd.Series(pdf, x).plot(ax=ax, label=distribution_name)
-                        end
+                        
                     except Exception:
                         pass
 
@@ -110,9 +110,10 @@ class NeuroDistributions():
         # Update plots
         ax.set_ylim(dataYLim)
         ax.set_title(u'All distributions comparison')
+        
         #plt.legend(loc="upper left")
         if save_plot:
-            filename = Path(self.path_folder,"Distribution_comparison_all.png")
+            filename = Path(self.path_folder,"dist_"+str(self.univ_id)+"_all.png")
             plt.savefig(filename)
             
 
@@ -132,6 +133,10 @@ class NeuroDistributions():
 
         ax.set_title(u'With best fit distribution \n' + dist_str)
         if save_plot:
-            filename = Path(self.path_folder,"Distribution_comparison_best.png")
+            filename = Path(self.path_folder,"dist_"+str(self.univ_id)+"_best.png")
             plt.savefig(filename)
+        
+    def get_best_dist(self):
+        best_distibutions = self.best_fit_distribution(200, None)
+        return best_distibutions[0]
             

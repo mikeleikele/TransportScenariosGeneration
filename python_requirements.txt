@@ -9,3 +9,6 @@ networkx
 scikit-learn
 xmltodict
 scikit-mobility
+copulas
+torchviz
+optuna
