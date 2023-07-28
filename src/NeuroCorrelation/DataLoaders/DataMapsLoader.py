@@ -34,6 +34,10 @@ class DataMapsLoader():
             filename = Path("data","neuroCorrelation_data","METRLA_S207_START17_END19_MF.csv")
         elif self.name_dataset=="China_Chengdu":
             filename = Path("data","neuroCorrelation_data","Chengdu_slot_A.csv")
+        
+        elif self.name_dataset=="China_Chengdu_A500":
+            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_200.csv")
+            
             
         self.data_df = pd.read_csv(filename, sep=',')
         
@@ -195,7 +199,7 @@ class DataMapsLoader():
                 if df_data is None:
                     col = [i for i in range(len(istance['sample']))]
                     df_data = pd.DataFrame(columns=col)
-                tensor_list.append(var.numpy().tolist())
+                tensor_list.append(var.detach().cpu().numpy().tolist())
             df_data.loc[i] = tensor_list        
         return df_data  
     

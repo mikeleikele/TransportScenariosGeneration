@@ -23,7 +23,7 @@ import os
 
 class NeuralCore():
 
-    def __init__(self, device, path_folder, epoch =25, batch_size=64,  model_case="autoencoder_3", univar_count=5943, lat_dim=750):
+    def __init__(self, device, path_folder, epoch =25, batch_size=32,  model_case="autoencoder_3", univar_count=200, lat_dim=150):
         device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
         
         self.device = device
@@ -52,7 +52,7 @@ class NeuralCore():
         
         elif self.model_case=="autoencoder_16_PEMS":
             self.model = GEN_autoEncoder_16
-            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.05, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_16_MetrLa":
             self.model = GEN_autoEncoder_16
             self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.00005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
@@ -116,6 +116,10 @@ class NeuralCore():
         elif self.model_case=="autoencoder_6k_Chengdu":
             self.model = GEN_autoEncoder_6k
             self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.0005, "SPEARMAN_CORRELATION_LOSS":0.1,  "DECORRELATION_LATENT_LOSS":  0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+        
+        elif self.model_case=="autoencoder_05k_Chengdu":
+            self.model = GEN_autoEncoder_05k
+            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.1, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
         self.modelTrainedAE = None
         self.corrCoeff = dict()
@@ -139,35 +143,35 @@ class NeuralCore():
             self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict)
         elif self.model_case=="autoencoder_16_PEMS":
             self.instaces_size = 1
-            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="PEMS_16", input_shape="vector")
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="PEMS_16")
             model_ae = self.training_model(data_dict, model_type="AE")
-            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict)
+            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
         elif self.model_case=="autoencoder_16_MetrLa":
             self.instaces_size = 1
-            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="MetrLA_16", input_shape="vector")
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="MetrLA_16")
             model_ae = self.training_model(data_dict, model_type="AE")
             self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict)
         elif self.model_case=="autoencoder_ALL_PEMS":
             self.instaces_size = 1
-            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="PEMS_all", input_shape="vector")
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="PEMS_all")
             model_ae = self.training_model(data_dict, model_type="AE")
             self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict)
         elif self.model_case=="autoencoder_ALL_MetrLa":
             self.instaces_size = 1
-            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="MetrLA_all", input_shape="vector")
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="MetrLA_all")
             model_ae = self.training_model(data_dict, model_type="AE")
-            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
+            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict)
         elif self.model_case=="GAN_linear_16_PEMS":
             self.instaces_size = 1
             data_dict = self.dataset_load(mode="graph_roads", train_percentual=1, name_dataset="PEMS_16")
             model_gan = self.training_model(data_dict, model_type="GAN")
-            self.predict_model(model=model_gan, model_type="GAN", data_dict=data_dict, input_shape="vector")
+            self.predict_model(model=model_gan, model_type="GAN", data_dict=data_dict)
         elif self.model_case=="GAN_linear_vc_copula":
             self.instaces_size = 1
             self.instaces_size_noise = (1, 7)
             data_dict = self.dataset_load(mode="vc_copula", starting_sample=50, train_sample=500000, test_samples = 1, noise_samples=100000)
             model_gan = self.training_model(data_dict, model_type="GAN")
-            self.predict_model(model=model_gan, model_type="GAN", data_dict=data_dict, input_shape="vector")
+            self.predict_model(model=model_gan, model_type="GAN", data_dict=data_dict)
         elif self.model_case=="GAN_conv_vc_7_copula":
             self.instaces_size = 32
             self.instaces_size_noise = (2, 6)
@@ -261,6 +265,25 @@ class NeuralCore():
             data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.4, name_dataset="China_Chengdu", instaces_size=1, draw_plots=False)
             model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
             self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
+        
+        elif self.model_case=="autoencoder_05k_Chengdu":
+            self.instaces_size = 1
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="China_Chengdu_A500", instaces_size=1, draw_plots=True)
+            model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
+            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
+            comparison_corr_list = [
+                # original data
+                [('data','train'),('data','train')],
+                [('data','train'),('data','test')],
+                # AE
+                [('AE_train','input'),('AE_train','output')],
+                [('AE_train','input'),('AE_noise','output')],
+                [('AE_train','input'),('AE_copulaLat','output')],                
+                [('AE_noise','output'),('AE_copulaLat','output')],
+                [('AE_train','output'),('AE_noise','output')],
+                [('AE_train','output'),('AE_copulaLat','output')],
+                
+            ]
 
         corr_comp = CorrelationComparison(self.corrCoeff, self.path_folder)
         corr_comp.compareMatrices(comparison_corr_list)
@@ -478,6 +501,9 @@ class NeuralCore():
         prediction_data_byvar = modelPrediction.getPred_byUnivar()     
         resultDict["prediction_data"] = prediction_data
         resultDict["prediction_data_byvar"] = prediction_data_byvar
+        
+        print(resultDict["prediction_data_byvar"][0])
+        raise Exception("alt")
         
         inp_data_vc = pd.DataFrame()
         for id_univar in range(univar_count_in):

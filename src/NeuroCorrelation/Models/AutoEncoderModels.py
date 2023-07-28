@@ -550,3 +550,73 @@ class GEN_autoEncoder_Decoder_6k(nn.Module):
         
         
         return {"x_input":x, "x_output":x_out}
+    
+    
+##########
+
+class GEN_autoEncoder_05k(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_05k()
+        self.decoder = GEN_autoEncoder_Decoder_05k()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+class GEN_autoEncoder_Encoder_05k(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=200, out_features=400)
+        self.hidden_layer_2 = nn.Linear(in_features=400, out_features=300)
+        self.hidden_layer_3 = nn.Linear(in_features=300, out_features=250)
+        self.hidden_layer_4 = nn.Linear(in_features=250, out_features=200)
+        self.hidden_layer_5 = nn.Linear(in_features=200, out_features=150)
+    
+        #BN without any learning associated to it
+        #self.batch_norm_1 = nn.BatchNorm1d(12, affine=True)
+
+    def forward(self, x):
+        layer_nn = self.hidden_layer_1(x)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        x_out = self.hidden_layer_5(layer_nn)
+        #x_out = self.batch_norm_1(layer_nn)
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_05k(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_3 = nn.Linear(in_features=150, out_features=200)
+        self.hidden_layer_4 = nn.Linear(in_features=200, out_features=250)
+        self.hidden_layer_5 = nn.Linear(in_features=250, out_features=300)
+        self.hidden_layer_6 = nn.Linear(in_features=300, out_features=400)
+        self.hidden_layer_7 = nn.Linear(in_features=400, out_features=200)
+
+    def forward(self, x):
+        #layer_nn = self.bn_1(x)
+        layer_nn = self.hidden_layer_3(x)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        x_out = self.hidden_layer_7(layer_nn)
+        
+        
+        return {"x_input":x, "x_output":x_out}
