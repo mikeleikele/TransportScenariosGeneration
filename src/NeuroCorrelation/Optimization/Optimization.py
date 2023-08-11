@@ -73,9 +73,10 @@ class Optimization():
             self.training_obj.eval()
             print("\t\t\tpoint score: ",optim_score)
             self.opt.tell(next_x, optim_score)
-        plot_args = {"show_legend": True,
-             "show_title": True, "show_next_point": True,
-             "show_acq_func": True}   
-        plot_gaussian_process(self.opt.get_result(), **plot_args) 
+        
+        print("OPTIMIZATION RESULT:")  
+        print(self.opt.get_result())
+
+        #plot_gaussian_process(self.opt.get_result(), **plot_args) 
         print("\t: end optimization")
         
