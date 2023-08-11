@@ -11,4 +11,5 @@ xmltodict
 scikit-mobility
 copulas
 torchviz
-optuna
+scikit-optimize
+torch-summary

@@ -21,6 +21,12 @@ class LossFunction(nn.Module):
         self.device = device
         self.first = 0
     
+    def loss_change_coefficent(self, loss_name, loss_coeff):
+        if loss_name in self.loss_case:
+            self.loss_case[loss_name] = loss_coeff
+    
+    def get_Loss_params(self):
+        return {"loss_case":self.loss_case, "latent_dim":self.latent_dim, "univar_count":self.univar_count,"batch_shape":self.batch_shape}
     
     def computate_loss(self, values_in, verbose=False):
         self.first += 1

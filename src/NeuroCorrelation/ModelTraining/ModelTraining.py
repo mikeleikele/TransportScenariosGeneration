@@ -21,8 +21,7 @@ import datetime
 
 class ModelTraining():
 
-    def __init__(self, model, device, loss_obj, epoch, dataset, dataGenerator, path_folder, univar_count, model_type="AE", pre_trained_decoder=False, trial=None):
-        
+    def __init__(self, model, device, loss_obj, epoch, dataset, dataGenerator, path_folder, univar_count, model_type="AE", pre_trained_decoder=False, optimization=False):
         self.loss_obj = loss_obj
         self.epoch = epoch
         self.dataset = dataset
@@ -59,12 +58,17 @@ class ModelTraining():
             self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=10, gamma=0.1)
             
             self.criterion = nn.BCELoss()
-            
+        
+        if optimization:
+            print("optimization!")    
 
-    def training(self, batch_size=64, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False):
+    def training(self, batch_size=64, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimizar_trial=None):
         self.dataLoaded= DataBatchGenerator(dataset=self.dataset, batch_size=batch_size, shuffle=shuffle_data)
         if load_model:
-            path_save_model = Path(self.path_folder,"model_save", 'model_weights.pth')
+            if optimizar_trial is not None:
+                path_save_model = Path(self.path_folder,"model_save", f"model_weights_trial_{optimizar_trial}.pth")
+            else:
+                path_save_model = Path(self.path_folder,"model_save", 'model_weights.pth')
             print("\tLOAD TRAINED MODEL:\t",path_save_model)
             
             self.model.load_state_dict(torch.load(path_save_model, map_location=self.device))

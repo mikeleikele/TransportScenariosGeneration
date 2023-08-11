@@ -209,7 +209,7 @@ class DataSynteticGeneration():
             
         corrMatrix = self.comparison_plot_syntetic.correlationCoeff(self.real_data_vc)
         if draw_plots:
-            self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc,plot_name="syntetic", color_data="olive")
+            self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc, plot_name="syntetic", color_data="olive")
             self.comparison_plot_syntetic.plot_vc_correlationCoeff(self.real_data_vc, "syntetic", corrMatrix=corrMatrix)
         return corrMatrix
 
@@ -313,8 +313,7 @@ class DataSynteticGeneration():
             vc_mapping =list(real_data.columns.values)
         if univar_count == None:
             univar_count = self.univar_count
-
-        
+         
         copula = GaussianMultivariate()
         print("\t"+name_data+"\tcopula.fit : start")
         copula.fit(real_data)
@@ -341,24 +340,24 @@ class DataSynteticGeneration():
             for j in range(instaces_size):
                 sample.append(self.getSample(i))
             
-            matrix_sample = torch.Tensor(instaces_size, univar_count)
+            matrix_sample = torch.Tensor(instaces_size, univar_count).to(self.torch_device)
             torch.cat(sample, out=matrix_sample)
             matrix_sample = matrix_sample.view(1, 1, univar_count, instaces_size)
             dataset_couple.append({"sample":matrix_sample, "noise":self.getRandom(dim=univar_count)})
-        self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
+        self.comparison_plot = DataComparison(univar_count_in=univar_count, univar_count_out=univar_count, dim_latent=None, path_folder= path_fold_copulagenAnalysis)
         noise_data_vc = dict()
         for id_var in range(univar_count):
             noise_data_vc[id_var] = list()
         for item in dataset_couple:
             for id_var in range(univar_count):
                 for j in range(instaces_size):
-                    noise_data_vc[id_var].append(item['sample'][0][0][id_var][j].detach().numpy().tolist())
+                    noise_data_vc[id_var].append(item['sample'][0][0][id_var][j].detach().cpu().numpy().tolist())
                     
         if draw_plots:
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
+            self.comparison_plot.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
         df_data = pd.DataFrame(noise_data_vc)
         
-        rho = self.comparison_plot_noise.correlationCoeff(df_data)
+        rho = self.comparison_plot.correlationCoeff(df_data)
         return dataset_couple, rho
 
 
@@ -387,9 +386,10 @@ class DataSynteticGeneration():
                 for lat_id in range(self.lat_dim):
                     random_sampled.append(random_values[lat_id][0][s_id])
                 sample.append(torch.stack(random_sampled))
-            matrix_sample = torch.Tensor(instaces_size, lat_id)
+            matrix_sample = torch.Tensor(instaces_size, lat_id).to(self.torch_device)
             torch.cat(sample, out=matrix_sample)       
             matrix_sample = matrix_sample.view(1, 1, self.lat_dim,instaces_size)
+            
             
             dataset_couple.append({"sample":matrix_sample, "noise":matrix_sample})
 

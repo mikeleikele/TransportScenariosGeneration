@@ -201,6 +201,7 @@ class DataComparison():
             n_row = self.univar_count_in
         else:
             n_row = self.univar_count_out
+        
         gs = gridspec.GridSpec(n_row, n_row)
         _key = _keys[0]
         if len(_keys)<=10:
@@ -238,7 +239,6 @@ class DataComparison():
 
                     
                     j_key = f"{key_j}"
-                    print(i_key, j_key)
                     if  i != j:
                         plt_cor = self.correlation_plot(i_val, j_val, i_key, j_key, color=color_data, marginal_dist=marginal_plot)
                         mg0 = SeabornFig2Grid(plt_cor, fig, gs[id_sub])
@@ -246,7 +246,7 @@ class DataComparison():
                         ax_sub = fig.add_subplot(gs[id_sub])
                         plt_variance = self.variance_plot(i_val, i_key, ax_sub, color=color_data)
                     id_sub += 1
-            print(247)
+            
             gs.tight_layout(fig)
             filename = Path(self.path_folder, "plot_vc_correlation_grid_"+plot_name+".png")
             plt.savefig(filename)

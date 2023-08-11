@@ -8,6 +8,7 @@ from src.NeuroCorrelation.Analysis.DataComparison import DataComparison, Correla
 from src.NeuroCorrelation.Analysis.DataStatistics import DataStatistics
 from src.NeuroCorrelation.DataLoaders.DataMapsLoader import DataMapsLoader
 from src.NeuroCorrelation.Optimization.Optimization import Optimization
+from src.NeuroCorrelation.Models.NetworkDetail import NetworkDetails
 
 import copy
 import torch
@@ -23,7 +24,7 @@ import os
 
 class NeuralCore():
 
-    def __init__(self, device, path_folder, epoch =25, batch_size=32,  model_case="autoencoder_3", univar_count=200, lat_dim=150):
+    def __init__(self, device, path_folder, epoch = 3, batch_size=20,  model_case="autoencoder_3", univar_count=7, lat_dim=4):
         device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
         
         self.device = device
@@ -46,7 +47,7 @@ class NeuralCore():
         if self.model_case=="autoencoder_78":
             self.model = GEN_autoEncoder_78
             self.loss_obj = LossFunction(["MSE_LOSS", "VARIANCE_LOSS"], univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
-        elif self.model_case=="autoencoder_3_copula" or self.model_case=="autoencoder_3_defined" :
+        elif self.model_case=="autoencoder_3_copula_optimization" or self.model_case=="autoencoder_3_defined" :
             self.model = GEN_autoEncoder_3
             self.loss_obj = LossFunction({"MSE_LOSS":  1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
@@ -93,7 +94,7 @@ class NeuralCore():
             self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.05, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
             self.loss_obj = dict()
-            self.loss_obj['ae'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.05, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['ae'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS":0.005, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
             self.path_folder_gan = Path(self.path_folder,'gan')
             if not os.path.exists(self.path_folder_gan):
@@ -119,21 +120,47 @@ class NeuralCore():
         
         elif self.model_case=="autoencoder_05k_Chengdu":
             self.model = GEN_autoEncoder_05k
-            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.1, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.1, "MEDIAN_LOSS":0.05,  "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+
+        elif self.model_case=="autoencoder_0016_Chengdu":
+            self.model = GEN_autoEncoder_16
+            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8,  "DECORRELATION_LATENT_LOSS":  0.01}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+        
+        elif self.model_case=="autoencoder_0064_Chengdu":
+            self.model = GEN_autoEncoder_64
+            self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+
 
         self.modelTrainedAE = None
         self.corrCoeff = dict()
+        
+        summary_path = Path(self.path_folder,'summary')
+        if not os.path.exists(summary_path):
+            os.makedirs(summary_path)
+        net_details = NetworkDetails(model=self.model, loss=self.loss_obj, path=summary_path)
+        net_details.saveModelParams()
 
     def start_experiment(self, load_model=False):
         comparison_corr_list = list()
         
-        if self.model_case=="autoencoder_3_copula":
+        if self.model_case=="autoencoder_3_copula_optimization":
             self.instaces_size = 1
             
             data_dict = self.dataset_load(mode="vc_copula")
 
             self.optimization = Optimization(model=self.model, device=self.device, data_dict=data_dict, model_type="AE", epoch=self.epoch, loss=self.loss_obj, path_folder=self.path_folder, univar_count=self.univar_count, batch_size=self.batch_size, dataGenerator=self.dataGenerator, instaces_size_noise=None, direction="maximize", timeout=600)
-            self.optimization.optimize(n_trials=10)
+            search_space = [{"type":"Categorical","min":0,"max":1, "values_list":[0,1,2], "name":"cat"},{"type":"Integer","min":0,"max":1, "values_list":[], "name":"int"}]
+            
+            search_space = [
+                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"MSE_LOSS"},
+                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"COVARIANCE_LOSS"},
+                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"DECORRELATION_LATENT_LOSS"}]
+            self.optimization.set_searchSpace(search_space)
+            self.optimization.set_optimizer(base_estimator="GP", n_initial_points=10)            
+            
+            
+            
+            self.optimization.optimization(n_trials=2)
             #model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
             #self.predict_model(model=self.model_trained, model_type="AE", data_dict=data_dict, input_shape="vector")
         elif self.model_case=="autoencoder_3_defined":
@@ -268,7 +295,24 @@ class NeuralCore():
         
         elif self.model_case=="autoencoder_05k_Chengdu":
             self.instaces_size = 1
-            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.5, name_dataset="China_Chengdu_A500", instaces_size=1, draw_plots=True)
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.2, name_dataset="China_Chengdu_A0500", instaces_size=1, draw_plots=True)
+            model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
+            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
+            comparison_corr_list = [                # original data
+                [('data','train'),('data','train')],
+                [('data','train'),('data','test')],
+                # AE
+                [('AE_train','input'),('AE_train','output')],
+                [('AE_train','input'),('AE_noise','output')],
+                [('AE_train','input'),('AE_copulaLat','output')],
+                [('AE_noise','output'),('AE_copulaLat','output')],
+                [('AE_train','output'),('AE_noise','output')],
+                [('AE_train','output'),('AE_copulaLat','output')],
+            ]
+            
+        elif self.model_case=="autoencoder_0016_Chengdu":
+            self.instaces_size = 1
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.4, name_dataset="China_Chengdu_A0016", instaces_size=1, draw_plots=True)
             model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
             self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
             comparison_corr_list = [
@@ -284,11 +328,30 @@ class NeuralCore():
                 [('AE_train','output'),('AE_copulaLat','output')],
                 
             ]
+        elif self.model_case=="autoencoder_0064_Chengdu":
+            self.instaces_size = 1
+            data_dict = self.dataset_load(mode="graph_roads", train_percentual=0.99, name_dataset="China_Chengdu_A0064", instaces_size=1, draw_plots=True)
+            model_ae = self.training_model(data_dict, model_type="AE", load_model=load_model)
+            self.predict_model(model=model_ae, model_type="AE", data_dict=data_dict, input_shape="vector")
+            comparison_corr_list = [
+                # original data
+                [('data','train'),('data','train')],
+                [('data','train'),('data','test')],
+                # AE
+                [('AE_train','input'),('AE_train','output')],
+                [('AE_train','input'),('AE_noise','output')],
+                [('AE_train','input'),('AE_copulaLat','output')],                
+                [('AE_noise','output'),('AE_copulaLat','output')],
+                [('AE_train','output'),('AE_noise','output')],
+                [('AE_train','output'),('AE_copulaLat','output')],
+                
+            ]    
+            
 
         corr_comp = CorrelationComparison(self.corrCoeff, self.path_folder)
         corr_comp.compareMatrices(comparison_corr_list)
 
-    def dataset_load(self, mode="vc_copula", train_percentual=0.70, starting_sample=20, train_sample=50, test_samples = 5000, noise_samples=5000, name_dataset=None, vc_dict=None, instaces_size=1, draw_plots=True):
+    def dataset_load(self, mode="vc_copula", train_percentual=0.70, starting_sample=20, train_sample=50, test_samples = 5000, noise_samples=10000, name_dataset=None, vc_dict=None, instaces_size=1, draw_plots=True):
         
         if mode=="vc_defined":
             print("DATASET PHASE: Sample generation")
@@ -311,18 +374,19 @@ class NeuralCore():
                 self.vc_mapping.append(key_vc)
             self.corrCoeff['data'] = dict()
             self.dataGenerator.casualVC_init_multi(num_of_samples = starting_sample, vc_dict=self.vc_dict, draw_plots=draw_plots)
-            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.casualVC_generation(name_data="train", num_of_samples = train_sample, draw_plots=draw_plots, instaces_size=self.instaces_size)
-            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.casualVC_generation(name_data="test", num_of_samples = test_samples,  draw_plots=draw_plots, instaces_size=self.instaces_size)
+            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.casualVC_generation(name_data="train", univar_count=self.univar_count, num_of_samples = train_sample, draw_plots=draw_plots, instaces_size=self.instaces_size)
+            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.casualVC_generation(name_data="test", univar_count=self.univar_count, num_of_samples = test_samples,  draw_plots=draw_plots, instaces_size=self.instaces_size)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = noise_samples, draw_plots=draw_plots, instaces_size=self.instaces_size)
         
         if mode=="graph_roads":
             print("DATASET PHASE: Load maps data")
-            
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, name_dataset=name_dataset, lat_dim=self.lat_dim, path_folder=self.path_folder)
+            self.corrCoeff['data'] = dict()
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, name_dataset=name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder)
             self.dataGenerator.mapsVC_load(train_percentual=train_percentual, draw_plots=draw_plots)
+            self.corrCoeff['data'] = dict()
             self.rangeData = self.dataGenerator.getDataRange()
-            train_data = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots)
-            test_data = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots)
+            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots)
+            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
 
@@ -414,7 +478,7 @@ class NeuralCore():
                 if draw_plot:
                     print("\tSTATS PHASE:  Plots")
                     plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
-                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.05}, "test_input":{'data':test_predict['prediction_data_byvar']['input'],'color':plot_colors['input']}, "test_reconstructed":{'data':test_predict['prediction_data_byvar']['output'],'color':plot_colors['output']}}
+                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "test_input":{'data':test_predict['prediction_data_byvar']['input'],'color':plot_colors['input']}, "test_reconstructed":{'data':test_predict['prediction_data_byvar']['output'],'color':plot_colors['output']}}
                     datastats_test.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
                 #
 
@@ -434,7 +498,7 @@ class NeuralCore():
                 if draw_plot:
                     print("\tSTATS PHASE:  Plots")
                     plot_colors = {"input":"green","output":"m"}
-                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.05}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.05}}
+                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
                     datastats_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
 
                 
@@ -457,7 +521,7 @@ class NeuralCore():
                 if draw_plot:
                     print("\tSTATS PHASE:  Plots")
                     plot_colors = {"input":"green", "output":"darkviolet"}                    
-                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.05}, "copulaLatent_generated":{'data':copulaLat_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.05}}
+                    distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "copulaLatent_generated":{'data':copulaLat_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
                     datastats_copLatent.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
                     
         
@@ -484,7 +548,7 @@ class NeuralCore():
                 
                 if draw_plot:    
                     plot_colors = {"input":"green", "output":"m"}                    
-                    distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.05}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.05}}
+                    distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
                     datastats_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=latent)
 
         print(self.corrCoeff)
@@ -501,9 +565,6 @@ class NeuralCore():
         prediction_data_byvar = modelPrediction.getPred_byUnivar()     
         resultDict["prediction_data"] = prediction_data
         resultDict["prediction_data_byvar"] = prediction_data_byvar
-        
-        print(resultDict["prediction_data_byvar"][0])
-        raise Exception("alt")
         
         inp_data_vc = pd.DataFrame()
         for id_univar in range(univar_count_in):

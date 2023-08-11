@@ -74,7 +74,7 @@ def flowview(simulation_name, number_sample):
 
 def neuroDist(num_case, folder, load_model=None):
     device = torch.device("cpu")
-    modelCase = ['autoencoder_05k_Chengdu', 'autoencoder_6k_Chengdu','autoencoder_3_copula','autoencoder_3_defined','autoencoder_16_PEMS',"autoencoder_16_MetrLa","autoencoder_ALL_PEMS","autoencoder_ALL_MetrLa", "GAN_linear_16_PEMS", "GAN_linear_pretrained_vc_copula", "GAN_conv_vc_7_copula", "AE_conv_vc_copula"]
+    modelCase = ['autoencoder_0064_Chengdu', 'autoencoder_05k_Chengdu','autoencoder_0016_Chengdu', 'autoencoder_6k_Chengdu','autoencoder_3_copula_optimization']
     print(f"|------------------------")
     print(f"| Modelcase   : {modelCase[int(num_case)]}")
     print(f"|------------------------")

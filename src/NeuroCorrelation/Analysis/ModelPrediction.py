@@ -67,9 +67,8 @@ class ModelPrediction():
 
         if remapping :
             diff_minmax = self.max_val - self.min_val
-        print("latent::: ",latent)
+        
         if latent:
-            print("latent::: _0")
             for x,z,y in zip(self.inpu_data, self.late_data, self.pred_data):
                 if remapping is not None:
                     x_list = [(i*diff_minmax)+self.min_val for i in x.detach().cpu().numpy()]
@@ -82,7 +81,6 @@ class ModelPrediction():
                 new_row = {'x_input': x_list, 'x_latent': z_list, 'x_output': y_list}
                 df_export.loc[len(df_export)] = new_row
         else: 
-            print("latent::: _1")
             for x,y in zip(self.inpu_data, self.pred_data):
                 if remapping is not None:
                     x_list = [(i*diff_minmax)+self.min_val for i in x.detach().cpu().numpy()]

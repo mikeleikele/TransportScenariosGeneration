@@ -18,9 +18,10 @@ import pandas as pd
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, lat_dim, path_folder):
+    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
+        self.univar_count = univar_count
         self.name_dataset = name_dataset
         self.min_val = None
         self.max_val = None
@@ -35,9 +36,12 @@ class DataMapsLoader():
         elif self.name_dataset=="China_Chengdu":
             filename = Path("data","neuroCorrelation_data","Chengdu_slot_A.csv")
         
-        elif self.name_dataset=="China_Chengdu_A500":
+        elif self.name_dataset=="China_Chengdu_A0500":
             filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_200.csv")
-            
+        elif self.name_dataset=="China_Chengdu_A0016":
+            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_16.csv")
+        elif self.name_dataset=="China_Chengdu_A0064":
+            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_64.csv")   
             
         self.data_df = pd.read_csv(filename, sep=',')
         
@@ -139,7 +143,11 @@ class DataMapsLoader():
             #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
             
 
-    def mapsVC_getData(self, name_data="train",  draw_plots=True):
+    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1):
+        path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
+        if not os.path.exists(path_fold_copulagenAnalysis):
+            os.makedirs(path_fold_copulagenAnalysis)
+            
         if name_data=="train":
             data = self.train_data_vc
             n_istances = self.train_samples
@@ -151,7 +159,20 @@ class DataMapsLoader():
         for i in range(n_istances):
             dataset_couple.append({"sample":self.getSample(data, i)})
         
-        return dataset_couple
+        maps_data_vc = dict()
+        for id_var in range(self.univar_count):
+            maps_data_vc[id_var] = list()
+        for item in dataset_couple:
+            for id_var in range(self.univar_count):
+                for j in range(instaces_size):
+                    maps_data_vc[id_var].append(item['sample'][id_var].detach().cpu().numpy().tolist())
+            
+            
+        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
+        df_data = pd.DataFrame(maps_data_vc)
+        rho = self.comparison_datamaps.correlationCoeff(df_data)
+        
+        return dataset_couple, rho
 
     def getSample(self, data, key_sample):
         sample = []
