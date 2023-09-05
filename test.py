@@ -1,4 +1,4 @@
-from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
+#from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
 from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
 from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 from src.SamplesGeneration.FlowSampling  import FlowSampling

@@ -244,8 +244,12 @@ class LossFunction(nn.Module):
         covariance_matr_out = torch.reshape(torch.cat(covariance_list_out), (len(values),self.univar_count))
         spearman_obj = SpearmanCorrCoef(self.univar_count)
         
-        spearman_values = spearman_obj(covariance_matr_in, covariance_matr_out)
         
+        
+        spearman_values = spearman_obj(covariance_matr_in, covariance_matr_out)
+        print(spearman_values)
+        raise Exception("Sorry, hold that")
+    
         for val in spearman_values:
             loss_ret += val
         loss_ret /= len(spearman_values)

@@ -49,7 +49,7 @@ class NeuralCore():
             self.loss_obj = LossFunction(["MSE_LOSS", "VARIANCE_LOSS"], univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_3_copula_optimization" or self.model_case=="autoencoder_3_defined" :
             self.model = GEN_autoEncoder_3
-            self.loss_obj = LossFunction({"MSE_LOSS":  1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj = LossFunction({"MSE_LOSS":  1, "SPEARMAN_CORRELATION_LOSS":1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_16_PEMS":
             self.model = GEN_autoEncoder_16
