@@ -473,11 +473,7 @@ class GEN_ConvAutoEncoder_7(nn.Module):
         self.decoder = GEN_ConvAutoEncoder_Decoder_7()
 
     def forward(self, x):
-        print("419-----------------")
-        print(x.shape)
-        print("********************")
         x_latent = self.encoder(x)
-        print(x_latent["x_output"].shape)
         x_hat = self.decoder(x_latent["x_output"])
         return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
 

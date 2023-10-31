@@ -87,7 +87,6 @@ class GAN_LinearGenerator_16(nn.Module):
         x_out = self.hidden_layer_7(layer_nn)
         return {"x_input":x, "x_output":x_out}
 
-
 class GAN_LinearNeural_7(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -141,7 +140,6 @@ class GAN_LinearGenerator_7(nn.Module):
         
         return {"x_input":x, "x_output":x_out}
 
-
 class GAN_neural_mixed_7(nn.Module):
     def __init__(self, generator=None, discriminator=None):
         super().__init__()
@@ -161,7 +159,25 @@ class GAN_neural_mixed_7(nn.Module):
     def get_discriminator(self):
         return self.D
 
+class GAN_neural_mixed_16(nn.Module):
+    def __init__(self, generator=None, discriminator=None):
+        super().__init__()
+        if generator is None:
+            self.G = GAN_LinearGenerator_16
+        else:
+            self.G = generator
+        
+        if discriminator is None:
+            self.D = GAN_LinearDiscriminator_16
+        else:
+            self.D = discriminator
 
+    def get_generator(self):
+        return self.G
+
+    def get_discriminator(self):
+        return self.D
+    
 class GAN_Conv_neural_16(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -216,7 +232,6 @@ class GAN_ConvGenerator_16(nn.Module):
         
         return {"x_input":x, "x_output":x_out}
 
-
 class GAN_Conv_neural_7(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -269,3 +284,81 @@ class GAN_ConvGenerator_7(nn.Module):
         layer_nn = F.tanh(layer_nn)
         x_out = self.hidden_layer_3(layer_nn)
         return {"x_input":x, "x_output":x_out}
+    
+class GAN_LinearDiscriminator_64(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=64, out_features=192)
+        self.hidden_layer_2 = nn.Linear(in_features=192, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=48)
+        self.hidden_layer_4 = nn.Linear(in_features=48, out_features=24)
+        self.hidden_layer_5 = nn.Linear(in_features=24, out_features=12)
+        self.hidden_layer_6 = nn.Linear(in_features=12, out_features=6)
+        self.hidden_layer_7 = nn.Linear(in_features=6, out_features=1)
+        
+
+    def forward(self, x):
+        x_flat = x.view(-1)
+        layer_nn = self.hidden_layer_1(x_flat)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_7(layer_nn)
+        x_hat = F.sigmoid(layer_nn)
+        return {"x_input":x, "x_output":x_hat}
+
+class GAN_LinearGenerator_64(nn.Module):
+    def __init__(self):    
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=56)
+        self.hidden_layer_2 = nn.Linear(in_features=56, out_features=64)
+        self.hidden_layer_3 = nn.Linear(in_features=64, out_features=128)
+        self.hidden_layer_4 = nn.Linear(in_features=128, out_features=192)
+        self.hidden_layer_5 = nn.Linear(in_features=192, out_features=64)
+        
+    def forward(self, x):
+        #layer_nn = self.bn_1(x)
+        layer_nn = self.hidden_layer_1(x)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        x_out = self.hidden_layer_5(layer_nn)
+        return {"x_input":x, "x_output":x_out}
+
+class GAN_neural_mixed_64(nn.Module):
+    def __init__(self, generator=None, discriminator=None):
+        super().__init__()
+        if generator is None:
+            self.G = GAN_LinearGenerator_64
+        else:
+            self.G = generator
+        
+        if discriminator is None:
+            self.D = GAN_LinearDiscriminator_64
+        else:
+            self.D = discriminator
+
+    def get_generator(self):
+        return self.G
+
+    def get_discriminator(self):
+        return self.D
+    
+    def summary(self):
+        dis_summary = summary(self.D, (1, 1, 64), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
+        gen_summary = summary(self.G, (1, 1, 48), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
+        summary_dict = {"Discriminator": dis_summary, "Generator": gen_summary}
+        return summary_dict

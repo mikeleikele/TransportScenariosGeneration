@@ -26,7 +26,10 @@ class LossFunction(nn.Module):
             self.loss_case[loss_name] = loss_coeff
     
     def get_Loss_params(self):
-        return {"loss_case":self.loss_case, "latent_dim":self.latent_dim, "univar_count":self.univar_count,"batch_shape":self.batch_shape}
+        if len(self.loss_case) == 0:
+            return {"loss_case":"-", "latent_dim":self.latent_dim, "univar_count":self.univar_count,"batch_shape":self.batch_shape}
+        else:
+            return {"loss_case":self.loss_case, "latent_dim":self.latent_dim, "univar_count":self.univar_count,"batch_shape":self.batch_shape}
     
     def computate_loss(self, values_in, verbose=False):
         self.first += 1
@@ -247,8 +250,6 @@ class LossFunction(nn.Module):
         
         
         spearman_values = spearman_obj(covariance_matr_in, covariance_matr_out)
-        print(spearman_values)
-        raise Exception("Sorry, hold that")
     
         for val in spearman_values:
             loss_ret += val

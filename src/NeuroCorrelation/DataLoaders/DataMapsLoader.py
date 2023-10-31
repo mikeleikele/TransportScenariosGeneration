@@ -93,8 +93,8 @@ class DataMapsLoader():
         rho_test_list = list()
 
         train_istance = math.floor(len(vc_values) * train_percentual)
-        print("min_val:",self.min_val)
-        print("max_val:",self.max_val)
+        print("\tmin val:",self.min_val)
+        print("\tmax val:",self.max_val)
         train_values_vc = dict()
         test_values_vc = dict()
         self.vc_mapping_list = self.data_df['ref'].values.tolist()
@@ -116,16 +116,16 @@ class DataMapsLoader():
             mu['test'] = test_values_vc[key_vc]['mean']
             rho_test_list.append(test_values_vc[key_vc]['values'])
             self.test_samples = len(test_values_vc[key_vc]['values'])
-        print("train samples: done")
-        print("test samples: done")
+        print("\ttrain samples: done")
+        print("\ttest samples: done")
         ticks_list = np.concatenate([[''], self.data_df['ref'].values])
         rho_train = np.corrcoef(rho_train_list)
         self.plot_correlation(rho_corr=rho_train, ticks_list=ticks_list, name_plot="train", path_fold=self.path_folder, draw_plots=draw_plots)
+        print("\ttrain correlation: done")
         
-        print("test samples: done")
         rho_test = np.corrcoef(rho_test_list)
         self.plot_correlation(rho_corr=rho_test, ticks_list=ticks_list, name_plot="test", path_fold=self.path_folder, draw_plots=draw_plots)
-        
+        print("\ttest correlation: done")
         
         self.train_data_vc = pd.DataFrame()
         for key_vc in train_values_vc:
@@ -136,9 +136,12 @@ class DataMapsLoader():
             self.test_data_vc[key_vc] = test_values_vc[key_vc]['values']
         
         if draw_plots:         
+            
             self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=None, path_folder= self.path_folder)
             self.comparison_plot.plot_vc_analysis(self.train_data_vc,plot_name="mapsTrain")
+            print("\ttrain correlation plot: done")
             self.comparison_plot.plot_vc_analysis(self.test_data_vc,plot_name="mapsTest")
+            print("\ttest correlation plot: done")
             data_plot = {"train_data":self.train_data_vc,"test_data":self.test_data_vc}
             #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
             

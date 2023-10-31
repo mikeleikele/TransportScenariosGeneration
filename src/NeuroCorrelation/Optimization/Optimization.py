@@ -9,7 +9,7 @@ from skopt.utils import point_asdict
 from skopt.plots import plot_gaussian_process
 
 class Optimization():
-    def __init__(self, model, device, data_dict, model_type, epoch, loss, path_folder, univar_count, batch_size, dataGenerator, instaces_size_noise=None, direction="maximize", timeout=600):
+    def __init__(self, model, device, data_dict, model_type, epoch, loss, path_folder, univar_count, batch_size, dataGenerator, latent_dim, vc_mapping, input_shape, rangeData, instaces_size_noise=None, direction="maximize", timeout=600):
         self.model = model
         self.device = device
         self.train_data = data_dict['train_data']
@@ -23,7 +23,10 @@ class Optimization():
         self.direction = direction
         self.timeout = timeout
         self.load_model = False
-        
+        self.lat_dim = latent_dim
+        self.vc_mapping = vc_mapping
+        self.input_shape = input_shape
+        self.rangeData = rangeData
         self.opt = None
         
         self.search_space = {"keys":list(),"space":list()}
@@ -50,24 +53,33 @@ class Optimization():
             
     def set_optimizer(self, base_estimator="GP", n_initial_points=10):
         
-        #"GP", "RF", "ET", "GBRT"
+        #base_estimator= "GP", "RF", "ET", "GBRT"
         print("\tcreate optimizer")
         self.opt = Optimizer(dimensions=self.search_space["space"], base_estimator=base_estimator, n_initial_points=n_initial_points, acq_optimizer="sampling")
         
         
     
-    def optimization(self, n_trials):
+    def optimization(self, n_trials, network_key):
         print("\tbegin optimization")
         for trial in range(n_trials):
             print("\t\ttrial -\t#",trial)
             next_x = self.opt.ask()
             print("\t\t\tpoint values: ",next_x)
             for key, val in zip(self.search_space["keys"], next_x): 
-                self.loss_obj.loss_change_coefficent(key, val)
+                self.loss_obj[network_key].loss_change_coefficent(key, val)
             
-            self.training_obj = ModelTraining(model=self.model, device=self.device, loss_obj=self.loss_obj, epoch=self.epoch, dataset=self.train_data, dataGenerator=self.dataGenerator, path_folder=self.path_folder, univar_count = self.univar_count, model_type=self.model_type, pre_trained_decoder=False)
+            self.training_obj = ModelTraining(model=self.model, device=self.device, loss_obj=self.loss_obj[network_key], 
+                                              epoch=self.epoch, dataset=self.train_data, dataGenerator=self.dataGenerator, 
+                                              path_folder=self.path_folder, univar_count_in = self.univar_count,univar_count_out = self.univar_count, 
+                                              latent_dim=self.lat_dim, vc_mapping=self.vc_mapping, input_shape=self.input_shape, rangeData=self.rangeData,
+                                              model_type=self.model_type, pre_trained_decoder=False)
+            
+            print("**************")
+            print(self.model_type)
+            print("**************")
+            
             if self.model_type =="AE":
-                optim_score = self.training_obj.training(batch_size=self.batch_size, model_flatten_in=True,load_model=False, optimizar_trial=trial)
+                optim_score = self.training_obj.training(batch_size=self.batch_size, model_flatten_in=True,load_model=False, optimization_name=trial)
             elif self.model_type =="GAN":
                 optim_score = self.training_obj.training(batch_size=self.batch_size, noise_size=1, load_model=False)
             self.training_obj.eval()

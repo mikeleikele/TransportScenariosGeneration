@@ -11,13 +11,15 @@ from matplotlib.ticker import PercentFormatter
 
 class ModelPrediction():
 
-    def __init__(self, model, device, univar_count_in, univar_count_out, latent_dim, path_folder, data_range=None, input_shape="vector"):
+    def __init__(self, model, device, dataset, univar_count_in, univar_count_out, latent_dim, path_folder, vc_mapping, data_range=None, input_shape="vector"):
         self.model = model
+        self.dataset = dataset
         self.univar_count_in = univar_count_in
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
         self.path_folder = path_folder
         self.device = device
+        self.vc_mapping = vc_mapping
         if data_range is not None:
             self.max_val = data_range['max_val']
             self.min_val = data_range['min_val']
@@ -134,9 +136,6 @@ class ModelPrediction():
                         else:
                             self.pred_byVar[univ_id].append(out_var_instance)
         
-
-
-
     def latent_sortByComponent(self, pred2numpy=True):
         self.late_byComp = dict()
 
@@ -182,3 +181,39 @@ class ModelPrediction():
             data_latent.append(istance_dict)
         comp_dict = {"latent":data_latent}
         return comp_dict
+    
+    # latent_dim, path_folder, data_range=None, input_shape
+    def compute_prediction(self, experiment_name, remapping_data=False):
+        resultDict = dict()
+        #modelPrediction = ModelPrediction(model, device=device, univar_count_in=univar_count_in, univar_count_out=univar_count_out, latent_dim=latent_dim, data_range=data_range, input_shape=input_shape, path_folder=folder)
+        if self.latent_dim is not None:
+            self.predict(self.dataset, latent=True,  experiment_name=experiment_name, remapping=remapping_data)
+        else:
+            self.predict(self.dataset, latent=False, experiment_name=experiment_name, remapping=remapping_data)
+
+        prediction_data = self.getPred()
+        prediction_data_byvar = self.getPred_byUnivar()     
+        resultDict["prediction_data"] = prediction_data
+        resultDict["prediction_data_byvar"] = prediction_data_byvar
+        
+        inp_data_vc = pd.DataFrame()
+        for id_univar in range(self.univar_count_in):
+            var_name = self.vc_mapping[id_univar]
+            inp_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['input'][id_univar]]
+        resultDict["inp_data_vc"] = inp_data_vc
+
+        out_data_vc = pd.DataFrame()
+        for id_univar in range(self.univar_count_out):
+                var_name = self.vc_mapping[id_univar]
+                out_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['output'][id_univar]]
+        resultDict["out_data_vc"] = out_data_vc
+
+        if self.latent_dim is not None:
+            lat_data = self.getLat()
+            resultDict["latent_data"] = lat_data
+            lat_data_bycomp = self.getLat_byComponent()
+            resultDict["latent_data_bycomp"] = lat_data_bycomp        
+            lat2dataInput = self.getLatent2data()
+            resultDict["latent_data_input"] = lat2dataInput  
+        resultDict['opt_measure'] = 2
+        return resultDict

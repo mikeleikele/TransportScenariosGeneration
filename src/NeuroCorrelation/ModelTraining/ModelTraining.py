@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import os
 import json
 from matplotlib.ticker import PercentFormatter
@@ -21,7 +22,7 @@ import datetime
 
 class ModelTraining():
 
-    def __init__(self, model, device, loss_obj, epoch, dataset, dataGenerator, path_folder, univar_count, model_type="AE", pre_trained_decoder=False, optimization=False):
+    def __init__(self, model, device, loss_obj, epoch, dataset, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim, vc_mapping, input_shape, rangeData, model_type="AE", pre_trained_decoder=False, optimization=False, optimization_function=None,optimization_name=None):
         self.loss_obj = loss_obj
         self.epoch = epoch
         self.dataset = dataset
@@ -29,15 +30,26 @@ class ModelTraining():
         self.path_folder = path_folder
         self.loss_dict = dict()
         self.model_type = model_type
-        self.univar_count = univar_count 
+        self.vc_mapping = vc_mapping
+        self.rangeData = rangeData
         self.device = device
+        
+        self.univar_count_in = univar_count_in 
+        self.univar_count_out = univar_count_out
+        self.latent_dim = latent_dim
+        
+        self.path_save_model_gradients = Path(self.path_folder, self.model_type,"model_gradients", )
+        if not os.path.exists(self.path_save_model_gradients):
+            os.makedirs(self.path_save_model_gradients)
+            
         if self.model_type=="AE":
             self.model = model()
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
             self.optimizer = optim.Adam(params=model_params, lr=0.01)
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=15, gamma=0.1)
-     
+            
+            
         elif self.model_type=="GAN":
             beta1 = 0.5
             lr = 0.1
@@ -60,15 +72,22 @@ class ModelTraining():
             self.criterion = nn.BCELoss()
         
         if optimization:
-            print("optimization!")    
+            print("optimization!")   
+            self.path_opt_results = Path(self.path_folder, self.model_type,"Optimizations") 
+            if not os.path.exists(self.path_opt_results):
+                os.makedirs(self.path_opt_results)
 
-    def training(self, batch_size=64, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimizar_trial=None):
+    def training(self, batch_size=64, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_function=None, optimization_name=None):
         self.dataLoaded= DataBatchGenerator(dataset=self.dataset, batch_size=batch_size, shuffle=shuffle_data)
         if load_model:
-            if optimizar_trial is not None:
-                path_save_model = Path(self.path_folder,"model_save", f"model_weights_trial_{optimizar_trial}.pth")
+            if optimization is not None:
+                path_opt_result = Path(self.path_opt_results, f"{optimization_name}")
+                if not os.path.exists(path_opt_result):
+                    os.makedirs(path_opt_result)
+
+                path_save_model = Path(path_opt_result, f"model_weights_trial_{optimization_name}.pth")
             else:
-                path_save_model = Path(self.path_folder,"model_save", 'model_weights.pth')
+                path_save_model = Path(self.path_folder, self.model_type, "model_save", 'model_weights.pth')
             print("\tLOAD TRAINED MODEL:\t",path_save_model)
             
             self.model.load_state_dict(torch.load(path_save_model, map_location=self.device))
@@ -81,29 +100,39 @@ class ModelTraining():
                 train_end_time = datetime.datetime.now()
                 train_time = train_end_time - train_start_time
                 print("\tTIME TRAIN MODEL:\t",train_time)
-
+                model_for_prediction = self.getModel('all')
             elif self.model_type == "GAN":
                 self.training_GAN(noise_size=noise_size)
-            if save_model:
+            if save_model and self.model_type != "GAN":
                 self.save_model()
-            opt_function_result = 1
+            if optimization:
+                if self.model_type == "AE":
+                
+                    modelPrediction = ModelPrediction(model=model_for_prediction, device=self.device,dataset=self.dataset, vc_mapping= self.vc_mapping, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=input_shape,path_folder=path_opt_result)         
+                       
+                    prediction_opt = modelPrediction.compute_prediction(experiment_name=f"{optimizar_trial}", remapping_data=True)
+                    opt_function_result = prediction_opt['opt_measure']
+                    
+                else:
+                    print("OPTIMIZATION PROCESS NOT IMPLEMENTED FOR:\t",self.model_type)
+            else:
+                opt_function_result = 1
+            print(opt_function_result)
             return opt_function_result
             
     def save_model(self):
-        path_folder_model = Path(self.path_folder,"model_save")
+        path_folder_model = Path(self.path_folder, self.model_type, "model_save")
         if not os.path.exists(path_folder_model):
             os.makedirs(path_folder_model)
         path_save_model = Path(path_folder_model, 'model_weights.pth')
         print("\tSAVE TRAINED MODEL:\t",path_save_model)
         torch.save(self.model.state_dict(), path_save_model)
-        
-        
-        
+   
     def training_AE(self, model_flatten_in, plot_loss=True):
         self.loss_dict = dict()
         self.model.train()
-        print("\tepoch:\t",0,"/",self.epoch,"\t -")
-        for epoch in range(self.epoch):
+        print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
+        for epoch in range(self.epoch['AE']):
             epoch_start_time = datetime.datetime.now()            
             dataBatches = self.dataLoaded.generate()
             loss_batch = list()
@@ -121,15 +150,16 @@ class ModelTraining():
                     sample_list.append(sample)
                     #noise = noisef.float()
                     
-                x_in = torch.Tensor(item_batch, self.univar_count).to(device=self.device)
+                x_in = torch.Tensor(item_batch, self.univar_count_in).to(device=self.device)
+                
                 
                 torch.cat(sample_list, out=x_in) 
+                
                 if model_flatten_in:
-                    x_in = x_in.view(-1,self.univar_count)
-    
-                #print(x_in)
-                #print(x_in.shape)
-                #print("self.univar_count ",self.univar_count)
+                    x_in = x_in.view(-1,self.univar_count_in)
+                    
+                
+                
                 y_hat = self.model.forward(x=x_in)
                 y_hat_list = list()
 
@@ -153,6 +183,7 @@ class ModelTraining():
                 
                 loss.backward()
                 self.optimizer.step()
+                
             self.scheduler.step()    
             self.loss_dict[epoch] = {"mean_all": np.mean(loss_batch), "values_list": loss_batch}
             for loss_part in loss_dict:
@@ -160,10 +191,12 @@ class ModelTraining():
             epoch_end_time = datetime.datetime.now()
             epoch_time = epoch_end_time - epoch_start_time
             
-            print("\tepoch:\t",epoch+1,"/",self.epoch,"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tlr: ",self.optimizer.param_groups[0]['lr'])
+            self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}")
+            
+            print("\tepoch:\t",epoch+1,"/",self.epoch['AE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tlr: ",self.optimizer.param_groups[0]['lr'])
         if plot_loss:
             self.loss_plot(self.loss_dict)
-   
+            
 
     def training_GAN(self, noise_size, plot_loss=True):
         
@@ -175,8 +208,8 @@ class ModelTraining():
         self.model_dis.train()
         print("model_gen.training\t: ",self.model_gen.training )
         print("model_dis.training\t: ",self.model_dis.training )
-        print("\tepoch:\t",0,"/",self.epoch," - ")
-        for epoch in range(self.epoch):
+        print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
+        for epoch in range(self.epoch['GAN']):
             
             dataBatches = self.dataLoaded.generate()
             loss_batch = list()
@@ -264,7 +297,7 @@ class ModelTraining():
             self.scheduler_gen.step()
 
             self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
-            print("\tepoch:\t",epoch,"/",self.epoch,"\t - loss D:\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\t G: ",np.mean(err_G_list),"\t\t\tlr D: ",self.optimizer_dis.param_groups[0]['lr'],"\t G: ",self.optimizer_gen.param_groups[0]['lr'])
+            print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t - loss D:\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\t G: ",np.mean(err_G_list),"\t\t\tlr D: ",self.optimizer_dis.param_groups[0]['lr'],"\t G: ",self.optimizer_gen.param_groups[0]['lr'])
         if plot_loss:
             self.loss_plot(self.loss_dict)
 
@@ -306,11 +339,8 @@ class ModelTraining():
             self.model_gen.train() 
             self.model_dis.train()
 
-
-        
-
     def loss_plot(self, loss_dict):
-        path_fold_lossplot = Path(self.path_folder, "loss_plot")
+        path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
             os.makedirs(path_fold_lossplot)
 
@@ -335,7 +365,7 @@ class ModelTraining():
         df = pd.DataFrame(loss_plot_dict).T.reset_index()
         #df.columns = 
 
-    #
+    #deprecato
     def compute_correlationMatrix(self):
         correlationList = list()
         correlationList_txt = list()
@@ -345,16 +375,53 @@ class ModelTraining():
             correlationList.append(self.generated_dict[univ_id])
             correlationList_txt.append(self.generated_dict[univ_id].tolist())
 
-        corrCoeff_list_gen_Path = Path(self.path_folder, "corrCoeffList_generated.txt")
+        corrCoeff_list_gen_Path = Path(self.path_folder, self.model_type, "corrCoeffList_generated.txt")
         with open(corrCoeff_list_gen_Path, 'w') as fp:
             json.dump(correlationList_txt, fp, sort_keys=True, indent=4)
 
         corrCoeff_matrix_gen = np.corrcoef(correlationList)
-        corrCoeff_matrix_gen_Path = Path(self.path_folder, "corrCoeffMatrix_generated.csv")
+        corrCoeff_matrix_gen_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_generated.csv")
         np.savetxt(corrCoeff_matrix_gen_Path, corrCoeff_matrix_gen, delimiter=",")
-        corrCoeff_matrix_orig_Path = Path(self.path_folder, "corrCoeffMatrix_original.csv")
+        corrCoeff_matrix_orig_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_original.csv")
         corrCoeff_matrix_orig = np.loadtxt(corrCoeff_matrix_orig_Path,delimiter=",")
 
         sub_correlation_matrix = np.subtract(corrCoeff_matrix_gen,corrCoeff_matrix_orig)
-        sub_correlation_matrix_Path = Path(self.path_folder, "corrCoeffMatrix_sub.csv")
+        sub_correlation_matrix_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_sub.csv")
         np.savetxt(sub_correlation_matrix_Path, sub_correlation_matrix, delimiter=",")
+              
+    def plot_grad_flow(self, named_parameters, epoch=None):
+        
+        
+        '''Plots the gradients flowing through different layers in the net during training.
+        Can be used for checking for possible gradient vanishing / exploding problems.
+        Usage: Plug this function in Trainer class after loss.backwards() as 
+        "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+        
+        ave_grads = []
+        max_grads= []
+        layers = []
+        for n, p in named_parameters:
+            if(p.requires_grad) and ("bias" not in n):
+                layers.append(n)
+                ave_grads.append(p.grad.abs().mean())
+                max_grads.append(p.grad.abs().max())
+        plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+        plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+        plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
+        plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+        plt.xlim(left=0, right=len(ave_grads))
+        plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+        plt.xlabel("Layers")
+        plt.ylabel("average gradient")
+        plt.title("Gradient flow")
+        plt.grid(True)
+        plt.legend([
+            Line2D([0], [0], color="c", lw=4),
+            Line2D([0], [0], color="b", lw=4),
+            Line2D([0], [0], color="k", lw=4)], 
+            ['max-gradient', 'mean-gradient', 'zero-gradient'])
+        
+        epoch_str = f'{epoch}'.zfill(len(str(self.epoch)))
+        path_save_gradexpl = Path(self.path_save_model_gradients,f"gradient_epoch_{epoch_str}.png")
+        plt.savefig(path_save_gradexpl)
+  

@@ -204,7 +204,7 @@ class DataComparison():
         
         gs = gridspec.GridSpec(n_row, n_row)
         _key = _keys[0]
-        if len(_keys)<=10:
+        if len(_keys)<=9:
             if len(_keys)>=7:
                 marginal_plot = False
             else:

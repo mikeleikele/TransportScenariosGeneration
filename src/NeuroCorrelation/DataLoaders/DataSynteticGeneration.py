@@ -27,10 +27,10 @@ class DataSynteticGeneration():
         self.univar_count = univar_count
         self.lat_dim = lat_dim
         self.path_folder = path_folder
-        self.univar_count = None
+        
         self.min_val = None
         self.max_val = None
-
+        
 
     def get_muR(self):
         if self.with_cov:
@@ -310,7 +310,7 @@ class DataSynteticGeneration():
                 real_data = self.data2Copula(real_data)
             else:
                 real_data = real_data
-            vc_mapping =list(real_data.columns.values)
+            vc_mapping = list(real_data.columns.values)
         if univar_count == None:
             univar_count = self.univar_count
          
