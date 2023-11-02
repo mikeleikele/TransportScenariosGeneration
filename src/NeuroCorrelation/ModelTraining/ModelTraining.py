@@ -131,6 +131,7 @@ class ModelTraining():
     def training_AE(self, model_flatten_in, plot_loss=True):
         self.loss_dict = dict()
         self.model.train()
+        
         print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
         for epoch in range(self.epoch['AE']):
             epoch_start_time = datetime.datetime.now()            

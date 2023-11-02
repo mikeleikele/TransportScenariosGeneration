@@ -31,7 +31,7 @@ class DataLoader:
         self.summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
-        self.vc_dict = None
+        self.statsData = None
 
     def dataset_load(self, draw_plots=True, save_summary=True):
         
@@ -77,16 +77,22 @@ class DataLoader:
             #self.train_data = self.dataGenerator.graphGen(num_of_samples = train_samples, with_cov=True)
 
         self.rangeData = self.dataGenerator.getDataRange()
+        self.statsData = self.dataGenerator.getDataStats()
+        
         data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data}
         
         if save_summary:
             self.saveDataset_setting()
         return data_dict
     
-    def get_varMapping(self):
+    def get_vcMapping(self):
         return self.vc_mapping
     
-    
+    def get_statsData(self):
+        if self.statsData is None:
+            raise Exception("rangeData not defined.")
+        return self.statsData
+        
     def getDataGenerator(self):
         if self.dataGenerator is None:
             raise Exception("rangeData not defined.")

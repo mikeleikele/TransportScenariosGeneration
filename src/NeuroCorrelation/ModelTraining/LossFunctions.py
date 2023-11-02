@@ -19,7 +19,8 @@ class LossFunction(nn.Module):
         self.latent_dim = latent_dim
         self.batch_shape = batch_shape
         self.device = device
-        self.first = 0
+        self.statsData = None
+        self.vc_mapping = None
     
     def loss_change_coefficent(self, loss_name, loss_coeff):
         if loss_name in self.loss_case:
@@ -31,15 +32,14 @@ class LossFunction(nn.Module):
         else:
             return {"loss_case":self.loss_case, "latent_dim":self.latent_dim, "univar_count":self.univar_count,"batch_shape":self.batch_shape}
     
+    def set_stats_data(self, stats_data, vc_mapping):
+        self.statsData = stats_data
+        self.vc_mapping = vc_mapping
+        
+        
     def computate_loss(self, values_in, verbose=False):
-        self.first += 1
-        if self.batch_shape =="vecdtor":
-            
-            if self.first==3:
-                print("======= VALUES LOSS : begin ================")
-                #print(values)
-                print("======= VALUES LOSS    end  ================")
-    
+        if self.statsData is None or self.vc_mapping is None:
+            raise Exception("statsData NOT SET")
         values = values_in
         loss_total = torch.zeros(1).to(device=self.device)
         loss_dict = dict()
@@ -61,14 +61,23 @@ class LossFunction(nn.Module):
             if verbose:
                 print("RMSE_LOSS - ", loss_coeff)
                 
-        if "MEDIAN_LOSS" in self.loss_case:
-            median_similarities_loss = self.median_similarities(values)
-            coeff = self.loss_case["MEDIAN_LOSS"]
+        if "MEDIAN_LOSS_batch" in self.loss_case:
+            median_similarities_loss = self.median_similarities(values, compute_on="B")
+            coeff = self.loss_case["MEDIAN_LOSS_batch"]
             loss_coeff = median_similarities_loss.mul(coeff)
             loss_total += loss_coeff
-            loss_dict["MEDIAN_LOSS"] = loss_coeff
+            loss_dict["MEDIAN_LOSS_batch"] = loss_coeff
             if verbose:
-                print("MEDIAN_LOSS - ", loss_coeff)
+                print("MEDIAN_LOSS_batch - ", loss_coeff)
+        
+        if "MEDIAN_LOSS_dataset" in self.loss_case:
+            median_similarities_loss = self.median_similarities(values, compute_on="D")
+            coeff = self.loss_case["MEDIAN_LOSS_dataset"]
+            loss_coeff = median_similarities_loss.mul(coeff)
+            loss_total += loss_coeff
+            loss_dict["MEDIAN_LOSS_dataset"] = loss_coeff
+            if verbose:
+                print("MEDIAN_LOSS_dataset - ", loss_coeff)
         
         if "VARIANCE_LOSS" in self.loss_case:            
             variance_similarities_loss = self.variance_similarities(values)
@@ -141,26 +150,34 @@ class LossFunction(nn.Module):
         loss_dict["loss_total"] = loss_total
         return loss_dict
 
-    def median_similarities(self, values):
+    def median_similarities(self, values, compute_on="batch"):
         loss_ret = torch.zeros(1).to(device=self.device)
-        variance_list_in = []
-        variance_list_out = []
-        #variance_list= [list() for i in range(self.univar_count)]
+        median_list_in = []
+        median_list_out = []
+        #median_list= [list() for i in range(self.univar_count)]
         
         for id_item, val in enumerate(values):
-            variance_list_in.append(val['x_input'])
-            variance_list_out.append(val['x_output'])
-
-        variance_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
-        variance_matr_in = torch.reshape(torch.cat(variance_list_in), (len(values),self.univar_count))
-        variance_in = torch.median(variance_matr_in, axis=0)[0]
+            median_list_in.append(val['x_input'])
+            median_list_out.append(val['x_output'])
         
-        variance_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
-        variance_matr_out = torch.reshape(torch.cat(variance_list_out), (len(values),self.univar_count))
+        if compute_on=="batch" or compute_on=="B":
+            median_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
+            median_matr_in = torch.reshape(torch.cat(median_list_in), (len(values),self.univar_count))
+            median_in = torch.median(median_matr_in, axis=0)[0]
+            
+        elif compute_on=="dataset" or compute_on=="D":
+            median_list_stats = []
+            
+            for key in self.vc_mapping:
+                median_list_stats.append(self.statsData['median_val'][key])
+            median_in = torch.FloatTensor(median_list_stats)
+            print("-median_in---",median_in)
+            
+        median_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
+        median_matr_out = torch.reshape(torch.cat(median_list_out), (len(values),self.univar_count))        
+        median_out = torch.median(median_matr_out, axis=0)[0]
         
-        variance_out = torch.median(variance_matr_out, axis=0)[0]
-        
-        for inp,oup in zip(variance_in, variance_out):
+        for inp,oup in zip(median_in, median_out):
             loss_ret += torch.square(torch.norm(torch.sub(inp,oup,alpha=1), p=2))
         return loss_ret#torch.mul(loss_ret,1)
 
@@ -254,7 +271,7 @@ class LossFunction(nn.Module):
         for val in spearman_values:
             loss_ret += val
         loss_ret /= len(spearman_values)
-        return loss_ret
+        return -loss_ret
 
     def MSE_similarities(self, values):
         """

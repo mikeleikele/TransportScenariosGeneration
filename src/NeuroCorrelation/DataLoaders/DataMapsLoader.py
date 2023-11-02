@@ -11,7 +11,7 @@ import os
 from copulas.multivariate import GaussianMultivariate
 import math
 import matplotlib.pyplot as plt
-
+import statistics
 from scipy import stats as stats
 import seaborn as sns
 import pandas as pd
@@ -25,6 +25,9 @@ class DataMapsLoader():
         self.name_dataset = name_dataset
         self.min_val = None
         self.max_val = None
+        self.mean_vc_val = dict()
+        self.median_vc_val = dict()
+        self.variance_vc_val = dict()
         if self.name_dataset=="PEMS_16":
             filename = Path("data","neuroCorrelation_data","PEMSBAY_S16_START17_END19_MF.csv")
         elif self.name_dataset=="MetrLA_16":
@@ -53,6 +56,11 @@ class DataMapsLoader():
     def getDataRange(self):
         rangeData = {"max_val": self.max_val, "min_val":self.min_val}
         return rangeData
+    
+              
+    def getDataStats(self):
+        statsData = {"mean_val": self.mean_vc_val, "median_val":self.median_vc_val, "variance_val":self.variance_vc_val}
+        return statsData
         
     def get_muR(self):
         if self.with_cov:
@@ -84,6 +92,15 @@ class DataMapsLoader():
             else:
                 max_vc = max(vc_values)
                 self.max_val = max(max_vc, self.max_val)
+                
+            self.mean_vc_val[key_vc] = statistics.mean(vc_values)
+            self.median_vc_val[key_vc] = statistics.median(vc_values)
+            self.variance_vc_val[key_vc] = statistics.variance(vc_values)
+            
+            
+            
+        self.mean_val = None
+        self.median_val = None
         
         mu = dict()
         mu['train'] = list()
@@ -93,8 +110,12 @@ class DataMapsLoader():
         rho_test_list = list()
 
         train_istance = math.floor(len(vc_values) * train_percentual)
-        print("\tmin val:",self.min_val)
-        print("\tmax val:",self.max_val)
+        print("\tglobal min :\t",self.min_val)
+        print("\tglobal max :\t",self.max_val)        
+        print("\tvc     mean:\t",self.mean_vc_val)
+        print("\tvc     median:\t",self.median_vc_val)
+        print("\tvc     variance:\t",self.variance_vc_val)
+        
         train_values_vc = dict()
         test_values_vc = dict()
         self.vc_mapping_list = self.data_df['ref'].values.tolist()
@@ -292,6 +313,7 @@ class DataMapsLoader():
         #torch.randn(dim).uniform_(0,1).to(self.torch_device)
         return randomNoise.float()
 
+    
     def plot_dataDist(self):
         path_fold_dist = Path(self.path_folder,"univar_distribution_synthetic")
         if not os.path.exists(path_fold_dist):
