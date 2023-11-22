@@ -49,11 +49,16 @@ class ModelPrediction():
                     x_in = x_in.view(-1,self.univar_count_in)
                 elif self.input_shape == "matrix":
                     x_in = x_in
-                out = self.model(x_in)            
-                self.inpu_data.append(out["x_input"][0])
+                x_in.unsqueeze_(1)
+                 
+                with torch.no_grad():
+                    out = self.model(x_in)          
+                
+                
+                self.inpu_data.append(out["x_input"][0][0])
                 if "x_latent" in out:
-                    self.late_data.append(out["x_latent"][0])
-                self.pred_data.append(out["x_output"][0])
+                    self.late_data.append(out["x_latent"][0][0])
+                self.pred_data.append(out["x_output"][0][0])
         self.predict_sortByUnivar(pred2numpy=pred2numpy)
         if latent:
             self.latent_sortByComponent(pred2numpy=pred2numpy)

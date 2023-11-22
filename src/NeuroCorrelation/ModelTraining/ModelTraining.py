@@ -93,10 +93,11 @@ class ModelTraining():
             self.model.load_state_dict(torch.load(path_save_model, map_location=self.device))
         else:
             print("\tTRAIN TRAINED MODEL:\t")
+            self.getModeModel()
             if self.model_type == "AE":
                 train_start_time = datetime.datetime.now()
 
-                self.training_AE(plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                self.training_AE(plot_loss=plot_loss, batch_size=batch_size, model_flatten_in=model_flatten_in)
                 train_end_time = datetime.datetime.now()
                 train_time = train_end_time - train_start_time
                 print("\tTIME TRAIN MODEL:\t",train_time)
@@ -128,7 +129,7 @@ class ModelTraining():
         print("\tSAVE TRAINED MODEL:\t",path_save_model)
         torch.save(self.model.state_dict(), path_save_model)
    
-    def training_AE(self, model_flatten_in, plot_loss=True):
+    def training_AE(self, model_flatten_in, batch_size, plot_loss=True):
         self.loss_dict = dict()
         self.model.train()
         
@@ -139,54 +140,60 @@ class ModelTraining():
             loss_batch = list()
             loss_batch_partial = dict()
             for batch_num, dataBatch in enumerate(dataBatches):
-                loss = torch.zeros([1])
                 item_batch = len(dataBatch)
-                self.optimizer.zero_grad()
-                y_hat_list = list()
-                sample_list = list()
-                for i, item in enumerate(dataBatch):
-                    samplef = item['sample']
-                    #noisef = item['noise']
-                    sample = samplef.float()
-                    sample_list.append(sample)
-                    #noise = noisef.float()
+                if True: #item_batch == batch_size:
+                    loss = torch.zeros([1])
                     
-                x_in = torch.Tensor(item_batch, self.univar_count_in).to(device=self.device)
-                
-                
-                torch.cat(sample_list, out=x_in) 
-                
-                if model_flatten_in:
-                    x_in = x_in.view(-1,self.univar_count_in)
+                    self.optimizer.zero_grad()
+                    y_hat_list = list()
+                    sample_list = list()
+                    for i, item in enumerate(dataBatch):
+                        samplef = item['sample']
+                        #noisef = item['noise']
+                        sample = samplef.float()
+                        sample_list.append(sample)
+                        #noise = noisef.float()
+                        
+                    x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
                     
-                
-                
-                y_hat = self.model.forward(x=x_in)
-                y_hat_list = list()
+                    
+                    torch.cat(sample_list, out=x_in) 
+                    
+                    if model_flatten_in:
+                        x_in = x_in.view(-1,self.univar_count_in)
+                        x_in.unsqueeze_(1)
+                                            
+                        
 
-                for i in range(item_batch):
-                    item_dict = {"x_input": y_hat['x_input'][i], "x_latent":y_hat['x_latent'][i], "x_output":y_hat['x_output'][i]}
-                    y_hat_list.append(item_dict)
-                #print(y_hat.shape)
                     
-                #y_hat_list.append(y_hat)
-                
-                loss_dict = self.loss_obj.computate_loss(y_hat_list)
+                    y_hat = self.model.forward(x=x_in)
+                    
+                    y_hat_list = list()
 
-                loss = loss_dict['loss_total']
-                
-                loss_batch.append(loss.detach().cpu().numpy())
-                for loss_part in loss_dict:
-                    if loss_part not in loss_batch_partial:
-                        loss_batch_partial[loss_part] = list()
-                    loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
-                    loss_batch_partial[loss_part].append(loss_part_value)
-                
-                loss.backward()
-                self.optimizer.step()
+
+                    for i in range(item_batch):
+                        item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
+                        y_hat_list.append(item_dict)
+                    #print(y_hat.shape)
+                        
+                    #y_hat_list.append(y_hat)
+                    
+                    loss_dict = self.loss_obj.computate_loss(y_hat_list)
+
+                    loss = loss_dict['loss_total']
+                    
+                    loss_batch.append(loss.detach().cpu().numpy())
+                    for loss_part in loss_dict:
+                        if loss_part not in loss_batch_partial:
+                            loss_batch_partial[loss_part] = list()
+                        loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
+                        loss_batch_partial[loss_part].append(loss_part_value)
+                    
+                    loss.backward()
+                    self.optimizer.step()
                 
             self.scheduler.step()    
-            self.loss_dict[epoch] = {"mean_all": np.mean(loss_batch), "values_list": loss_batch}
+            self.loss_dict[epoch] = {"ALL_loss": np.mean(loss_batch), "values_list": loss_batch}
             for loss_part in loss_dict:
                 self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
             epoch_end_time = datetime.datetime.now()
@@ -232,17 +239,17 @@ class ModelTraining():
                 ###########################
                 
                 self.model_dis.zero_grad()
-                batch_real_err = torch.zeros(1)
+                batch_real_err = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(dataBatch):
                     samplef = item['sample']
                     sample = samplef.float()
-                    label = torch.full((1,), real_label, dtype=torch.float)                    
+                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
                     
                     output = self.model_dis(sample)['x_output'].view(-1)
                     
                     item_err = self.criterion(output, label)
                     batch_real_err += item_err
-                err_D_r_list.append(batch_real_err.detach().numpy()[0]/len(dataBatch))
+                err_D_r_list.append(batch_real_err.detach().cpu().numpy()[0]/len(dataBatch))
                 batch_real_err.backward()
                 self.optimizer_dis.step()
                 
@@ -252,47 +259,47 @@ class ModelTraining():
                 
                 noise_batch = list()
                 for i, item in enumerate(dataBatch):
-                    noise = torch.randn(1, 1, noise_size[0], noise_size[1])
+                    noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
                     noise_batch.append(noise)
                 ###########################
                 ##  B Update D with fake data
                 ###########################
                 
-                batch_fake_err = torch.zeros(1)
+                batch_fake_err = torch.zeros(1).to(device=self.device) 
 
                 
                 for i, item in enumerate(noise_batch):
                     
                     
                     fake = self.model_gen(item)['x_output']
-                    label = torch.full((1,), fake_label, dtype=torch.float)                    
+                    label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
                     output = self.model_dis(fake.detach())['x_output'].view(-1)
                     
                     item_err = self.criterion(output, label)
                     batch_fake_err += item_err
                 
-                err_D_f_list.append(batch_fake_err.detach().numpy()[0]/len(dataBatch))
+                err_D_f_list.append(batch_fake_err.detach().cpu().numpy()[0]/len(dataBatch))
                 batch_fake_err.backward()
                 self.optimizer_dis.step()
                 
                 errD = batch_real_err + batch_fake_err
-                err_D_list.append(errD.detach().numpy())
+                err_D_list.append(errD.detach().cpu().numpy())
                 ############################
                 # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
                 ###########################
                 
                 self.model_gen.zero_grad()
-                batch_fake_err = torch.zeros(1)
+                batch_fake_err = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(noise_batch):
                     
                     fake = self.model_gen(item)['x_output']
-                    label = torch.full((1,), real_label, dtype=torch.float)
+                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
                     output = self.model_dis(fake.detach())['x_output'].view(-1)
                     item_err = self.criterion(output, label)
                     batch_fake_err += item_err
                 batch_fake_err.backward()
                 errG = batch_fake_err
-                err_G_list.append(errG.detach().numpy())
+                err_G_list.append(errG.detach().cpu().numpy())
                 self.optimizer_gen.step()
             self.scheduler_dis.step()
             self.scheduler_gen.step()
@@ -340,6 +347,13 @@ class ModelTraining():
             self.model_gen.train() 
             self.model_dis.train()
 
+    def getModeModel(self):
+        if self.model_type == "AE":
+            print("AE mode training:\t", self.model.training)
+        elif self.model_type == "GAN":
+            print("GAN gen mode training:\t", self.model_gen.training)
+            print("GAN dis mode training:\t", self.model_dis.training)
+    
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
@@ -403,9 +417,10 @@ class ModelTraining():
         layers = []
         for n, p in named_parameters:
             if(p.requires_grad) and ("bias" not in n):
-                layers.append(n)
-                ave_grads.append(p.grad.abs().mean())
-                max_grads.append(p.grad.abs().max())
+                if p.grad is not None:
+                    layers.append(n)
+                    ave_grads.append(p.grad.abs().mean().cpu())
+                    max_grads.append(p.grad.abs().max().cpu())
         plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
         plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
         plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )

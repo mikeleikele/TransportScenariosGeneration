@@ -27,9 +27,17 @@ import os
 
 class NeuralCore():
 
-    def __init__(self, device, path_folder, epoch, batch_size,  model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape):
+    def __init__(self, device, path_folder, epoch, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, seed=0):
         device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
-        
+        self.seed_torch = seed
+        self.seed_data = seed
+        self.seed_noise = seed
+        print("SETTING PHASE: Seed ")
+        print("\seed torch:\t",self.seed_torch)
+        print("\seed data:\t",self.seed_data)
+        print("\seed noise:\t",self.seed_noise)
+        torch.manual_seed(self.seed_torch)
+
         self.device = device
         print("SETTING PHASE: Device selection")
         print("\tdevice:\t",self.device)
@@ -38,7 +46,7 @@ class NeuralCore():
         self.lat_dim = lat_dim
         self.epoch = epoch
         self.dataset_setting = dataset_setting
-        self.batch_size = batch_size
+        self.batch_size = dataset_setting['batch_size']
         self.path_folder = Path('data','neuroCorrelation',path_folder)
         if not os.path.exists(self.path_folder):
             os.makedirs(self.path_folder)
@@ -52,86 +60,122 @@ class NeuralCore():
         summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(summary_path):
             os.makedirs(summary_path)
-        
+                
         print("SETTING PHASE: Model creation")
         print("\tmodel_case:\t",model_case)
         self.model_case = model_case
         
         if self.model_case=="autoencoder_3_copula_optimization":            
-            dataloader = DataLoader(mode="random_var", name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_3
             self.loss_obj['AE'] = LossFunction({"MSE_LOSS":  1, "SPEARMAN_CORRELATION_LOSS":1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_3_defined":
-            dataloader = DataLoader(mode="random_var", name_dataset="3var_defined", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="3var_defined", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_3
             self.loss_obj['AE'] = LossFunction({"MSE_LOSS":  1, "SPEARMAN_CORRELATION_LOSS":1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_16_PEMS":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_16_MetrLa":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
         
         elif self.model_case=="autoencoder_ALL_PEMS":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="PEMS_all", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_all", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_325
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
         elif self.model_case=="autoencoder_ALL_MetrLa":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="MetrLA_all", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_all", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_207
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.5}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
             
         elif self.model_case=="GAN_linear_16_PEMS":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GAN_neural_16()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
             
         elif self.model_case=="GAN_linear_vc_copula":
-            dataloader = DataLoader(mode="random_var", name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GAN_LinearNeural_7()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
 
         elif self.model_case=="GAN_conv_vc_7_copula":
-            dataloader = DataLoader(mode="random_var", name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GAN_Conv_neural_7()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
         elif self.model_case=="GAN_linear_pretrained_vc_copula":
-            dataloader = DataLoader(mode="random_var", name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":0.3,  "DECORRELATION_LATENT_LOSS":  0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":0.05, "DECORRELATION_LATENT_LOSS":  -0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
                 os.makedirs(self.path_folder_gan)
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
         
-        elif self.model_case=="GAN_linear_pretrained_16_PEMS":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+        elif self.model_case=="GAN_linear_pretrained_16_PEMS_bt":
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
             self.model = GEN_autoEncoder_16
-            #self.loss_obj = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.path_folder_gan = Path(self.path_folder,'GAN')
+            if not os.path.exists(self.path_folder_gan):
+                os.makedirs(self.path_folder_gan)
+            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
             
+        elif self.model_case=="GAN_linear_pretrained_16_PEMS_ds":
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            self.path_folder_ae = Path(self.path_folder,'AE')
+            if not os.path.exists(self.path_folder_ae):
+                os.makedirs(self.path_folder_ae)
+            self.model = GEN_autoEncoder_16
             
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_dataset":0.005, "SPEARMAN_CORRELATION_LOSS":0.3}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_dataset":0.005, "SPEARMAN_CORRELATION_LOSS":0.00005}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
                 os.makedirs(self.path_folder_gan)
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
 
+        
+        elif self.model_case=="GAN_linear_pretrained_16_METR_bt":
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            self.path_folder_ae = Path(self.path_folder,'AE')
+            if not os.path.exists(self.path_folder_ae):
+                os.makedirs(self.path_folder_ae)
+            self.model = GEN_autoEncoder_16 
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.path_folder_gan = Path(self.path_folder,'GAN')
+            if not os.path.exists(self.path_folder_gan):
+                os.makedirs(self.path_folder_gan)
+            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
+        
+        elif self.model_case=="GAN_linear_pretrained_16_CHENGDU_bt":
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0016", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            self.path_folder_ae = Path(self.path_folder,'AE')
+            if not os.path.exists(self.path_folder_ae):
+                os.makedirs(self.path_folder_ae)
+            self.model = GEN_autoEncoder_16 
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.path_folder_gan = Path(self.path_folder,'GAN')
+            if not os.path.exists(self.path_folder_gan):
+                os.makedirs(self.path_folder_gan)
+            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
+            
+            
         elif self.model_case=="AE_conv_vc_copula":
-            dataloader = DataLoader(mode="random_var", name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
@@ -145,27 +189,27 @@ class NeuralCore():
 
 
         elif self.model_case=="autoencoder_6k_Chengdu":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="China_Chengdu", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_6k
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.0005, "SPEARMAN_CORRELATION_LOSS":0.1,  "DECORRELATION_LATENT_LOSS":  0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_05k_Chengdu":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="China_Chengdu_A0500", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0500", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_05k
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.1, "MEDIAN_LOSS_batch":0.05,  "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
         elif self.model_case=="autoencoder_0016_Chengdu":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="China_Chengdu_A0016", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0016", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8,  "DECORRELATION_LATENT_LOSS":  0.01}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_0064_Chengdu":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_64
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
         elif self.model_case=="GAN_linear_pretrained_0064_Chengdu":
-            dataloader = DataLoader(mode="graph_roads", name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
@@ -185,7 +229,7 @@ class NeuralCore():
         net_details.saveModelParams()
         
                 
-        self.data_splitted = dataloader.dataset_load(draw_plots=True, save_summary=True)
+        self.data_splitted = dataloader.dataset_load(draw_plots=True, save_summary=True, loss=self.loss_obj)
         self.dataGenerator = dataloader.getDataGenerator()
         self.vc_mapping = dataloader.get_vcMapping()
         self.rangeData = dataloader.getRangeData()
@@ -193,19 +237,22 @@ class NeuralCore():
         
         for key in self.loss_obj:
             self.loss_obj[key].set_stats_data(self.statsData, self.vc_mapping)
+            
+        self.optimization = Optimization(model=self.model, device=self.device, data_dict=self.data_splitted,
+            epoch=self.epoch, loss=self.loss_obj, path_folder=self.path_folder, 
+            univar_count=self.univar_count, batch_size=self.batch_size, latent_dim=self.lat_dim, vc_mapping=self.vc_mapping, 
+            input_shape=self.input_shape, rangeData=self.rangeData, dataGenerator=self.dataGenerator, 
+            instaces_size_noise=self.instaces_size_noise, direction="maximize", timeout=600)
+    #------------------------------
+
 
     def start_experiment(self, load_model=False):
         comparison_corr_list = list()
         
         if self.model_case=="autoencoder_3_copula_optimization":
-            self.optimization = Optimization(model=self.model, device=self.device, data_dict=self.data_splitted, model_type="AE", 
-                                            epoch=self.epoch, loss=self.loss_obj, path_folder=self.path_folder, 
-                                            univar_count=self.univar_count, batch_size=self.batch_size, 
-                                            latent_dim=self.lat_dim, vc_mapping=self.vc_mapping, input_shape=self.input_shape, rangeData=self.rangeData,
-                                            dataGenerator=self.dataGenerator, instaces_size_noise=None, direction="maximize", 
-                                            timeout=600)
-            search_space = [{"type":"Categorical","min":0,"max":1, "values_list":[0,1,2], "name":"cat"},{"type":"Integer","min":0,"max":1, "values_list":[], "name":"int"}]
             
+            
+            self.optimization.sef_modeltype(model_type="AE")
             search_space = [
                 {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"MSE_LOSS"},
                 {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"COVARIANCE_LOSS"},
@@ -292,8 +339,45 @@ class NeuralCore():
             ]
 
 
-        elif self.model_case=="GAN_linear_pretrained_16_PEMS":            
+        elif self.model_case=="GAN_linear_pretrained_16_PEMS_bt":            
             self.model_ae = GEN_autoEncoder_16
+            print(self.loss_obj['AE'].get_lossTerms())
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
+            
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
+            
+            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
+        elif self.model_case=="GAN_linear_pretrained_16_PEMS_ds":            
+            self.model_ae = GEN_autoEncoder_16
+            print(self.loss_obj['AE'].get_lossTerms())
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
+            
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
+            
+            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
+        
+        
+        elif self.model_case=="GAN_linear_pretrained_16_METR_bt":            
+            self.model_ae = GEN_autoEncoder_16
+            print(self.loss_obj['AE'].get_lossTerms())
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
+            
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
+            
+            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
+        
+        elif self.model_case=="GAN_linear_pretrained_16_CHENGDU_bt":            
+            self.model_ae = GEN_autoEncoder_16
+            print(self.loss_obj['AE'].get_lossTerms())
             model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
@@ -578,7 +662,7 @@ class NeuralCore():
         for count, item in enumerate(data):
             
             if pred2numpy:
-                item_np = item['sample'].detach().numpy()
+                item_np = item['sample'].detach().cpu().numpy()
             else:
                 item_np = item['sample'][0][0]
             

@@ -1,4 +1,5 @@
-from torchsummary import summary
+import torchinfo 
+
 from torch import Tensor, zeros
 from torch.nn import Linear
 from torch.nn import ReLU
@@ -141,8 +142,8 @@ class GEN_autoEncoder_3(nn.Module):
         return self.decoder
 
     def summary(self):       
-        enc_summary = []#summary(self.encoder, (1, 1, 1, 7), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
-        dec_summary = []#summary(self.decoder, (1, 1, 1, 4), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
+        enc_summary = []#torchinfo.summary(self.encoder, (1, 1, 1, 7), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = []#torchinfo.summary(self.decoder, (1, 1, 1, 4), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
 
         summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
         return summary_dict
@@ -209,9 +210,8 @@ class GEN_autoEncoder_16(nn.Module):
 
     def summary(self):
         
-        
-        enc_summary = summary(self.encoder, (1, 1, 16), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
-        dec_summary = summary(self.decoder, (1, 1, 12), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 16), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 12), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
 
         summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
         return summary_dict
@@ -221,49 +221,41 @@ class GEN_autoEncoder_Encoder_16(nn.Module):
        
         super().__init__()
         self.hidden_layer_1 = nn.Linear(in_features=16, out_features=48)
-        #self.hidden_layer_2 = nn.Linear(in_features=48, out_features=64)
-        #self.hidden_layer_3 = nn.Linear(in_features=64, out_features=48)
+        
+        self.hidden_layer_2 = nn.Linear(in_features=48, out_features=64)
+        self.hidden_layer_3 = nn.Linear(in_features=64, out_features=48)
+        
         self.hidden_layer_4 = nn.Linear(in_features=48, out_features=32)
         self.hidden_layer_5 = nn.Linear(in_features=32, out_features=16)
         self.hidden_layer_6 = nn.Linear(in_features=16, out_features=14)
         self.hidden_layer_7 = nn.Linear(in_features=14, out_features=12)
         #BN without any learning associated to it
-        #self.batch_norm_1 = nn.BatchNorm1d(12, affine=True)
-        self.dropout_1 = nn.Dropout(p=0.15)
-        self.dropout_2 = nn.Dropout(p=0.15)
-        self.dropout_3 = nn.Dropout(p=0.15)
-        self.dropout_4 = nn.Dropout(p=0.15)
-        self.dropout_5 = nn.Dropout(p=0.15)
-        self.dropout_6 = nn.Dropout(p=0.15)
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
 
     def forward(self, x):
+        
         layer_nn = self.hidden_layer_1(x)
         layer_nn = F.tanh(layer_nn)
-        #layer_nn = self.dropout_1(layer_nn)
+        layer_nn = self.batch_norm_1(layer_nn)
         
-        #layer_nn = self.hidden_layer_2(layer_nn)
-        #layer_nn = F.tanh(layer_nn)        
-        ##layer_nn = self.dropout_2(layer_nn)
-        
-        #layer_nn = self.hidden_layer_3(layer_nn)
-        #layer_nn = F.tanh(layer_nn)
-        ##layer_nn = self.dropout_3(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
         
         layer_nn = self.hidden_layer_4(layer_nn)
         layer_nn = F.tanh(layer_nn)
-        #layer_nn = self.dropout_4(layer_nn)
         
         layer_nn = self.hidden_layer_5(layer_nn)
         layer_nn = F.tanh(layer_nn)
-        #layer_nn = self.dropout_5(layer_nn)
         
         layer_nn = self.hidden_layer_6(layer_nn)
         layer_nn = F.tanh(layer_nn)
-        #layer_nn = self.dropout_6(layer_nn)
         
-        x_out = self.hidden_layer_7(layer_nn)
-        #x_out = self.batch_norm_1(layer_nn)
+        layer_nn = self.hidden_layer_7(layer_nn)        
         
+        #layer_nn = self.batch_norm_1(layer_nn)
+        x_out = layer_nn
         return {"x_input":x, "x_output":x_out}
 
 class GEN_autoEncoder_Decoder_16(nn.Module):
@@ -275,8 +267,8 @@ class GEN_autoEncoder_Decoder_16(nn.Module):
         self.hidden_layer_2 = nn.Linear(in_features=14, out_features=16)
         self.hidden_layer_3 = nn.Linear(in_features=16, out_features=32)
         self.hidden_layer_4 = nn.Linear(in_features=32, out_features=48)
-        #self.hidden_layer_5 = nn.Linear(in_features=48, out_features=64)
-        #self.hidden_layer_6 = nn.Linear(in_features=64, out_features=48)
+        self.hidden_layer_5 = nn.Linear(in_features=48, out_features=64)
+        self.hidden_layer_6 = nn.Linear(in_features=64, out_features=48)
         self.hidden_layer_7 = nn.Linear(in_features=48, out_features=16)
         
         self.dropout_1 = nn.Dropout(p=0.15)
@@ -305,12 +297,12 @@ class GEN_autoEncoder_Decoder_16(nn.Module):
         layer_nn = F.tanh(layer_nn)
         #layer_nn = self.dropout_4(layer_nn)
         
-        #layer_nn = self.hidden_layer_5(layer_nn)
-        #layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)
         ##layer_nn = self.dropout_5(layer_nn)
         
-        #layer_nn = self.hidden_layer_6(layer_nn)
-        #layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = F.tanh(layer_nn)
         ##layer_nn = self.dropout_6(layer_nn)
         
         x_out = self.hidden_layer_7(layer_nn)
@@ -691,8 +683,8 @@ class GEN_autoEncoder_64(nn.Module):
         return self.decoder
 
     def summary(self):
-        enc_summary = summary(self.encoder, (1, 1, 64), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
-        dec_summary = summary(self.decoder, (1, 1, 48), batch_dim = 0, col_names = ('input_size', 'output_size', 'num_params', 'kernel_size', 'mult_adds'), verbose = 0)
+        enc_summary = torchsummary.summary(self.encoder, (1, 1, 64), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchsummary.summary(self.decoder, (1, 1, 48), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
         return summary_dict
 

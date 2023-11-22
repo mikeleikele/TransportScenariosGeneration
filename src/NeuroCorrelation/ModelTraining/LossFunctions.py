@@ -22,6 +22,10 @@ class LossFunction(nn.Module):
         self.statsData = None
         self.vc_mapping = None
     
+    def get_lossTerms(self):
+        return self.loss_case
+        
+        
     def loss_change_coefficent(self, loss_name, loss_coeff):
         if loss_name in self.loss_case:
             self.loss_case[loss_name] = loss_coeff
@@ -171,7 +175,7 @@ class LossFunction(nn.Module):
             for key in self.vc_mapping:
                 median_list_stats.append(self.statsData['median_val'][key])
             median_in = torch.FloatTensor(median_list_stats)
-            print("-median_in---",median_in)
+            
             
         median_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
         median_matr_out = torch.reshape(torch.cat(median_list_out), (len(values),self.univar_count))        
@@ -266,12 +270,12 @@ class LossFunction(nn.Module):
         
         
         
-        spearman_values = spearman_obj(covariance_matr_in, covariance_matr_out)
+        spearman_values = spearman_obj(covariance_matr_out, covariance_matr_in)
     
         for val in spearman_values:
             loss_ret += val
-        loss_ret /= len(spearman_values)
-        return -loss_ret
+        #loss_ret /= len(spearman_values)
+        return loss_ret
 
     def MSE_similarities(self, values):
         """

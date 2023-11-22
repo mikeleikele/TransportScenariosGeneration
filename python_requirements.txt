@@ -12,4 +12,4 @@ scikit-mobility
 copulas
 torchviz
 scikit-optimize
-torch-summary
+torchinfo

@@ -15,14 +15,17 @@ import statistics
 from scipy import stats as stats
 import seaborn as sns
 import pandas as pd
+import random
+from random import shuffle
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder):
+    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder, seed):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
         self.univar_count = univar_count
         self.name_dataset = name_dataset
+        self.seed = seed
         self.min_val = None
         self.max_val = None
         self.mean_vc_val = dict()
@@ -68,7 +71,7 @@ class DataMapsLoader():
         else:
             return {"mu":None, "r_psd": None}
 
-    def mapsVC_load(self, train_percentual=0.70, draw_plots=True):
+    def mapsVC_load(self, train_percentual=0.70, draw_plots=True, verbose=False):
         all_values_vc = dict()
         vc_mapping = list()
         
@@ -110,11 +113,15 @@ class DataMapsLoader():
         rho_test_list = list()
 
         train_istance = math.floor(len(vc_values) * train_percentual)
-        print("\tglobal min :\t",self.min_val)
-        print("\tglobal max :\t",self.max_val)        
-        print("\tvc     mean:\t",self.mean_vc_val)
-        print("\tvc     median:\t",self.median_vc_val)
-        print("\tvc     variance:\t",self.variance_vc_val)
+        shuffle_indexes = [i for i in range(len(vc_values))]
+        random.Random(self.seed).shuffle(shuffle_indexes)
+        
+        if verbose:
+            print("\tglobal min :\t",self.min_val)
+            print("\tglobal max :\t",self.max_val)        
+            print("\tvc     mean:\t",self.mean_vc_val)
+            print("\tvc     median:\t",self.median_vc_val)
+            print("\tvc     variance:\t",self.variance_vc_val)
         
         train_values_vc = dict()
         test_values_vc = dict()
@@ -123,7 +130,8 @@ class DataMapsLoader():
         for key_vc in self.data_df['ref'].values:
 
             train_values_vc[key_vc] = dict()
-            train_values_vc[key_vc]['values'] = (np.array(all_values_vc[key_vc]['values'][:train_istance]) - self.min_val)/(self.max_val - self.min_val)
+            train_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc)) if i in shuffle_indexes[:train_istance]]            
+            train_values_vc[key_vc]['values'] = (np.array(train_istance_list) - self.min_val)/(self.max_val - self.min_val)
             train_values_vc[key_vc]['mean'] = np.mean(train_values_vc[key_vc]['values'])
             train_values_vc[key_vc]['std'] = np.std(train_values_vc[key_vc]['values'])
             mu['train'] = train_values_vc[key_vc]['mean']
@@ -131,7 +139,9 @@ class DataMapsLoader():
             self.train_samples = len(train_values_vc[key_vc]['values'])
 
             test_values_vc[key_vc] = dict()
-            test_values_vc[key_vc]['values'] = (np.array(all_values_vc[key_vc]['values'][train_istance:]) - self.min_val)/(self.max_val - self.min_val)
+            test_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc)) if i in shuffle_indexes[train_istance:]]
+            
+            test_values_vc[key_vc]['values'] = (np.array(test_istance_list) - self.min_val)/(self.max_val - self.min_val)
             test_values_vc[key_vc]['mean'] = np.mean(test_values_vc[key_vc]['values'])
             test_values_vc[key_vc]['std'] = np.std(test_values_vc[key_vc]['values'])
             mu['test'] = test_values_vc[key_vc]['mean']

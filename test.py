@@ -3,7 +3,8 @@ from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
 from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
-from src.NeuroCorrelation.NeuralCore import NeuralCore
+
+from src.NeuroCorrelation.NeuroExperiment import NeuroExperiment
 
 from pathlib import Path
 import sys
@@ -72,30 +73,9 @@ def flowview(simulation_name, number_sample):
     #flowviewer.draw_sampledgraph("weighted_mean")
     flowviewer.draw_sampledgraph("vehicles_id")
 
-def neuroDist(num_case, folder, load_model=None):
-    device = torch.device("cpu")
-    id_experiments = int(num_case)
-    experiments_list = [
-        {"model_case":"autoencoder_3_copula_optimization","epoch":{'AE':3,'GAN':2}, "batch_size":32,"univar_count":7,"lat_dim":3, "dataset_setting":{"train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None}, "instaces_size" :1, "input_shape":"vector"},
-        {"model_case":"GAN_linear_pretrained_16_PEMS","epoch":{'AE':50,'GAN':50}, "batch_size":64,"univar_count":16,"lat_dim":12, "dataset_setting":{"train_percentual":0.5,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None}, "instaces_size" :1, "input_shape":"vector"},
-        {"model_case":"GAN_linear_pretrained_16_METRLA","epoch":{'AE':50,'GAN':50}, "batch_size":64,"univar_count":16,"lat_dim":12, "dataset_setting":{"train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None}, "instaces_size" :1, "input_shape":"vector"},
-        {"model_case":"GAN_linear_pretrained_16_CHENGDU","epoch":{'AE':50,'GAN':50}, "batch_size":64,"univar_count":16,"lat_dim":12, "dataset_setting":{"train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None}, "instaces_size" :1, "input_shape":"vector"},
-        {"model_case":"GAN_linear_pretrained_0064_Chengdu","epoch":{'AE':50,'GAN':50}, "batch_size":32,"univar_count":64,"lat_dim":48, "dataset_setting":{"train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None}, "instaces_size" :1, "input_shape":"vector"}
-    ]
-    experiments_selected = experiments_list[id_experiments]
+def neuroDist(num_case, seed, folder, load_model=None):
+    neuroExp = NeuroExperiment(num_case=num_case, folder=folder, seed=seed, load_model=load_model)
 
-
-    #, 'autoencoder_05k_Chengdu','autoencoder_0016_Chengdu', 'autoencoder_6k_Chengdu','autoencoder_3_copula_optimization']
-    print(f"|------------------------")
-    print(f"| Modelcase   : {experiments_selected['model_case']}")
-    print(f"|             : {experiments_selected}")
-    print(f"|------------------------")
-    print(f" ")
-    nc = NeuralCore(device,epoch=experiments_selected["epoch"], batch_size=experiments_selected["batch_size"],  model_case=experiments_selected["model_case"], univar_count=experiments_selected["univar_count"], lat_dim=experiments_selected["lat_dim"], dataset_setting=experiments_selected['dataset_setting'], instaces_size= experiments_selected["instaces_size"], input_shape= experiments_selected["input_shape"], path_folder=folder)
-    if load_model=="--load":
-        nc.start_experiment(load_model=True)
-    else:
-        nc.start_experiment()
 
     
 if __name__ == "__main__":
@@ -166,10 +146,24 @@ if __name__ == "__main__":
         flowview(simulation_name,number_sample)
         print(10)
     elif args[0] ==  "--neuroD" or args[0] == "--n":
-        if len(args)==4:
-            neuroDist(args[1], args[2], args[3])
+        if len(args)==5:
+            neuroDist(args[1], args[2], args[3], args[4])
         else:
-            neuroDist(args[1], args[2])
-        print(11)
+            neuroDist(args[1], args[2], args[3])
+        print("end")
+        print("========================================")
+        print(args[-1])
+    elif args[0] ==  "--neuroD" or args[0] == "--nAll":
+        run_todo = 30
+        case_list = [3]
+        case_list_name = ["","pems","metr","chengdu"]
+        main_folder_name = f"2023_11_17"
+        for case in case_list:
+            for seed in range(run_todo):
+                experiment_folder_name = f"{main_folder_name}___{case_list_name[case]}_{seed}"
+                neuroDist(num_case=case, seed=seed, folder=experiment_folder_name )
+        print("end")
+        print("========================================")
+        print(args[-1])
     else:
         print(0," no opt recognized")

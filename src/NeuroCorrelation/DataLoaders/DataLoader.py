@@ -8,9 +8,10 @@ import os
 
 class DataLoader:
     
-    def __init__(self, mode,  name_dataset, device, dataset_setting, univar_count, lat_dim, corrCoeff, instaces_size, path_folder):
+    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None):
         
         self.mode = mode
+        self.seed = seed
         self.name_dataset = name_dataset
         self.vc_mapping = None
         self.path_folder = path_folder
@@ -19,6 +20,7 @@ class DataLoader:
         self.univar_count = univar_count
         self.lat_dim = lat_dim
         self.rangeData = None
+        self.epoch = epoch
         self.dataGenerator = None
         self.dataset_setting = dataset_setting
         self.starting_sample = self.checkInDict(self.dataset_setting,"starting_sample",20)
@@ -32,9 +34,10 @@ class DataLoader:
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
         self.statsData = None
+        self.vc_dict = vc_dict
 
-    def dataset_load(self, draw_plots=True, save_summary=True):
-        
+    def dataset_load(self, draw_plots=True, save_summary=True, loss=None):
+        self.loss = loss
         if self.mode=="random_var" and self.name_dataset=="3var_defined":
             print("DATASET PHASE: Sample generation")
             self.dataGenerator = DataSynteticGeneration(torch_device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, path_folder=self.path_folder)
@@ -63,7 +66,7 @@ class DataLoader:
         if self.mode =="graph_roads":
             print("DATASET PHASE: Load maps data")
             
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, name_dataset=self.name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             
@@ -115,18 +118,32 @@ class DataLoader:
 
     def saveDataset_setting(self):
         settings_list = []
+        settings_list.append(f"dataset settings") 
+        settings_list.append(f"================") 
         settings_list.append(f"mode_dataset:: {self.mode}") 
         settings_list.append(f"name_dataset:: {self.name_dataset}")
+        settings_list.append(f"mode_dataset:: {self.epoch}") 
          
         for key in self.dataset_setting:
+            print("saveDataset_setting\t",key)
             data_summary = self.dataset_setting[key]         
             summary_str = f"{key}:: {data_summary}"
             settings_list.append(summary_str)
             
-        settings_str = '\n'.join(summary_str)
         
+        if self.loss is not None:
+            settings_list.append(f" ") 
+            settings_list.append(f"loss settings") 
+            settings_list.append(f"================") 
+            for key in self.loss:
+                settings_list.append(f"loss part:: {key} -") 
+                loss_terms = self.loss[key].get_lossTerms()
+                for item in loss_terms:
+                    settings_list.append(f"\t\t:: {item} \t\tcoef:: {loss_terms[item]}") 
+        
+        setting_str = '\n'.join(settings_list)    
         filename = Path(self.summary_path, "summary_dataset.txt")
         with open(filename, 'w') as file:
-            file.write(settings_str)
+            file.write(setting_str)
         print("SETTING PHASE: Summary dataset file - DONE")
         

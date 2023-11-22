@@ -18,6 +18,7 @@ import seaborn as sns
 from numpy import dot
 from numpy.linalg import norm
 
+
 class DataComparison():
 
     def __init__(self, univar_count_in, univar_count_out, dim_latent, path_folder):
@@ -54,6 +55,9 @@ class DataComparison():
             stats_dict['univ_id'].append(name_univ)
             plt.figure(figsize=(12,8))  
             for key in data:
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+
 
                 list_values = data[key]['data'][id_univar]
                 color_data = data[key]['color']
@@ -176,20 +180,60 @@ class DataComparison():
             corrMatrix = self.correlationCoeff(df_data)
         rho = corrMatrix
         
-        corrcoef_Path = Path(path_fold_dist, "data_pearson_pearson_"+plot_name+".csv")
-        np.savetxt(corrcoef_Path, rho, delimiter=",")
-
-        fig = plt.figure(figsize=(18,18))
-        sns.heatmap(rho, annot = True,square=True, vmin=-1, vmax=1)
-        filename = Path(path_fold_dist,"plot_pearson_pearson_"+plot_name+".png")
-        plt.savefig(filename)
+        
+        for key in rho:
+            csvFile_Path = Path(path_fold_dist, f"data_{key}_"+plot_name+".csv")
+            np.savetxt(csvFile_Path, rho[key], delimiter=",")
+            
+            fig = plt.figure(figsize=(18,18))
+            sns.heatmap(rho[key], annot = True, square=True, vmin=-1, vmax=1, cmap= 'coolwarm')
+            filename = Path(path_fold_dist,f"plot_{key}_"+plot_name+".png")
+            plt.savefig(filename)
         
 
     def correlationCoeff(self, df_data):    
         rho_val_list = list()
         for key_vc in df_data:
-            rho_val_list.append(df_data[key_vc])
-        rho = np.corrcoef(rho_val_list)
+            if isinstance(df_data[key_vc][0], (np.ndarray) ):
+                vc_values =list()
+                for value in df_data[key_vc]:
+                    vc_values.append(value.tolist())
+                rho_val_list.append(vc_values)
+            else:
+                rho_val_list.append(df_data[key_vc])
+        
+        rho = dict()
+        rho['pearson'] = list()
+        rho['spearman'] = list()
+        rho['kendall'] = list()
+        
+        #rho_pearson = np.corrcoef(rho_val_list)
+        
+        for i in range(len(rho_val_list)):
+            row = dict()
+            for key in rho:          
+                row[key] = list()
+            
+            for j in range(len(rho_val_list)):
+                a_array = rho_val_list[i]
+                b_array = rho_val_list[j]
+                row['pearson'].append(stats.pearsonr(a_array,b_array).statistic)
+                row['spearman'].append(stats.spearmanr(a_array,b_array).statistic)
+                row['kendall'].append(stats.kendalltau(a_array,b_array).statistic)
+            
+            for key in rho:          
+                rho[key].append(row[key])
+        
+        covar_array = list()
+        for j in range(len(rho_val_list)):
+            
+            _array = rho_val_list[j]
+            covar_array.append(_array)
+        cov_matrix = np.cov(covar_array, bias=False)        
+        rho['covar'] = cov_matrix
+        
+        for key in rho:     
+            rho[key] = np.array(rho[key])
         return rho
 
     

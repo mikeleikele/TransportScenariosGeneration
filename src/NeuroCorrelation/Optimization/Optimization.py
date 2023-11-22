@@ -9,7 +9,7 @@ from skopt.utils import point_asdict
 from skopt.plots import plot_gaussian_process
 
 class Optimization():
-    def __init__(self, model, device, data_dict, model_type, epoch, loss, path_folder, univar_count, batch_size, dataGenerator, latent_dim, vc_mapping, input_shape, rangeData, instaces_size_noise=None, direction="maximize", timeout=600):
+    def __init__(self, model, device, data_dict, epoch, loss, path_folder, univar_count, batch_size, dataGenerator, latent_dim, vc_mapping, input_shape, rangeData, model_type=None, instaces_size_noise=None, direction="maximize", timeout=600):
         self.model = model
         self.device = device
         self.train_data = data_dict['train_data']
@@ -32,8 +32,12 @@ class Optimization():
         self.search_space = {"keys":list(),"space":list()}
         print("OPTIMIZATION PHASE:")
         
+    def sef_modeltype(self, model_type):
+        self.model_type = model_type
         
-
+    #
+    # search_space = [{"type":"Categorical","min":0,"max":1, "values_list":[0,1,2], "name":"cat"},{"type":"Integer","min":0,"max":1, "values_list":[], "name":"int"}]
+    #
     def set_searchSpace(self, search_space):
         
         for space_vals in search_space:
@@ -51,8 +55,7 @@ class Optimization():
                 self.search_space["keys"].append(space_vals["name"])
                 self.search_space["space"].append(space)
             
-    def set_optimizer(self, base_estimator="GP", n_initial_points=10):
-        
+    def set_optimizer(self, base_estimator="GP", n_initial_points=10):        
         #base_estimator= "GP", "RF", "ET", "GBRT"
         print("\tcreate optimizer")
         self.opt = Optimizer(dimensions=self.search_space["space"], base_estimator=base_estimator, n_initial_points=n_initial_points, acq_optimizer="sampling")
@@ -60,6 +63,8 @@ class Optimization():
         
     
     def optimization(self, n_trials, network_key):
+        if self.model_type is None:
+            raise Exception("Optimizator - model_type not set.")
         print("\tbegin optimization")
         for trial in range(n_trials):
             print("\t\ttrial -\t#",trial)

@@ -11,7 +11,7 @@ from sklearn.datasets import make_spd_matrix
 from pathlib import Path
 import json
 import os
-
+import statistics
 from copulas.multivariate import GaussianMultivariate
 import matplotlib.pyplot as plt
 
@@ -30,7 +30,9 @@ class DataSynteticGeneration():
         
         self.min_val = None
         self.max_val = None
-        
+        self.mean_vc_val = dict()
+        self.median_vc_val = dict()
+        self.variance_vc_val = dict()
 
     def get_muR(self):
         if self.with_cov:
@@ -249,6 +251,11 @@ class DataSynteticGeneration():
             else:
                 max_vc = max(vc_values)
                 self.max_val = max(max_vc, self.max_val)
+                
+            self.mean_vc_val[key_vc] = statistics.mean(vc_values)
+            self.median_vc_val[key_vc] = statistics.median(vc_values)
+            self.variance_vc_val[key_vc] = statistics.variance(vc_values)
+            
         self.mu = list()
         rho_val_list = list()
 
@@ -366,6 +373,10 @@ class DataSynteticGeneration():
         for ed in self.sample_synthetic:    
             sample.append(ed[0][key_sample])  
         return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+    
+    def getDataStats(self):
+        statsData = {"mean_val": self.mean_vc_val, "median_val":self.median_vc_val, "variance_val":self.variance_vc_val}
+        return statsData
     
     def getRandom(self, dim):
         randomNoise =  torch.randn(1, dim).to(self.torch_device)
