@@ -73,9 +73,8 @@ def flowview(simulation_name, number_sample):
     #flowviewer.draw_sampledgraph("weighted_mean")
     flowviewer.draw_sampledgraph("vehicles_id")
 
-def neuroDist(num_case, seed, folder, load_model=None):
-    neuroExp = NeuroExperiment(num_case=num_case, folder=folder, seed=seed, load_model=load_model)
-
+def neuroDist(num_case, main_folder, experiment_name, seed, load_model=None):
+    neuroExp = NeuroExperiment(num_case=num_case, main_folder=main_folder, experiment_name=experiment_name, seed=seed, load_model=load_model)
 
     
 if __name__ == "__main__":
@@ -145,25 +144,23 @@ if __name__ == "__main__":
         number_sample = args[2]                   
         flowview(simulation_name,number_sample)
         print(10)
-    elif args[0] ==  "--neuroD" or args[0] == "--n":
-        if len(args)==5:
-            neuroDist(args[1], args[2], args[3], args[4])
-        else:
-            neuroDist(args[1], args[2], args[3])
+    
+    
+    elif args[0] ==  "--neuroD":
+        run_todo = args[4]
+        
+        for seed in range(int(args[4])):            
+            experiment_name = f"{args[2]}___{args[1]}_{seed}"
+            neuroDist(num_case=int(args[1]), main_folder=args[3], seed=seed, experiment_name=experiment_name, load_model=args[5])
+        
         print("end")
         print("========================================")
-        print(args[-1])
-    elif args[0] ==  "--neuroD" or args[0] == "--nAll":
-        run_todo = 30
-        case_list = [3]
-        case_list_name = ["","pems","metr","chengdu"]
-        main_folder_name = f"2023_11_17"
-        for case in case_list:
-            for seed in range(run_todo):
-                experiment_folder_name = f"{main_folder_name}___{case_list_name[case]}_{seed}"
-                neuroDist(num_case=case, seed=seed, folder=experiment_folder_name )
-        print("end")
-        print("========================================")
-        print(args[-1])
+        print("folder:\t",args[-1])
+    
+    elif args[0] ==  "--help":
+        print("--neuroD")
+        print("--neuroD (1)num_case::int  (2)experiment_name_suffix::int (3)main_folder::string (4)repeat::int (5)load_model::--load/None")
     else:
         print(0," no opt recognized")
+        
+    

@@ -13,3 +13,6 @@ copulas
 torchviz
 scikit-optimize
 torchinfo
+seaborn
+torch_geometric
+torchmetrics

@@ -34,7 +34,7 @@ class DataMapsLoader():
         if self.name_dataset=="PEMS_16":
             filename = Path("data","neuroCorrelation_data","PEMSBAY_S16_START17_END19_MF.csv")
         elif self.name_dataset=="MetrLA_16":
-            filename = Path("data","neuroCorrelation_data","METR_LA_S16_START17_END19_MF.csv")
+            filename = Path("data","neuroCorrelation_data","METR_LA_S16_START7_END9.csv")
         elif self.name_dataset=="PEMS_all":
             filename = Path("data","neuroCorrelation_data","PEMSBAY_S325_START17_END19_MF.csv")
         elif self.name_dataset=="MetrLA_all":
@@ -80,8 +80,8 @@ class DataMapsLoader():
 
         for i, key_vc in enumerate(self.data_df['ref'].values):
             vc_mapping.append(key_vc)
-            all_values_vc[key_vc] = dict()
-            vc_values = [float(x) for x in self.data_df['traffic_speed'][i].strip('[]').replace('"', '').replace(' ', '').split(',')]
+            all_values_vc[key_vc] = dict()        
+            vc_values = [float(x) for x in self.data_df['traffic_speed'][i][0:-2].strip('[]').replace('"', '').replace(' ', '').split(',')]
             all_values_vc[key_vc]['values'] = vc_values
 
             if self.min_val is None:
@@ -95,7 +95,8 @@ class DataMapsLoader():
             else:
                 max_vc = max(vc_values)
                 self.max_val = max(max_vc, self.max_val)
-                
+            print("-------A---",len(vc_values))
+            print("-------B---",vc_values)
             self.mean_vc_val[key_vc] = statistics.mean(vc_values)
             self.median_vc_val[key_vc] = statistics.median(vc_values)
             self.variance_vc_val[key_vc] = statistics.variance(vc_values)
