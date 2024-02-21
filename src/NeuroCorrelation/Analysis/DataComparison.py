@@ -9,6 +9,8 @@ import pandas as pd
 import math
 import random
 
+import torch
+from torch import Tensor
 import scipy.stats as stats
 from matplotlib import cm # for a scatter plot
 from src.tool.utils_matplot import SeabornFig2Grid
@@ -319,6 +321,65 @@ class DataComparison():
         title_txt = f"Histogram of {name1}"
         h.set_title(title_txt, fontsize=16)        
         return h
+    
+    def find_nearest_kde(self, array, value):
+        array = np.asarray(array)
+        idx = (np.abs(array - value)).argmin()
+        return array[idx]
+    
+    def draw_point_overDistribution(self, plotname, folder, n_var, points,  distr):
+        if distr is None:
+            distr = list()
+            for i in range(1000):
+                mu, sigma = 0, math.sqrt(1) # mean and standard deviation
+                s = np.random.normal(mu, sigma, 1000)  
+                distr.append({'sample': torch.Tensor(s), 'noise': torch.Tensor(s)})
+
+
+        fig = plt.figure(figsize=(18,18))
+        n_col = math.ceil(math.sqrt(n_var))
+        n_row = math.ceil(n_var/n_col)  
+
+        gs = gridspec.GridSpec(n_row,n_col)
+        distr_dict = dict()
+        points_dict = dict()
+    
+        for i in range(n_var):
+            distr_dict[i] = list()
+            points_dict[i] = list()
+
+        for sample in distr:
+            for i in range(n_var):
+                distr_dict[i].append(float(sample['sample'][i].cpu().numpy()))
+            
+        for sample in points:
+            for i in range(n_var):
+                points_dict[i].append(float(sample['sample'][i].cpu().numpy()))
+
+
+        for id_sub in range(n_var):
+            ax_sub = fig.add_subplot(gs[id_sub])
+            h = sns.histplot(data=np.array(distr_dict[id_sub]), kde = True, element="step", ax=ax_sub, alpha=0.3)
+            point_list = list()
+
+            x = ax_sub.lines[0].get_xdata()
+            y = ax_sub.lines[0].get_ydata()
+
+            points = list(zip(x, y))
+            t_dic = dict(points)
+
+            lls = 1
+            for sample in points_dict[id_sub]:
+                true_x = sample
+                x_point = self.find_nearest_kde(np.array(list(t_dic.keys())), true_x)
+
+                sns.scatterplot(x = [x_point],y = [t_dic[x_point]], s=50)
+                ax_sub.text(x_point+.02, t_dic[x_point], str(lls))
+                lls += 1
+
+        gs.tight_layout(fig)
+        filename = Path(folder, f"{plotname}.png")
+        plt.savefig(filename)
 
 
 class CorrelationComparison():
@@ -396,61 +457,4 @@ class CorrelationComparison():
         mask = np.triu_indices(df.shape[0], k=1)
         return df[mask]
 
-    def find_nearest_kde(self, array, value):
-        array = np.asarray(array)
-        idx = (np.abs(array - value)).argmin()
-        return array[idx]
     
-    def draw_point_overDistribution(self, plotname, folder, n_var, points,  distr):
-        if distr is None:
-            distr = list()
-            for i in range(1000):
-                mu, sigma = 0, math.sqrt(1) # mean and standard deviation
-                s = np.random.normal(mu, sigma, 1000)  
-                distr.append({'sample': torch.Tensor(s), 'noise': torch.Tensor(s)})
-
-
-        fig = plt.figure(figsize=(18,18))
-        n_col = math.ceil(math.sqrt(n_var))
-        n_row = math.ceil(n_var/n_col)  
-
-        gs = gridspec.GridSpec(n_row,n_col)
-        distr_dict = dict()
-        points_dict = dict()
-    
-        for i in range(n_var):
-            distr_dict[i] = list()
-            points_dict[i] = list()
-
-        for sample in distr:
-            for i in range(n_var):
-                distr_dict[i].append(float(sample['sample'][i].numpy()))
-            
-        for sample in points:
-            for i in range(n_var):
-                points_dict[i].append(float(sample['sample'][i].numpy()))
-
-
-        for id_sub in range(n_var):
-            ax_sub = fig.add_subplot(gs[id_sub])
-            h = sns.histplot(data=np.array(distr_dict[id_sub]), kde = True, element="step", ax=ax_sub, alpha=0.3)
-            point_list = list()
-
-            x = ax_sub.lines[0].get_xdata()
-            y = ax_sub.lines[0].get_ydata()
-
-            points = list(zip(x, y))
-            t_dic = dict(points)
-
-            lls = 1
-            for sample in points_dict[id_sub]:
-                true_x = sample
-                x_point = find_nearest(np.array(list(t_dic.keys())), true_x)
-
-                sns.scatterplot(x = [x_point],y = [t_dic[x_point]], s=50)
-                ax_sub.text(x_point+.02, t_dic[x_point], str(lls))
-                lls += 1
-
-        gs.tight_layout(fig)
-        filename = Path(folder, f"{plotname}.png")
-        plt.savefig(filename)

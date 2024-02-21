@@ -27,7 +27,7 @@ class NeuroExperiment():
         for seed in range(0, int(repeation)):
             experiment_name = f"{experiments_name}_{seed}"
             if train_models=="yes":
-                univar_count = self.experiment(num_case=num_case, main_folder=path_folder, seed=seed, experiment_name=experiment_name,                                              load_model=load_model)
+                univar_count = self.experiment(num_case=num_case, main_folder=path_folder, seed=seed, experiment_name=experiment_name, load_model=load_model)
         
             id_experiments = int(num_case)
             experiments_list = self.getExperimentsList(seed=0)
@@ -42,11 +42,11 @@ class NeuroExperiment():
             {"id":  0, "model_case":"autoencoder_3_copula_optimization",  "epoch":{'AE':   3,'GAN':   2}, "univar_count": 7, "lat_dim": 3, "dataset_setting":{"batch_size":  32, "train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
             
             {"id":  1, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE':  50,'GAN':  50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size": 128, "train_percentual":0.5,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
-            {"id":  2, "model_case":"GAN_linear_pretrained_16_METR_bt",   "epoch":{'AE': 50,'GAN': 2}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  32, "train_percentual":0.4,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
+            {"id":  2, "model_case":"GAN_linear_pretrained_16_METR_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
             {"id":  3, "model_case":"GAN_linear_pretrained_32_METR_bt",   "epoch":{'AE': 50,'GAN': 3}, "univar_count":32, "lat_dim":28, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
             {"id":  4, "model_case":"GAN_linear_pretrained_48_METR_bt",   "epoch":{'AE': 50,'GAN': 2}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
             
-            {"id":  5, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE': 3,'GAN': 50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":1000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
+            {"id":  5, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE': 3,'GAN': 2}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":1000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
             {"id":  6, "model_case":"GAN_linear_pretrained_32_PEMS_bt",   "epoch":{'AE': 50,'GAN': 2}, "univar_count":32, "lat_dim":28, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
             {"id":  7, "model_case":"GAN_linear_pretrained_48_PEMS_bt",   "epoch":{'AE': 2,'GAN': 200}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  96, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
             

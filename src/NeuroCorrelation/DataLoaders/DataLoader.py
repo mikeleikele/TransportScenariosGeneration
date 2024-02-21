@@ -200,7 +200,7 @@ class DataLoader:
                 else:
                     r = np.percentile(s, k+window)
                 c = np.random.uniform(l, r, self.lat_dim)
-                noise_redux_samples.append({'sample': torch.Tensor(c), 'noise': torch.Tensor(c)})
+                noise_redux_samples.append({'sample': torch.Tensor(c).to(device=self.device), 'noise': torch.Tensor(c).to(device=self.device)})
                 k += window
                     
         return noise_redux_samples

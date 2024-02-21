@@ -61,14 +61,25 @@ class NeuralCore():
         self.summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
-                
-        self.ea_do__training_data = True
-        self.ea_do__testing_data = True
-        self.ea_do__noised_data = True
-        self.ea_do__reduced_noised_data = False
-        self.ea_do__copula_data = True
-        self.gan_do__noised_data = True    
-        
+        fast_test = False
+        if fast_test:   
+            self.ea_do__training_data = True
+            self.ea_do__testing_data = False
+            self.ea_do__noised_data = False
+            self.ea_do__reduced_noised_data = True
+            self.ea_do__copula_data = False
+            self.gan_do__noised_data = False  
+            self.gan_do__reduced_noised_data = True  
+             
+        else:
+            self.ea_do__training_data = True
+            self.ea_do__testing_data = True
+            self.ea_do__noised_data = True
+            self.ea_do__reduced_noised_data = True
+            self.ea_do__copula_data = True
+            self.gan_do__noised_data = True    
+            self.gan_do__reduced_noised_data = True
+            
         print("SETTING PHASE: Model creation")
         print("\tmodel_case:\t",model_case)
         self.model_case = model_case
@@ -86,8 +97,7 @@ class NeuralCore():
         elif self.model_case=="autoencoder_16_PEMS":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_16
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
-        
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.5, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_16_MetrLa":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.model = GEN_autoEncoder_16
@@ -151,7 +161,7 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_16 
+            #self.model = GEN_autoEncoder_16 
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -404,7 +414,7 @@ class NeuralCore():
             ] 
         elif self.model_case=="GAN_linear_pretrained_16_PEMS_ds":            
             self.model_ae = GEN_autoEncoder_16
-            print(self.loss_obj['AE'].get_lossTerms())
+            
             model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
@@ -416,14 +426,15 @@ class NeuralCore():
         
         #METR
         elif self.model_case=="GAN_linear_pretrained_16_METR_bt":            
-            self.model_ae = GEN_autoEncoder_16
-            print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            self.model['AE'] = GEN_autoEncoder_16
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
+            self.model['GAN']  = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'] , loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
+            
         elif self.model_case=="GAN_linear_pretrained_32_METR_bt":            
             self.model_ae = GEN_autoEncoder_32
             print(self.loss_obj['AE'].get_lossTerms())
@@ -455,16 +466,13 @@ class NeuralCore():
         #PEMS
         elif self.model_case=="GAN_linear_pretrained_16_PEMS_bt":            
             self.model['AE'] = GEN_autoEncoder_16
-            print(self.loss_obj['AE'].get_lossTerms())
             model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
             
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             self.model['GAN'] = GAN_neural_mixed_16(generator=model_ae_decoder)
-            
             model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")            
+            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_32_PEMS_bt":            
             self.model_ae = GEN_autoEncoder_32
             print(self.loss_obj['AE'].get_lossTerms())
@@ -726,7 +734,7 @@ class NeuralCore():
                         os.makedirs(reduced_noise_analysis_folder)
                     modelTrainedDecoder = modelAE.get_decoder()
                     
-                    reduced_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)                
+                    reduced_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder)                
                     reduced_noise_predict = reduced_noise_modelPrediction.compute_prediction(experiment_name="reduced_noise_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
@@ -740,9 +748,10 @@ class NeuralCore():
                         reduced_distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':reduced_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
                         datastats_reduced_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent)
                         datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.lat_dim, points=reduced_noise_data,  distr=None)
-                        print(train_predict['prediction_data_byvar']['input'])
-                        raise Exception("CRo")
-                        #datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_generated", n_var=self.univar_count, points=reduced_noise_predict,  distr=None)
+                        reduced_noise_data_dict = list()
+                        for pred in reduced_noise_predict['prediction_data']['output']:
+                            reduced_noise_data_dict.append({'sample':pred, 'noise':pred })
+                        datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_generated", n_var=self.univar_count, points=reduced_noise_data_dict,  distr=train_data)
                         
 
                 if self.ea_do__copula_data:
@@ -754,7 +763,7 @@ class NeuralCore():
                     copulaLat_samples_starting = train_predict['latent_data_input']['latent']
                     copulaLat_data, self.corrCoeff['copulaLatent_data_AE'] = self.dataGenerator.casualVC_generation(name_data="copulaLatent", real_data=copulaLat_samples_starting, univar_count=self.lat_dim, num_of_samples = noise_samples,  draw_plots=True)
                     modelTrainedDecoder = modelAE.get_decoder()
-                    
+                    print(copulaLat_data)
                     copulaLat_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=copulaLat_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=copulaLat_analysis_folder)                
                     copulaLat_predict = copulaLat_modelPrediction.compute_prediction(experiment_name="copula_test_data", remapping_data=True)
                     
@@ -785,21 +794,47 @@ class NeuralCore():
                     if not os.path.exists(noise_analysis_folder):
                         os.makedirs(noise_analysis_folder)
                     traindata_input = self.dataset2var(train_data)
-                    if self.gan_do__noised_data:
-                        noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)
-                        noise_predict = noise_modelPrediction.compute_prediction(experiment_name="noise_test_data", remapping_data=True)
-                        
-                        print("\tSTATS PHASE:  Correlation and distribution")
-                        datastats_noiseGAN = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=noise_predict, path_folder=noise_analysis_folder)
-                        datastats_latent=False
-                        self.corrCoeff[plot_name] = datastats_noiseGAN.get_corrCoeff(latent=datastats_latent)
-                        
-                        if draw_plot:    
-                            plot_colors = {"input":"green", "output":"m"}                    
-                            distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                            datastats_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                    noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)
+                    noise_predict = noise_modelPrediction.compute_prediction(experiment_name="noise_test_data", remapping_data=True)
+                    
+                    print("\tSTATS PHASE:  Correlation and distribution")
+                    datastats_noiseGAN = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=noise_predict, path_folder=noise_analysis_folder)
+                    datastats_latent=False
+                    self.corrCoeff[plot_name] = datastats_noiseGAN.get_corrCoeff(latent=datastats_latent)
+                    
+                    if draw_plot:
+                        print("\tSTATS PHASE:  Plots")
+                        plot_colors = {"input":"green", "output":"m"}                    
+                        distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
+                        datastats_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
 
-        
+                if self.gan_do__reduced_noised_data:
+                    print("PREDICT PHASE: reduced noised data generation")
+                    plot_name = "GAN_reduced_noise"
+                    reduced_noise_analysis_folder = Path(path_folder_pred,"reduced_noise_data_analysis")
+                    if not os.path.exists(reduced_noise_analysis_folder):
+                        os.makedirs(reduced_noise_analysis_folder)
+                                       
+                    reduced_noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder)
+                    reduced_noise_predict = reduced_noise_modelPrediction.compute_prediction(experiment_name="reduced_noise_test_data", remapping_data=True)
+                    traindata_input = self.dataset2var(train_data)
+                    
+                    print("\tSTATS PHASE:  Correlation and distribution")
+                    datastats_reduced_noiseGAN = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=reduced_noise_predict, path_folder=reduced_noise_analysis_folder)
+                    datastats_latent=False
+                    self.corrCoeff[plot_name] = datastats_reduced_noiseGAN.get_corrCoeff(latent=datastats_latent)
+                    
+                    if draw_plot:
+                        print("\tSTATS PHASE:  Plots")
+                        plot_colors = {"input":"green","output":"m"}
+                        reduced_distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':reduced_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
+                        datastats_reduced_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent)
+                        datastats_reduced_noiseGAN.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.lat_dim, points=reduced_noise_data,  distr=None)
+                        reduced_noise_data_dict = list()
+                        for pred in reduced_noise_predict['prediction_data']['output']:
+                            reduced_noise_data_dict.append({'sample':pred, 'noise':pred })
+                        datastats_reduced_noiseGAN.draw_point_overDistribution(plotname="noise_reduced_sampled_generated", n_var=self.univar_count, points=reduced_noise_data_dict,  distr=train_data)
+                        
         
   
 
