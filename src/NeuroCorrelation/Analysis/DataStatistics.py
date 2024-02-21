@@ -56,3 +56,5 @@ class DataStatistics():
         
         self.dataComparison.plot_vc_correlationCoeff(self.data["out_data_vc"], plot_name=f"{plot_name}_output", corrMatrix=corrCoeff['output'])                 
 
+    def draw_point_overDistribution(self, plotname, n_var, points,  distr=None):
+        self.dataComparison.draw_point_overDistribution(plotname, self.path_folder, n_var, points,  distr)

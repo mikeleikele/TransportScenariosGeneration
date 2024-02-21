@@ -1,10 +1,15 @@
 from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSynteticGeneration
 from src.NeuroCorrelation.DataLoaders.DataMapsLoader import DataMapsLoader
 
-
+import math
 from pathlib import Path
 import os
-
+import torch
+from torch import Tensor
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 
 class DataLoader:
     
@@ -82,8 +87,8 @@ class DataLoader:
         self.rangeData = self.dataGenerator.getDataRange()
         self.statsData = self.dataGenerator.getDataStats()
         
-        reduced_noise_data = self.generateNoiseRedux(1)
-        
+        reduced_noise_data = self.generateNoiseReduced(method="percentile", percentile_points=10)
+         
         data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data, "reduced_noise_data":reduced_noise_data}
         
         if save_summary:
@@ -148,15 +153,56 @@ class DataLoader:
         with open(filename, 'w') as file:
             file.write(setting_str)
         print("SETTING PHASE: Summary dataset file - DONE")
+    
+    
+    
+    
+    def find_nearest_kde(self, array, value):
+        array = np.asarray(array)
+        idx = (np.abs(array - value)).argmin()
+        return array[idx]
+    '''        
+    methods :
+        'all'     : all possible combination of redux_noise_values
+        'percentile' : sampling between 2 different percentile
+    '''
+    def generateNoiseReduced(self, method, percentile_points = 10,draw_plot = True):
+        noise_reduced_path_folder_a = Path(self.path_folder,"maps_analysis_"+self.name_dataset)
+        if not os.path.exists(noise_reduced_path_folder_a):
+            os.makedirs(noise_reduced_path_folder_a)
+        noise_red_path_folder = Path(noise_reduced_path_folder_a,"noise_reduced_data_analysis")
+        if not os.path.exists(noise_red_path_folder):
+            os.makedirs(noise_red_path_folder)
+            
         
-    def generateNoiseRedux(self, high):
-        redux_noise = list()
-        redux_noise_values = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1]
-        redux_noise_values = [-1,  -0.5,  0,  0.5,  1]
-        c = self.generateNoisePercentile(high, redux_noise_values)
         noise_redux_samples = list()
-        #for c_item in c:
-        #    noise_redux_samples.append({'sample': torch.Tensor(c_item).to(device=self.device), 'noise': torch.Tensor(c_item).to(device=self.device)})
+        if method=='all':
+            redux_noise = list()
+            redux_noise_values = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1]
+            redux_noise_values = [-1,  -0.5,  0,  0.5,  1]
+            high = self.lat_dim
+            c = self.generateNoisePercentile(high, redux_noise_values)
+            
+            for c_item in c:
+                noise_redux_samples.append({'sample': torch.Tensor(c_item).to(device=self.device), 'noise': torch.Tensor(c_item).to(device=self.device)})
+        elif method== 'percentile':
+            mu, sigma = 0, math.sqrt(1) # mean and standard deviation
+            s = np.random.normal(mu, sigma, 1000)
+            k = 0
+            window = 100/(percentile_points)
+            values = []
+            o = 0
+            while o < percentile_points:
+                o += 1
+                l = np.percentile(s, k)
+                if  k+window>=100:
+                    r = 100
+                else:
+                    r = np.percentile(s, k+window)
+                c = np.random.uniform(l, r, self.lat_dim)
+                noise_redux_samples.append({'sample': torch.Tensor(c), 'noise': torch.Tensor(c)})
+                k += window
+                    
         return noise_redux_samples
 
     def generateNoisePercentile(self, high, redux_noise_values):

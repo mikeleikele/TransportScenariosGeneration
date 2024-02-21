@@ -65,7 +65,7 @@ class NeuralCore():
         self.ea_do__training_data = True
         self.ea_do__testing_data = True
         self.ea_do__noised_data = True
-        self.ea_do__redux_noised_data = False
+        self.ea_do__reduced_noised_data = False
         self.ea_do__copula_data = True
         self.gan_do__noised_data = True    
         
@@ -651,7 +651,7 @@ class NeuralCore():
         train_data = data_dict['train_data']
         test_data = data_dict['test_data']
         noise_data = data_dict['noise_data']
-        
+        reduced_noise_data = data_dict['reduced_noise_data']
         if model_type =="AE":
             print("PHASE: AutoEncoder")
             if model is not None:
@@ -718,28 +718,32 @@ class NeuralCore():
                         distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
                         datastats_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
                 
-                if self.ea_do__redux_noised_data:
-                    print("PREDICT PHASE: Redux noised data generation")
-                    plot_name = "AE_redux_noise"
-                    redux_noise_analysis_folder = Path(path_folder_pred,"redux_noise_data_analysis")
-                    if not os.path.exists(redux_noise_analysis_folder):
-                        os.makedirs(redux_noise_analysis_folder)
+                if self.ea_do__reduced_noised_data:
+                    print("PREDICT PHASE: reduced noised data generation")
+                    plot_name = "AE_reduced_noise"
+                    reduced_noise_analysis_folder = Path(path_folder_pred,"reduced_noise_data_analysis")
+                    if not os.path.exists(reduced_noise_analysis_folder):
+                        os.makedirs(reduced_noise_analysis_folder)
                     modelTrainedDecoder = modelAE.get_decoder()
                     
-                    redux_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=redux_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)                
-                    redux_noise_predict = redux_noise_modelPrediction.compute_prediction(experiment_name="redux_noise_test_data", remapping_data=True)
+                    reduced_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)                
+                    reduced_noise_predict = reduced_noise_modelPrediction.compute_prediction(experiment_name="reduced_noise_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
-                    datastats_redux_noiseAE = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=redux_noise_predict, path_folder=redux_noise_analysis_folder)
+                    datastats_reduced_noiseAE = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=reduced_noise_predict, path_folder=reduced_noise_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_redux_noiseAE.get_corrCoeff(latent=datastats_latent)
+                    self.corrCoeff[plot_name] = datastats_reduced_noiseAE.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green","output":"m"}
-                        redux_distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':redux_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_redux_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=redux_distribution_compare, latent=datastats_latent)
-
+                        reduced_distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':reduced_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
+                        datastats_reduced_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent)
+                        datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.lat_dim, points=reduced_noise_data,  distr=None)
+                        print(train_predict['prediction_data_byvar']['input'])
+                        raise Exception("CRo")
+                        #datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_generated", n_var=self.univar_count, points=reduced_noise_predict,  distr=None)
+                        
 
                 if self.ea_do__copula_data:
                     print("PREDICT PHASE: Copula Latent data")
