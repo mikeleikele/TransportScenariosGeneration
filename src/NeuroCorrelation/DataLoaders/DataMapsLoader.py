@@ -31,10 +31,25 @@ class DataMapsLoader():
         self.mean_vc_val = dict()
         self.median_vc_val = dict()
         self.variance_vc_val = dict()
-        if self.name_dataset=="PEMS_16":
-            filename = Path("data","neuroCorrelation_data","PEMSBAY_S16_START17_END19_MF.csv")
+        
+        if self.name_dataset=="PemsBay_16":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S16_START7_END9.csv")
+        elif self.name_dataset=="PemsBay_32":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S32_START7_END9.csv")
+        elif self.name_dataset=="PemsBay_48":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S48_START7_END9.csv")
+        elif self.name_dataset=="PemsBay_64":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S64_START7_END9.csv")
+            
         elif self.name_dataset=="MetrLA_16":
             filename = Path("data","neuroCorrelation_data","METR_LA_S16_START7_END9.csv")
+        elif self.name_dataset=="MetrLA_32":
+            filename = Path("data","neuroCorrelation_data","METR_LA_S32_START7_END9.csv")
+        elif self.name_dataset=="MetrLA_48":
+            filename = Path("data","neuroCorrelation_data","METR_LA_S48_START7_END9.csv")
+        elif self.name_dataset=="MetrLA_64":
+            filename = Path("data","neuroCorrelation_data","METR_LA_S64_START7_END9.csv")
+        
         elif self.name_dataset=="PEMS_all":
             filename = Path("data","neuroCorrelation_data","PEMSBAY_S325_START17_END19_MF.csv")
         elif self.name_dataset=="MetrLA_all":
@@ -82,6 +97,8 @@ class DataMapsLoader():
             vc_mapping.append(key_vc)
             all_values_vc[key_vc] = dict()        
             vc_values = [float(x) for x in self.data_df['traffic_speed'][i][0:-2].strip('[]').replace('"', '').replace(' ', '').split(',')]
+            if verbose:
+                print("\tkey",key_vc,"\t#istances:\t", len(vc_values))
             all_values_vc[key_vc]['values'] = vc_values
 
             if self.min_val is None:
@@ -95,14 +112,11 @@ class DataMapsLoader():
             else:
                 max_vc = max(vc_values)
                 self.max_val = max(max_vc, self.max_val)
-            print("-------A---",len(vc_values))
-            print("-------B---",vc_values)
             self.mean_vc_val[key_vc] = statistics.mean(vc_values)
             self.median_vc_val[key_vc] = statistics.median(vc_values)
             self.variance_vc_val[key_vc] = statistics.variance(vc_values)
-            
-            
-            
+
+        
         self.mean_val = None
         self.median_val = None
         
@@ -115,6 +129,7 @@ class DataMapsLoader():
 
         train_istance = math.floor(len(vc_values) * train_percentual)
         shuffle_indexes = [i for i in range(len(vc_values))]
+        
         random.Random(self.seed).shuffle(shuffle_indexes)
         
         if verbose:
@@ -123,7 +138,7 @@ class DataMapsLoader():
             print("\tvc     mean:\t",self.mean_vc_val)
             print("\tvc     median:\t",self.median_vc_val)
             print("\tvc     variance:\t",self.variance_vc_val)
-        
+            
         train_values_vc = dict()
         test_values_vc = dict()
         self.vc_mapping_list = self.data_df['ref'].values.tolist()
@@ -131,7 +146,7 @@ class DataMapsLoader():
         for key_vc in self.data_df['ref'].values:
 
             train_values_vc[key_vc] = dict()
-            train_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc)) if i in shuffle_indexes[:train_istance]]            
+            train_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc[key_vc]['values'])) if i in shuffle_indexes[:train_istance]]
             train_values_vc[key_vc]['values'] = (np.array(train_istance_list) - self.min_val)/(self.max_val - self.min_val)
             train_values_vc[key_vc]['mean'] = np.mean(train_values_vc[key_vc]['values'])
             train_values_vc[key_vc]['std'] = np.std(train_values_vc[key_vc]['values'])
@@ -140,7 +155,7 @@ class DataMapsLoader():
             self.train_samples = len(train_values_vc[key_vc]['values'])
 
             test_values_vc[key_vc] = dict()
-            test_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc)) if i in shuffle_indexes[train_istance:]]
+            test_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc[key_vc]['values'])) if i in shuffle_indexes[train_istance:]]
             
             test_values_vc[key_vc]['values'] = (np.array(test_istance_list) - self.min_val)/(self.max_val - self.min_val)
             test_values_vc[key_vc]['mean'] = np.mean(test_values_vc[key_vc]['values'])
@@ -148,6 +163,16 @@ class DataMapsLoader():
             mu['test'] = test_values_vc[key_vc]['mean']
             rho_test_list.append(test_values_vc[key_vc]['values'])
             self.test_samples = len(test_values_vc[key_vc]['values'])
+            if verbose:
+                print("\t#istances train\tkey:",key_vc," :",len(train_values_vc[key_vc]['values']))
+                print("\t#istances test\tkey:",key_vc," :",len(test_values_vc[key_vc]['values']))
+            
+        
+        filename_train = Path(self.path_folder,"samples_train.csv")
+        filename_test = Path(self.path_folder,"samples_train.csv")
+        np.savetxt(filename_train, train_values_vc[key_vc]['values'], delimiter=",")
+        np.savetxt(filename_test, test_values_vc[key_vc]['values'], delimiter=",")
+
         print("\ttrain samples: done")
         print("\ttest samples: done")
         ticks_list = np.concatenate([[''], self.data_df['ref'].values])
@@ -236,14 +261,19 @@ class DataMapsLoader():
 
         if draw_plots:
             noise_data_vc = dict()
+            noise_data_vc['noise'] = dict()
+            noise_data_vc['noise']['data'] = dict()
             for id_var in range(self.lat_dim):
-                noise_data_vc[id_var] = list()
+                noise_data_vc['noise']['data'][id_var] = list()
             for item in dataset_couple:
                 for id_var in range(self.lat_dim):
-                    noise_data_vc[id_var].append(item['sample'][id_var].tolist())
+                    noise_data_vc['noise']['data'][id_var].append(item['sample'][id_var].tolist())
             self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, dim_latent=self.lat_dim, path_folder= path_fold_noiseAnalysis)
-
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
+            noise_data_vc['noise']['color'] = 'green'
+            noise_data_vc['noise']['alpha'] = 1
+            #print(noise_data_vc['noise']['data'][1])
+            self.comparison_plot_noise.data_comparison_plot(noise_data_vc, plot_name="normal_noise", mode="in", is_npArray=False)
+            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc['noise']['data'],plot_name=name_data, color_data="green")
 
         return dataset_couple
 

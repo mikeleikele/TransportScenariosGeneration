@@ -18,7 +18,9 @@ import os
 import json
 from matplotlib.ticker import PercentFormatter
 import datetime
+from torchviz import make_dot
 
+from torch.nn.utils import parameters_to_vector
 
 class ModelTraining():
 
@@ -46,28 +48,35 @@ class ModelTraining():
             self.model = model()
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
-            self.optimizer = optim.Adam(params=model_params, lr=0.01)
+            lr_ae = 0.01
+            self.optimizer = optim.Adam(params=model_params, lr=lr_ae)
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=15, gamma=0.1)
             
             
         elif self.model_type=="GAN":
-            beta1 = 0.5
-            lr = 0.1
-
+            lr_gen = 0.0001
+            lr_dis = 0.0001
+            self.model = model
+            
             if pre_trained_decoder:
                 self.model_gen = model.get_generator()
             else:
                 model_gen = model.get_generator()
                 self.model_gen = model_gen()
             self.model_gen.to(device=self.device)
-            self.optimizer_gen = optim.Adam(self.model_gen.parameters(), lr=lr)
-            self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=10, gamma=0.1)
+            gen_params = self.model_gen.parameters()
+            
+            self.optimizer_gen = optim.Adam(gen_params, lr=lr_gen, betas=(0.5, 0.999))
+            self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=15, gamma=0.1)
 
-            model_dis = model.get_discriminator()
+            model_dis = self.model.get_discriminator()
             self.model_dis = model_dis()
             self.model_dis.to(device=self.device)
-            self.optimizer_dis = optim.Adam(self.model_dis.parameters(), lr=lr)   
-            self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=10, gamma=0.1)
+            dis_params = self.model_dis.parameters()
+            self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis, betas=(0.5, 0.999))  
+            self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=15, gamma=0.1)
+            
+           
             
             self.criterion = nn.BCELoss()
         
@@ -94,6 +103,7 @@ class ModelTraining():
         else:
             print("\tTRAIN TRAINED MODEL:\t")
             self.getModeModel()
+            print("--------------------------------------------------------------------------------------------------------------------------",self.model_type)
             if self.model_type == "AE":
                 train_start_time = datetime.datetime.now()
 
@@ -101,15 +111,21 @@ class ModelTraining():
                 train_end_time = datetime.datetime.now()
                 train_time = train_end_time - train_start_time
                 print("\tTIME TRAIN MODEL:\t",train_time)
-                model_for_prediction = self.getModel('all')
+                model_opt_prediction = self.getModel('all')
             elif self.model_type == "GAN":
+                train_start_time = datetime.datetime.now()
                 self.training_GAN(noise_size=noise_size)
-            if save_model and self.model_type != "GAN":
+                train_end_time = datetime.datetime.now()
+                train_time = train_end_time - train_start_time
+                print("\tTIME TRAIN MODEL:\t",train_time)
+                #model_opt_prediction = self.getModel('all')
+           
+            if save_model:
                 self.save_model()
             if optimization:
                 if self.model_type == "AE":
                 
-                    modelPrediction = ModelPrediction(model=model_for_prediction, device=self.device,dataset=self.dataset, vc_mapping= self.vc_mapping, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=input_shape,path_folder=path_opt_result)         
+                    modelPrediction = ModelPrediction(model=model_opt_prediction, device=self.device,dataset=self.dataset, vc_mapping= self.vc_mapping, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=input_shape,path_folder=path_opt_result)         
                        
                     prediction_opt = modelPrediction.compute_prediction(experiment_name=f"{optimizar_trial}", remapping_data=True)
                     opt_function_result = prediction_opt['opt_measure']
@@ -118,17 +134,27 @@ class ModelTraining():
                     print("OPTIMIZATION PROCESS NOT IMPLEMENTED FOR:\t",self.model_type)
             else:
                 opt_function_result = 1
-            print(opt_function_result)
             return opt_function_result
             
     def save_model(self):
-        path_folder_model = Path(self.path_folder, self.model_type, "model_save")
+        path_folder_model = Path(self.path_folder, self.model_type, f"model_save_{self.model_type}")
         if not os.path.exists(path_folder_model):
             os.makedirs(path_folder_model)
-        path_save_model = Path(path_folder_model, 'model_weights.pth')
-        print("\tSAVE TRAINED MODEL:\t",path_save_model)
-        torch.save(self.model.state_dict(), path_save_model)
-   
+        
+        if self.model_type  == "AE":
+            path_save_model = Path(path_folder_model, 'model_weights_AE.pth')
+            torch.save(self.model.state_dict(), path_save_model)
+            print("\tSAVE TRAINED MODEL AE:\t",path_save_model)
+        else:
+            path_save_model_gen = Path(path_folder_model, 'model_weights_GAN_gen.pth')
+            torch.save(self.model_gen.state_dict(), path_save_model_gen)
+            print("\tSAVE TRAINED MODEL GAN GEN:\t",path_save_model_gen)
+            
+            path_save_model_dis = Path(path_folder_model, 'model_weights_GAN_dis.pth')            
+            torch.save(self.model_dis.state_dict(), path_save_model_dis)
+            print("\tSAVE TRAINED MODEL GAN DIS:\t",path_save_model_dis)
+            
+               
     def training_AE(self, model_flatten_in, batch_size, plot_loss=True):
         self.loss_dict = dict()
         self.model.train()
@@ -142,8 +168,7 @@ class ModelTraining():
             for batch_num, dataBatch in enumerate(dataBatches):
                 item_batch = len(dataBatch)
                 if True: #item_batch == batch_size:
-                    loss = torch.zeros([1])
-                    
+                    loss = torch.zeros([1])                    
                     self.optimizer.zero_grad()
                     y_hat_list = list()
                     sample_list = list()
@@ -153,7 +178,6 @@ class ModelTraining():
                         sample = samplef.float()
                         sample_list.append(sample)
                         #noise = noisef.float()
-                        
                     x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
                     
                     
@@ -199,7 +223,10 @@ class ModelTraining():
             epoch_end_time = datetime.datetime.now()
             epoch_time = epoch_end_time - epoch_start_time
             
-            self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}")
+            
+            
+            
+            self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}", model_section="AE")
             
             print("\tepoch:\t",epoch+1,"/",self.epoch['AE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tlr: ",self.optimizer.param_groups[0]['lr'])
         if plot_loss:
@@ -214,10 +241,10 @@ class ModelTraining():
         self.loss_dict = dict()
         self.model_gen.train()
         self.model_dis.train()
-        print("model_gen.training\t: ",self.model_gen.training )
-        print("model_dis.training\t: ",self.model_dis.training )
+        
         print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
         for epoch in range(self.epoch['GAN']):
+            first = True
             
             dataBatches = self.dataLoaded.generate()
             loss_batch = list()
@@ -230,85 +257,115 @@ class ModelTraining():
             
             loss_batch_partial = dict()
             for batch_num, dataBatch in enumerate(dataBatches):
-                ############################
+                
+                
+                ###########################
                 # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                 ###########################
                 
                 ###########################
                 ##  A Update D with real data
                 ###########################
-                
                 self.model_dis.zero_grad()
-                batch_real_err = torch.zeros(1).to(device=self.device) 
+                self.optimizer_dis.zero_grad()
+                batch_real_err_D = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(dataBatch):
                     samplef = item['sample']
                     sample = samplef.float()
                     label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
-                    
-                    output = self.model_dis(sample)['x_output'].view(-1)
-                    
+                    output = self.model_dis(sample)['x_output'].view(-1)                    
                     item_err = self.criterion(output, label)
-                    batch_real_err += item_err
-                err_D_r_list.append(batch_real_err.detach().cpu().numpy()[0]/len(dataBatch))
-                batch_real_err.backward()
-                self.optimizer_dis.step()
+                    batch_real_err_D += item_err
+                err_D_r_list.append(batch_real_err_D.detach().cpu().numpy()[0]/len(dataBatch))
+                batch_real_err_D.backward()
+                #self.optimizer_dis.step()
                 
+            
                 ###########################
                 ##  make noiseData
                 ###########################
-                
                 noise_batch = list()
                 for i, item in enumerate(dataBatch):
                     noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
                     noise_batch.append(noise)
+            
                 ###########################
                 ##  B Update D with fake data
                 ###########################
-                
-                batch_fake_err = torch.zeros(1).to(device=self.device) 
-
-                
+                ##self.optimizer_dis.zero_grad()
+                batch_fake_err_D = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(noise_batch):
-                    
-                    
-                    fake = self.model_gen(item)['x_output']
+                    fake = self.model_gen(item)['x_output'] 
                     label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
                     output = self.model_dis(fake.detach())['x_output'].view(-1)
-                    
                     item_err = self.criterion(output, label)
-                    batch_fake_err += item_err
+                    batch_fake_err_D += item_err
+                err_D_f_list.append(batch_fake_err_D.detach().cpu().numpy()[0]/len(dataBatch))
                 
-                err_D_f_list.append(batch_fake_err.detach().cpu().numpy()[0]/len(dataBatch))
-                batch_fake_err.backward()
-                self.optimizer_dis.step()
-                
-                errD = batch_real_err + batch_fake_err
+                batch_fake_err_D.backward()
+                self.optimizer_dis.step() 
+            
+                ###########################               
+                errD = batch_real_err_D + batch_fake_err_D
                 err_D_list.append(errD.detach().cpu().numpy())
-                ############################
+                
+                ###########################
                 # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
                 ###########################
                 
-                self.model_gen.zero_grad()
-                batch_fake_err = torch.zeros(1).to(device=self.device) 
+                self.optimizer_gen.zero_grad()
+                batch_fake_err_G = torch.zeros(1).to(device=self.device) 
+                self.model_gen.train()
+
                 for i, item in enumerate(noise_batch):
-                    
-                    fake = self.model_gen(item)['x_output']
+                    fake = self.model_gen(item)['x_output']                    
                     label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
-                    output = self.model_dis(fake.detach())['x_output'].view(-1)
+                    output = self.model_dis(fake)['x_output'].view(-1)                    
                     item_err = self.criterion(output, label)
-                    batch_fake_err += item_err
-                batch_fake_err.backward()
-                errG = batch_fake_err
-                err_G_list.append(errG.detach().cpu().numpy())
-                self.optimizer_gen.step()
+                    batch_fake_err_G += item_err 
+                batch_fake_err_G.backward()
+                self.optimizer_gen.step() 
+                err_G_list.append(batch_fake_err_G.detach().cpu().numpy()[0]/len(noise_batch))
+                
+                
             self.scheduler_dis.step()
             self.scheduler_gen.step()
+            
 
+            
+            
+            self.plot_grad_flow(named_parameters = self.model_gen.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_gen")
+            self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
+            
+            
             self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
-            print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t - loss D:\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\t G: ",np.mean(err_G_list),"\t\t\tlr D: ",self.optimizer_dis.param_groups[0]['lr'],"\t G: ",self.optimizer_gen.param_groups[0]['lr'])
+            print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
+            print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
+            print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
+            
         if plot_loss:
             self.loss_plot(self.loss_dict)
+            
+    def get_tensor_info(tensor):
+        info = []
+        for name in ['requires_grad', 'is_leaf', 'retains_grad', 'grad_fn', 'grad']:
+            info.append(f'{name}({getattr(tensor, name, None)})')
+        return ' '.join(info)
 
+    def getBack(self, var_grad_fn):
+        print(var_grad_fn)
+        for n in var_grad_fn.next_functions:
+            if n[0]:
+                try:
+                    tensor = getattr(n[0], 'variable')
+                    print(n[0])
+                    print('Tensor with grad found:', tensor)
+                    print(' - gradient :', tensor.grad)
+                    print()
+                except AttributeError as e:
+                    self.getBack(n[0])
+
+    
     def getModel(self, selection='all', eval=False, train=False):
         if self.model_type == "AE":
             if selection=='all':
@@ -404,8 +461,7 @@ class ModelTraining():
         sub_correlation_matrix_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_sub.csv")
         np.savetxt(sub_correlation_matrix_Path, sub_correlation_matrix, delimiter=",")
               
-    def plot_grad_flow(self, named_parameters, epoch=None):
-        
+    def plot_grad_flow(self, named_parameters, epoch, model_section):
         
         '''Plots the gradients flowing through different layers in the net during training.
         Can be used for checking for possible gradient vanishing / exploding problems.
@@ -437,7 +493,7 @@ class ModelTraining():
             Line2D([0], [0], color="k", lw=4)], 
             ['max-gradient', 'mean-gradient', 'zero-gradient'])
         
-        epoch_str = f'{epoch}'.zfill(len(str(self.epoch)))
-        path_save_gradexpl = Path(self.path_save_model_gradients,f"gradient_epoch_{epoch_str}.png")
+        epoch_str = f'{epoch}'.zfill(len(str(self.epoch[self.model_type])))
+        path_save_gradexpl = Path(self.path_save_model_gradients,f"{model_section}_gradient_epoch_{epoch_str}.png")
         plt.savefig(path_save_gradexpl)
   

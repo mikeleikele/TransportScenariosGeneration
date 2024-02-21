@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 import numpy as np
-from scipy.stats import norm
+#from scipy.stats import norm
 import statistics
 from pathlib import Path
 import os
@@ -33,7 +33,7 @@ class DataComparison():
         name_univ = f'{id_univar:0{num_digit}d}'
         return name_univ
 
-    def data_comparison_plot(self, data, plot_name=None, mode="in"):
+    def data_comparison_plot(self, data, plot_name=None, mode="in", is_npArray=True):
         if plot_name is not None:
             fold_name = f"{plot_name}_distributions_compare"
         else:
@@ -58,8 +58,10 @@ class DataComparison():
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
-
-                list_values = data[key]['data'][id_univar]
+                if is_npArray:
+                    list_values = [x.tolist() for x in data[key]['data'][id_univar]]
+                else:
+                    list_values = data[key]['data'][id_univar]
                 color_data = data[key]['color']
                 if 'alpha' in data[key]:
                     alpha_data = data[key]['alpha']
@@ -111,10 +113,11 @@ class DataComparison():
         stats_dict = {"univ_id": []}
         
         for id_comp in range(self.dim_latent):
-            list_values = data_lat[id_comp]
+            list_values = [x.tolist() for x in data_lat[id_comp]]
             name_comp = self.get_idName(id_comp, max_val=self.dim_latent)
             plt.figure(figsize=(12,8))
-            plt.hist(list_values, weights=np.ones(len(list_values)) / len(list_values), histtype='stepfilled', alpha = 0.2, color= color_data)
+            list_values_weights = np.ones(len(list_values)) / len(list_values)
+            plt.hist(list_values, weights=list_values_weights, histtype='stepfilled', alpha = 0.2, color= color_data)
             title_txt = f"{plot_name} - component: {id_comp}"
             plt.title(title_txt)
             filename = Path(path_fold_dist, "plot_latent_distribution_"+plot_name+"_"+name_comp+"_latent.png")

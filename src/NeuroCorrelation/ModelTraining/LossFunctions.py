@@ -262,18 +262,20 @@ class LossFunction(nn.Module):
         for id_item, val in enumerate(values):
             covariance_list_in.append(val['x_input'])
             covariance_list_out.append(val['x_output'])
+            
         covariance_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
         covariance_matr_in = torch.reshape(torch.cat(covariance_list_in), (len(values),self.univar_count))
+        
         covariance_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
         covariance_matr_out = torch.reshape(torch.cat(covariance_list_out), (len(values),self.univar_count))
-        spearman_obj = SpearmanCorrCoef(self.univar_count)
+        spearman_obj = SpearmanCorrCoef(num_outputs=self.univar_count)
         
         
         
         spearman_values = spearman_obj(covariance_matr_out, covariance_matr_in)
     
         for val in spearman_values:
-            loss_ret += val
+            loss_ret += torch.abs(val)
         #loss_ret /= len(spearman_values)
         return loss_ret
 
@@ -376,3 +378,4 @@ class LossFunction(nn.Module):
             loss_ret += jsd_value
         return loss_ret
 
+##mahalanobis

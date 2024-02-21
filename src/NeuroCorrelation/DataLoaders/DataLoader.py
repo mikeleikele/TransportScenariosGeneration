@@ -26,7 +26,7 @@ class DataLoader:
         self.starting_sample = self.checkInDict(self.dataset_setting,"starting_sample",20)
         self.train_percentual = self.checkInDict(self.dataset_setting,"train_percentual",0.70)        
         self.train_samples = self.checkInDict(self.dataset_setting,"train_samples", 50)
-        self.test_samples = self.checkInDict(self.dataset_setting,"test_samples", 5000)
+        self.test_samples = self.checkInDict(self.dataset_setting,"test_samples", 500)
         self.noise_samples = self.checkInDict(self.dataset_setting,"noise_samples", 1000)
         self.corrCoeff = corrCoeff
         self.corrCoeff['data'] = dict()
@@ -82,7 +82,9 @@ class DataLoader:
         self.rangeData = self.dataGenerator.getDataRange()
         self.statsData = self.dataGenerator.getDataStats()
         
-        data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data}
+        reduced_noise_data = self.generateNoiseRedux(1)
+        
+        data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data, "reduced_noise_data":reduced_noise_data}
         
         if save_summary:
             self.saveDataset_setting()
@@ -146,4 +148,33 @@ class DataLoader:
         with open(filename, 'w') as file:
             file.write(setting_str)
         print("SETTING PHASE: Summary dataset file - DONE")
+        
+    def generateNoiseRedux(self, high):
+        redux_noise = list()
+        redux_noise_values = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1]
+        redux_noise_values = [-1,  -0.5,  0,  0.5,  1]
+        c = self.generateNoisePercentile(high, redux_noise_values)
+        noise_redux_samples = list()
+        #for c_item in c:
+        #    noise_redux_samples.append({'sample': torch.Tensor(c_item).to(device=self.device), 'noise': torch.Tensor(c_item).to(device=self.device)})
+        return noise_redux_samples
+
+    def generateNoisePercentile(self, high, redux_noise_values):
+        if high == 0:
+            return None
+        else:    
+            recur_list = list()
+            recur_values = self.generateNoisePercentile(high-1, redux_noise_values)
+            if recur_values is None:
+                for item in redux_noise_values:
+                    recur_list.append([item])
+                return recur_list
+            else:
+                recur_list = list()
+                for item_list in recur_values:
+                    for i in range(len(redux_noise_values)):
+                        a = item_list.copy()
+                        a.append(redux_noise_values[i])
+                        recur_list.append(a)
+                return recur_list    
         

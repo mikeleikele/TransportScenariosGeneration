@@ -5,6 +5,7 @@ from src.NeuroCorrelation.ModelTraining import ModelTraining
 from src.NeuroCorrelation.ModelPrediction import ModelPrediction
 from src.NeuroCorrelation.DataComparison import DataComparison
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm

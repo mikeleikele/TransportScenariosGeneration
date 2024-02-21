@@ -9,18 +9,26 @@ class NetworkDetails():
         self.path = path
         
     def saveModelParams(self):
-        ann_str = self.saveModel_structure()
-        loss_str = self.saveModel_loss()
-        file_str = f"{ann_str}\n\n{loss_str}"
+        file_str = ""
+        for key in self.model:
+            ann_str = self.saveModel_structure(key, self.model[key])
+            if key =="AE":                
+                loss_str = self.saveModel_loss()
+            else:
+                loss_str = "----"
+            file_str_key = f"================ {key} ================\n======== structure\n{ann_str}\n\n======== loss\n{loss_str}"
+            file_str = "\n".join([file_str, file_str_key])
         filename = Path(self.path, "summary_network.txt")
         with open(filename, 'w') as file:
             file.write(file_str)
         print("SETTING PHASE: Summary model file - DONE")
     
-    def saveModel_structure(self):
-        net_summary = self.model().summary()
-        ann_str = f"{net_summary}"
-        return ann_str
+    def saveModel_structure(self, key, model_net):
+        if key == "GAN":
+            net_summary = model_net.summary()
+        elif key =="AE":
+            net_summary = model_net().summary()
+        return f"{key}::\n {net_summary}"
     
     def saveModel_loss(self):
         loss_str = ""
