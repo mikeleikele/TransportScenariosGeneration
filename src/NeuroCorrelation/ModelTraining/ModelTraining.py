@@ -19,8 +19,9 @@ import json
 from matplotlib.ticker import PercentFormatter
 import datetime
 from torchviz import make_dot
-
+from torch import autograd
 from torch.nn.utils import parameters_to_vector
+
 
 class ModelTraining():
 
@@ -145,14 +146,14 @@ class ModelTraining():
             path_save_model = Path(path_folder_model, 'model_weights_AE.pth')
             torch.save(self.model.state_dict(), path_save_model)
             print("\tSAVE TRAINED MODEL AE:\t",path_save_model)
-        else:
-            path_save_model_gen = Path(path_folder_model, 'model_weights_GAN_gen.pth')
+        elif self.model_type=="GAN":
+            path_save_model_gen = Path(path_folder_model, f'model_weights_GAN_gen.pth')
             torch.save(self.model_gen.state_dict(), path_save_model_gen)
-            print("\tSAVE TRAINED MODEL GAN GEN:\t",path_save_model_gen)
+            print(f"\tSAVE TRAINED MODEL GAN GEN:\t",path_save_model_gen)
             
-            path_save_model_dis = Path(path_folder_model, 'model_weights_GAN_dis.pth')            
+            path_save_model_dis = Path(path_folder_model, f'model_weights_GAN_dis.pth')            
             torch.save(self.model_dis.state_dict(), path_save_model_dis)
-            print("\tSAVE TRAINED MODEL GAN DIS:\t",path_save_model_dis)
+            print(f"\tSAVE TRAINED MODEL GAN DIS:\t",path_save_model_dis)
             
                
     def training_AE(self, model_flatten_in, batch_size, plot_loss=True):
@@ -233,7 +234,7 @@ class ModelTraining():
             self.loss_plot(self.loss_dict)
             
 
-    def training_GAN(self, noise_size, plot_loss=True):
+    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=0.2):
         
         real_label = 1.
         fake_label = 0.
@@ -244,7 +245,7 @@ class ModelTraining():
         
         print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
         for epoch in range(self.epoch['GAN']):
-            first = True
+            first = False
             
             dataBatches = self.dataLoaded.generate()
             loss_batch = list()
@@ -257,92 +258,173 @@ class ModelTraining():
             
             loss_batch_partial = dict()
             for batch_num, dataBatch in enumerate(dataBatches):
+                if not train4batch:
+                    for i, item in enumerate(dataBatch):
+                        samplef = item['sample']
+                        sample = samplef.float()
+                        
+                        ###########################
+                        # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+                        ###########################
+                    
+                        ###########################
+                        ##  A Update D with real data
+                        ###########################
+                        self.model_dis.zero_grad()
+                        self.optimizer_dis.zero_grad()               
+                        
+                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
+                        output = self.model_dis(sample)['x_output'].view(-1)                    
+                        item_err = self.criterion(output, label)
+                        
+                        self.optimizer_dis.step()
+                        
+                        ###########################
+                        ##  B Update D with fake data
+                        ###########################
+                        self.optimizer_dis.zero_grad()                
+                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
+                        fake = self.model_gen(noise)['x_output'] 
+                        label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                        output = self.model_dis(fake.detach())['x_output'].view(-1)
+                        item_err = self.criterion(output, label)
+                        item_err.backward()
+                        self.optimizer_dis.step() 
+                    
+                        ###########################
+                        # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
+                        ###########################
+                        self.optimizer_gen.zero_grad()
+                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
+                        fake = self.model_gen(noise)['x_output']                    
+                        
+                        if first:
+                            print("NOISE: (epoch",epoch,")\t",noise)
+                            print("")
+                            print("FAKE: (epoch",epoch,")\t",fake)
+                            print("================================================================================================================================================\n\n")
+                            first = False
+                            
+                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                        output = self.model_dis(fake)['x_output'].view(-1)                    
+                        item_err = self.criterion(output, label)
+                        item_err.backward()
+                        self.optimizer_gen.step() 
+                #------------------
+                elif train4batch:
+                    ###########################
+                    # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+                    ###########################
+                    
+                    ###########################
+                    ##  A Update D with real data
+                    ###########################
+                    #self.model_dis.zero_grad()
+                    
+                    batch_real_err_D = torch.zeros(1).to(device=self.device) 
+                    x_real = list()
+                    
+                    for i, item in enumerate(dataBatch):
+                        samplef = item['sample']
+                        sample = samplef.float()
+                        x_real.append(sample)
+                        
+                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
+                        output = self.model_dis(sample)['x_output'].view(-1)                    
+                        item_err = self.criterion(output, label)
+                        batch_real_err_D += item_err
+                    
+                    #maximize batch_real_err_D using minus sign
+                    batch_real_err_D__mean = -batch_real_err_D/len(dataBatch)
+                    err_D_r_list.append(batch_real_err_D__mean.detach().cpu().numpy()[0])
+                    #batch_real_err_D.backward()
+                    #self.optimizer_dis.step()
+                    
                 
+                    ###########################
+                    ##  make noiseData
+                    ###########################
+                    noise_batch = list()
+                    for i, item in enumerate(dataBatch):
+                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
+                        noise_batch.append(noise)
                 
-                ###########################
-                # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-                ###########################
+                    ###########################
+                    ##  B Update D with fake data
+                    ###########################
+                    ##self.optimizer_dis.zero_grad()
+                    batch_fake_err_D = torch.zeros(1).to(device=self.device) 
+                    x_fake = list()
+                    for i, item in enumerate(noise_batch):
+                        fake = self.model_gen(item)['x_output'] 
+                        x_fake.append(sample)
+                        label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                        output = self.model_dis(fake.detach())['x_output'].view(-1)
+                        item_err = self.criterion(output, label)
+                        batch_fake_err_D += item_err
+                    
+                    #maximize batch_real_err_D using minus sign
+                    batch_fake_err_D__mean = batch_fake_err_D/len(dataBatch)
+                    err_D_f_list.append(batch_fake_err_D__mean.detach().cpu().numpy()[0])
+                    
+                    if is_WGAN:
+                        xarr_real = torch.stack(x_real).to(device=self.device) 
+                        xarr_fake = torch.stack(x_fake).to(device=self.device) 
+                        batch_size = len(noise_batch)
+                        wgan_grad_penality = self.wasser_gradient_penalty(self.model_dis, xr=xarr_real, xf=xarr_fake, batch_size=batch_size)
+                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean + WGAN_coef * wgan_grad_penality 
+                        print("batch_err_D", batch_err_D)
+                        batch_err_D_test = batch_real_err_D__mean + batch_fake_err_D__mean                    
+                        print("batch_err_D nowgan",batch_err_D_test)
+                        
+                    else: 
+                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean                    
+                    self.optimizer_dis.zero_grad()
+                    batch_err_D.backward()
+                    self.optimizer_dis.step() 
                 
-                ###########################
-                ##  A Update D with real data
-                ###########################
-                self.model_dis.zero_grad()
-                self.optimizer_dis.zero_grad()
-                batch_real_err_D = torch.zeros(1).to(device=self.device) 
-                for i, item in enumerate(dataBatch):
-                    samplef = item['sample']
-                    sample = samplef.float()
-                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
-                    output = self.model_dis(sample)['x_output'].view(-1)                    
-                    item_err = self.criterion(output, label)
-                    batch_real_err_D += item_err
-                err_D_r_list.append(batch_real_err_D.detach().cpu().numpy()[0]/len(dataBatch))
-                batch_real_err_D.backward()
-                #self.optimizer_dis.step()
-                
-            
-                ###########################
-                ##  make noiseData
-                ###########################
-                noise_batch = list()
-                for i, item in enumerate(dataBatch):
-                    noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
-                    noise_batch.append(noise)
-            
-                ###########################
-                ##  B Update D with fake data
-                ###########################
-                ##self.optimizer_dis.zero_grad()
-                batch_fake_err_D = torch.zeros(1).to(device=self.device) 
-                for i, item in enumerate(noise_batch):
-                    fake = self.model_gen(item)['x_output'] 
-                    label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
-                    output = self.model_dis(fake.detach())['x_output'].view(-1)
-                    item_err = self.criterion(output, label)
-                    batch_fake_err_D += item_err
-                err_D_f_list.append(batch_fake_err_D.detach().cpu().numpy()[0]/len(dataBatch))
-                
-                batch_fake_err_D.backward()
-                self.optimizer_dis.step() 
-            
-                ###########################               
-                errD = batch_real_err_D + batch_fake_err_D
-                err_D_list.append(errD.detach().cpu().numpy())
-                
-                ###########################
-                # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
-                ###########################
-                
-                self.optimizer_gen.zero_grad()
-                batch_fake_err_G = torch.zeros(1).to(device=self.device) 
-                self.model_gen.train()
+                    ###########################               
+                    
+                    err_D_list.append(batch_err_D.detach().cpu().numpy())
+                    
+                    ###########################
+                    # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
+                    ###########################
+                    
+                    
+                    batch_fake_err_G = torch.zeros(1).to(device=self.device) 
+                    self.model_gen.train()
 
-                for i, item in enumerate(noise_batch):
-                    fake = self.model_gen(item)['x_output']                    
-                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
-                    output = self.model_dis(fake)['x_output'].view(-1)                    
-                    item_err = self.criterion(output, label)
-                    batch_fake_err_G += item_err 
-                batch_fake_err_G.backward()
-                self.optimizer_gen.step() 
-                err_G_list.append(batch_fake_err_G.detach().cpu().numpy()[0]/len(noise_batch))
-                
+                    for i, item in enumerate(noise_batch):
+                        fake = self.model_gen(item)['x_output']                    
+                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                        output = self.model_dis(fake)['x_output'].view(-1)                    
+                        item_err = self.criterion(output, label)
+                        batch_fake_err_G += item_err 
+                    
+                    
+                    #maximize batch_real_err_D using minus sign
+                    batch_fake_err_G__mean = -batch_fake_err_G/len(dataBatch)
+                    err_G_list.append(batch_fake_err_G__mean.detach().cpu().numpy()[0])
+                    
+                    batch_err_G = batch_fake_err_G__mean
+                    
+                    self.optimizer_gen.zero_grad()
+                    batch_err_G.backward()
+                    self.optimizer_gen.step() 
                 
             self.scheduler_dis.step()
             self.scheduler_gen.step()
             
-
-            
-            
             self.plot_grad_flow(named_parameters = self.model_gen.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_gen")
             self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
-            
             
             self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
             print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
             print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
             print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
             
+
         if plot_loss:
             self.loss_plot(self.loss_dict)
             
@@ -410,6 +492,27 @@ class ModelTraining():
         elif self.model_type == "GAN":
             print("GAN gen mode training:\t", self.model_gen.training)
             print("GAN dis mode training:\t", self.model_dis.training)
+    
+    
+    def wasser_gradient_penalty(self, dis, xr, xf, batch_size):
+        t = torch.rand(batch_size, 1).to(device=self.device) 
+        
+        # [b, 1] => [b, 2]  broadcasting so t is the same for x1 and x2
+        t = t.expand_as(xr)
+        
+        # interpolation
+        mid = t * xr + (1 - t) * xf
+        # set it to require grad info
+        
+        mid.requires_grad_()
+        pred = dis(mid)['x_output']
+        
+        grads = autograd.grad(outputs=pred, inputs=mid,
+                            grad_outputs=torch.ones_like(pred),
+                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+        gp = torch.pow(grads.norm(2, dim=1) - 1, 2).mean()
+        return gp
+    
     
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")

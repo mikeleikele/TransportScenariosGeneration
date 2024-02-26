@@ -61,7 +61,7 @@ class NeuralCore():
         self.summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
-        fast_test = False
+        fast_test = True
         if fast_test:   
             self.ea_do__training_data = True
             self.ea_do__testing_data = False
@@ -69,7 +69,7 @@ class NeuralCore():
             self.ea_do__reduced_noised_data = True
             self.ea_do__copula_data = False
             self.gan_do__noised_data = False  
-            self.gan_do__reduced_noised_data = True  
+            self.gan_do__reduced_noised_data = False  
              
         else:
             self.ea_do__training_data = True
@@ -763,7 +763,7 @@ class NeuralCore():
                     copulaLat_samples_starting = train_predict['latent_data_input']['latent']
                     copulaLat_data, self.corrCoeff['copulaLatent_data_AE'] = self.dataGenerator.casualVC_generation(name_data="copulaLatent", real_data=copulaLat_samples_starting, univar_count=self.lat_dim, num_of_samples = noise_samples,  draw_plots=True)
                     modelTrainedDecoder = modelAE.get_decoder()
-                    print(copulaLat_data)
+                    
                     copulaLat_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=copulaLat_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=copulaLat_analysis_folder)                
                     copulaLat_predict = copulaLat_modelPrediction.compute_prediction(experiment_name="copula_test_data", remapping_data=True)
                     
