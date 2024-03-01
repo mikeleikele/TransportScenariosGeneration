@@ -20,8 +20,10 @@ from matplotlib.ticker import PercentFormatter
 import datetime
 from torchviz import make_dot
 from torch import autograd
+from torch.autograd import Variable
+from matplotlib.pyplot import cm
 from torch.nn.utils import parameters_to_vector
-
+from termcolor import colored, cprint 
 
 class ModelTraining():
 
@@ -36,7 +38,13 @@ class ModelTraining():
         self.vc_mapping = vc_mapping
         self.rangeData = rangeData
         self.device = device
-        
+        self.append_count = 150
+        self.n_critic = 5
+        self.opt_scheduler_ae = "ReduceLROnPlateau"
+        self.opt_scheduler_gen = "ReduceLROnPlateau"
+        self.opt_scheduler_dis = "StepLR"
+        cprint(f"PAY ATTENTION: GEN is update every {self.n_critic} batches", "magenta", end="\n")
+        self.GAN_loss = "MSELoss"
         self.univar_count_in = univar_count_in 
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
@@ -44,7 +52,9 @@ class ModelTraining():
         self.path_save_model_gradients = Path(self.path_folder, self.model_type,"model_gradients", )
         if not os.path.exists(self.path_save_model_gradients):
             os.makedirs(self.path_save_model_gradients)
-            
+        self.chechWeightsUpdate = False    
+        if self.chechWeightsUpdate:
+            cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
         if self.model_type=="AE":
             self.model = model()
             self.model.to(device=self.device)
@@ -53,10 +63,19 @@ class ModelTraining():
             self.optimizer = optim.Adam(params=model_params, lr=lr_ae)
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=15, gamma=0.1)
             
+            if self.opt_scheduler_ae == "ReduceLROnPlateau":
+                self.scheduler_ae = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=5, verbose=True)
+            elif self.opt_scheduler_ae == "StepLR":
+                self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.1)
+
             
         elif self.model_type=="GAN":
-            lr_gen = 0.0001
-            lr_dis = 0.0001
+            lr_gen = 0.01
+            lr_dis = 0.01
+            b1_gen = 0.5   #decay of first order momentum of gradient gen
+            b1_dis = 0.5   #decay of first order momentum of gradient dis
+            b2_gen = 0.999 #decay of first order momentum of gradient gen
+            b2_dis = 0.999 #decay of first order momentum of gradient dis
             self.model = model
             
             if pre_trained_decoder:
@@ -67,20 +86,31 @@ class ModelTraining():
             self.model_gen.to(device=self.device)
             gen_params = self.model_gen.parameters()
             
-            self.optimizer_gen = optim.Adam(gen_params, lr=lr_gen, betas=(0.5, 0.999))
-            self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=15, gamma=0.1)
+            self.optimizer_gen = optim.Adam(gen_params, lr=lr_gen, betas=(b1_gen, b2_gen))
+            if self.opt_scheduler_gen == "ReduceLROnPlateau":
+                self.scheduler_gen = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_gen, factor=0.1, patience=5, verbose=True)
+            elif self.opt_scheduler_gen == "StepLR":
+                self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=20, gamma=0.1)
+
 
             model_dis = self.model.get_discriminator()
             self.model_dis = model_dis()
             self.model_dis.to(device=self.device)
             dis_params = self.model_dis.parameters()
-            self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis, betas=(0.5, 0.999))  
-            self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=15, gamma=0.1)
+            self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis, betas=(b1_gen, b2_gen))  
+            
+            if self.opt_scheduler_dis == "ReduceLROnPlateau":
+                self.scheduler_dis = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_dis, factor=0.1, patience=5, verbose=True)
+            elif self.opt_scheduler_dis == "StepLR":
+                self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=15, gamma=0.1)
+            
             
            
-            
-            self.criterion = nn.BCELoss()
-        
+            '''if self.GAN_loss =="BCELoss":
+                self.criterion = nn.BCELoss()
+            elif self.GAN_loss =="MSELoss":
+                self.criterion = nn.MSE_LOSS()'''
+                
         if optimization:
             print("optimization!")   
             self.path_opt_results = Path(self.path_folder, self.model_type,"Optimizations") 
@@ -206,24 +236,29 @@ class ModelTraining():
                     loss_dict = self.loss_obj.computate_loss(y_hat_list)
 
                     loss = loss_dict['loss_total']
-                    
-                    loss_batch.append(loss.detach().cpu().numpy())
+                    if batch_num%self.append_count == 0:
+                        loss_batch.append(loss.detach().cpu().numpy())
                     for loss_part in loss_dict:
                         if loss_part not in loss_batch_partial:
                             loss_batch_partial[loss_part] = list()
-                        loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
-                        loss_batch_partial[loss_part].append(loss_part_value)
+                        if batch_num%self.append_count == 0:
+                            loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
+                            loss_batch_partial[loss_part].append(loss_part_value)
                     
                     loss.backward()
                     self.optimizer.step()
                 
-            self.scheduler.step()    
-            self.loss_dict[epoch] = {"ALL_loss": np.mean(loss_batch), "values_list": loss_batch}
+               
+            self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch}
             for loss_part in loss_dict:
                 self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
             epoch_end_time = datetime.datetime.now()
             epoch_time = epoch_end_time - epoch_start_time
             
+            if self.opt_scheduler_ae == "ReduceLROnPlateau":
+                self.scheduler_ae.step(np.mean(loss_batch))
+            elif self.opt_scheduler_ae == "StepLR":
+                self.scheduler_ae.step() 
             
             
             
@@ -234,7 +269,7 @@ class ModelTraining():
             self.loss_plot(self.loss_dict)
             
 
-    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=0.2):
+    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=10):
         
         real_label = 1.
         fake_label = 0.
@@ -242,7 +277,14 @@ class ModelTraining():
         self.loss_dict = dict()
         self.model_gen.train()
         self.model_dis.train()
-        
+        #self.model_gen = self.model_gen.apply(self.weights_init_uniform)
+        #self.model_dis = self.model_dis.apply(self.weights_init_uniform)
+        if self.chechWeightsUpdate:
+            layer_gen_notrained = dict()
+            for lay in range(len(list(self.model_gen.parameters()))):                
+                lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
+                layer_gen_notrained[f"lay_{lay}"] = lay_tens
+                
         print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
         for epoch in range(self.epoch['GAN']):
             first = False
@@ -253,6 +295,7 @@ class ModelTraining():
             err_D_list = list()
             err_D_r_list = list()
             err_D_f_list = list()
+            wgan_gp_list = list()
 
             err_G_list = list()
             
@@ -320,7 +363,7 @@ class ModelTraining():
                     ##  A Update D with real data
                     ###########################
                     #self.model_dis.zero_grad()
-                    
+                    self.optimizer_dis.zero_grad()
                     batch_real_err_D = torch.zeros(1).to(device=self.device) 
                     x_real = list()
                     
@@ -331,12 +374,13 @@ class ModelTraining():
                         
                         label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
                         output = self.model_dis(sample)['x_output'].view(-1)                    
-                        item_err = self.criterion(output, label)
+                        item_err = output #self.criterion(output, label)
                         batch_real_err_D += item_err
                     
                     #maximize batch_real_err_D using minus sign
                     batch_real_err_D__mean = -batch_real_err_D/len(dataBatch)
-                    err_D_r_list.append(batch_real_err_D__mean.detach().cpu().numpy()[0])
+                    if batch_num%self.append_count == 0:
+                        err_D_r_list.append(batch_real_err_D__mean.detach().cpu().numpy()[0])
                     #batch_real_err_D.backward()
                     #self.optimizer_dis.step()
                     
@@ -352,7 +396,7 @@ class ModelTraining():
                     ###########################
                     ##  B Update D with fake data
                     ###########################
-                    ##self.optimizer_dis.zero_grad()
+                    
                     batch_fake_err_D = torch.zeros(1).to(device=self.device) 
                     x_fake = list()
                     for i, item in enumerate(noise_batch):
@@ -360,61 +404,77 @@ class ModelTraining():
                         x_fake.append(sample)
                         label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
                         output = self.model_dis(fake.detach())['x_output'].view(-1)
-                        item_err = self.criterion(output, label)
+                        item_err = output #self.criterion(output, label)
                         batch_fake_err_D += item_err
                     
                     #maximize batch_real_err_D using minus sign
                     batch_fake_err_D__mean = batch_fake_err_D/len(dataBatch)
-                    err_D_f_list.append(batch_fake_err_D__mean.detach().cpu().numpy()[0])
+                    if batch_num%self.append_count == 0:
+                        err_D_f_list.append(batch_fake_err_D__mean.detach().cpu().numpy()[0])
                     
                     if is_WGAN:
                         xarr_real = torch.stack(x_real).to(device=self.device) 
                         xarr_fake = torch.stack(x_fake).to(device=self.device) 
                         batch_size = len(noise_batch)
                         wgan_grad_penality = self.wasser_gradient_penalty(self.model_dis, xr=xarr_real, xf=xarr_fake, batch_size=batch_size)
-                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean + WGAN_coef * wgan_grad_penality 
-                        print("batch_err_D", batch_err_D)
-                        batch_err_D_test = batch_real_err_D__mean + batch_fake_err_D__mean                    
-                        print("batch_err_D nowgan",batch_err_D_test)
-                        
+                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean + (WGAN_coef * wgan_grad_penality)
+                        if batch_num%30 == 0:
+                            wgan_gp_list.append(wgan_grad_penality.detach().cpu().numpy())
                     else: 
                         batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean                    
-                    self.optimizer_dis.zero_grad()
+                    
                     batch_err_D.backward()
                     self.optimizer_dis.step() 
                 
                     ###########################               
-                    
-                    err_D_list.append(batch_err_D.detach().cpu().numpy())
+                    if batch_num%self.append_count == 0:
+                        err_D_list.append(batch_err_D.detach().cpu().numpy())
                     
                     ###########################
                     # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
                     ###########################
                     
+                    if batch_num%self.n_critic == 0:
                     
-                    batch_fake_err_G = torch.zeros(1).to(device=self.device) 
-                    self.model_gen.train()
+                        batch_fake_err_G = torch.zeros(1).to(device=self.device) 
+                        self.optimizer_gen.zero_grad()
+                        self.model_gen.train()
 
-                    for i, item in enumerate(noise_batch):
-                        fake = self.model_gen(item)['x_output']                    
-                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
-                        output = self.model_dis(fake)['x_output'].view(-1)                    
-                        item_err = self.criterion(output, label)
-                        batch_fake_err_G += item_err 
-                    
-                    
-                    #maximize batch_real_err_D using minus sign
-                    batch_fake_err_G__mean = -batch_fake_err_G/len(dataBatch)
-                    err_G_list.append(batch_fake_err_G__mean.detach().cpu().numpy()[0])
-                    
-                    batch_err_G = batch_fake_err_G__mean
-                    
-                    self.optimizer_gen.zero_grad()
-                    batch_err_G.backward()
-                    self.optimizer_gen.step() 
+                        for i, item in enumerate(noise_batch):
+                            fake = self.model_gen(item)['x_output']                    
+                            label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                            output = self.model_dis(fake)['x_output'].view(-1)                    
+                            item_err = output #self.criterion(output, label)
+                            batch_fake_err_G += item_err 
+                        
+                        
+                        #maximize batch_real_err_D using minus sign
+                        batch_fake_err_G__mean = -batch_fake_err_G/len(dataBatch)
+                        
+                        batch_err_G = batch_fake_err_G__mean
+                        if batch_num%self.append_count == 0:
+                            err_G_list.append(batch_fake_err_G__mean.detach().cpu().numpy()[0])
+                        
+                        batch_err_G.backward()
+                        self.optimizer_gen.step() 
                 
-            self.scheduler_dis.step()
-            self.scheduler_gen.step()
+            
+            if self.chechWeightsUpdate:
+                print(len(list(self.model_gen.parameters())))
+                layer_gen_trained = dict()
+                for lay in range(len(list(self.model_gen.parameters()))):                
+                    lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
+                    layer_gen_trained[f"lay_{lay}"] = lay_tens
+                
+                print("START EQ ---")
+                for key in layer_gen_trained:
+                    n_train = layer_gen_notrained[key]
+                    y_train = layer_gen_trained[key]
+                    ten_eq = np.array_equal(n_train,y_train)
+                    if ten_eq:
+                        print(f"{key} are equals")
+                print("END EQ -----")
+            
             
             self.plot_grad_flow(named_parameters = self.model_gen.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_gen")
             self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
@@ -423,10 +483,33 @@ class ModelTraining():
             print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
             print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
             print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
+            if is_WGAN:
+                 print("\t\t\t-gradient penalty\t",np.mean(wgan_gp_list))
             
+            
+            if self.opt_scheduler_gen == "ReduceLROnPlateau":
+                self.scheduler_gen.step(np.mean(err_G_list))
+            elif self.opt_scheduler_gen == "StepLR":
+                self.scheduler_gen.step() 
+            
+            if self.opt_scheduler_dis == "ReduceLROnPlateau":
+                self.scheduler_dis.step(np.mean(err_D_list))
+            elif self.opt_scheduler_dis == "StepLR":
+                self.scheduler_dis.step() 
 
         if plot_loss:
             self.loss_plot(self.loss_dict)
+            
+        
+   
+    def weights_init_uniform(self, m):
+        classname = m.__class__.__name__
+        # for every Linear layer in a model..
+        if classname.find('Linear') != -1:
+            # apply a uniform distribution to the weights and a bias=0
+            m.weight.data.uniform_(0.0, 1.0)
+            m.bias.data.fill_(0)
+    
             
     def get_tensor_info(tensor):
         info = []
@@ -495,31 +578,60 @@ class ModelTraining():
     
     
     def wasser_gradient_penalty(self, dis, xr, xf, batch_size):
-        t = torch.rand(batch_size, 1).to(device=self.device) 
         
-        # [b, 1] => [b, 2]  broadcasting so t is the same for x1 and x2
-        t = t.expand_as(xr)
+        #  Random weight term for interpolation between real and fake samples
+        alpha  = torch.rand(batch_size, 1).to(device=self.device) 
+        alpha = alpha.expand_as(xr)
         
-        # interpolation
-        mid = t * xr + (1 - t) * xf
+        # interpolation between real and fake samples
+        interpolates = alpha  * xr + (1 - alpha) * xf
         # set it to require grad info
         
-        mid.requires_grad_()
-        pred = dis(mid)['x_output']
+        interpolates.requires_grad_(True)
+        d_interpolates = dis(interpolates)['x_output']
         
-        grads = autograd.grad(outputs=pred, inputs=mid,
-                            grad_outputs=torch.ones_like(pred),
-                            create_graph=True, retain_graph=True, only_inputs=True)[0]
-        gp = torch.pow(grads.norm(2, dim=1) - 1, 2).mean()
-        return gp
+        real_grad_out = Variable(Tensor(xr.shape[0], 1).fill_(1.0).to(device=self.device), requires_grad=False)
+        
+        real_grad = autograd.grad(outputs=d_interpolates,
+                            inputs=interpolates,
+                            grad_outputs=real_grad_out,
+                            create_graph=True,
+                            retain_graph=True,
+                            only_inputs=True)[0]
+        real_grad = real_grad.view(real_grad.size(0), -1)    
+        gradient_penalty = torch.pow(real_grad.norm(2, dim=1) - 1, 2).mean()
+        
+        '''
+        #Compute W-div gradient penalty
+        # REAL
+        real_grad_out = Variable(Tensor(xr.shape[0], 1).fill_(1.0).to(device=self.device), requires_grad=False)
+        real_grad = autograd.grad(
+            real_validity, xr, real_grad_out, create_graph=True, retain_graph=True, only_inputs=True
+        )[0]
+        real_grad_norm = real_grad.view(real_grad.size(0), -1).pow(2).sum(1) ** (p / 2)
+
+
+
+        fake_grad_out = Variable(Tensor(fake_imgs.size(0), 1).fill_(1.0), requires_grad=False)
+        fake_grad = autograd.grad(
+            fake_validity, fake_imgs, fake_grad_out, create_graph=True, retain_graph=True, only_inputs=True
+        )[0]
+        fake_grad_norm = fake_grad.view(fake_grad.size(0), -1).pow(2).sum(1) ** (p / 2)
+        '''
+        
+        return gradient_penalty
+
     
     
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
             os.makedirs(path_fold_lossplot)
+            
+        color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])))
 
         loss_plot_dict = dict()
+        i = 0
         for key in loss_dict[0]:
             if key != "values_list" and key!='loss_total':
                 loss_list = list()
@@ -527,18 +639,21 @@ class ModelTraining():
                     loss_list.append(loss_dict[mean_val][key])
                 loss_plot_dict[key] = loss_list
                 plt.figure(figsize=(12,8))  
-                plt.plot(loss_list, color='Blue', marker='o',mfc='Blue' )
+                plt.plot(loss_list, color=color[i], marker='o',mfc=color[i])
                 filename = Path(path_fold_lossplot,"loss_training_"+str(key)+".png")
                 plt.savefig(filename)
-        
+                i += 1
+        i = 0
         plt.figure(figsize=(12,8))
         for key in loss_plot_dict:  
-            plt.plot(loss_plot_dict[key], marker='o',mfc='Blue', label=str(key))
+            if key != "allLosses":
+                plt.plot(loss_plot_dict[key], color=color[i], marker='o',mfc=color[i], label=str(key))
+                i += 1
         plt.legend(loc="upper right")
         filename = Path(path_fold_lossplot,"loss_training_allLosses.png")
         plt.savefig(filename)
         df = pd.DataFrame(loss_plot_dict).T.reset_index()
-        #df.columns = 
+        
 
     #deprecato
     def compute_correlationMatrix(self):
@@ -600,4 +715,3 @@ class ModelTraining():
         epoch_str = f'{epoch}'.zfill(len(str(self.epoch[self.model_type])))
         path_save_gradexpl = Path(self.path_save_model_gradients,f"{model_section}_gradient_epoch_{epoch_str}.png")
         plt.savefig(path_save_gradexpl)
-  

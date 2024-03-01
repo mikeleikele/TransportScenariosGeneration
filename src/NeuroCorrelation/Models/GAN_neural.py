@@ -53,11 +53,11 @@ class GAN_LinearDiscriminator_16(nn.Module):
 
     def forward(self, x):
         layer_nn = self.hidden_layer_1(x)
-        layer_nn = F.tanh(layer_nn)
+        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
         layer_nn = self.hidden_layer_2(layer_nn)
-        layer_nn = F.tanh(layer_nn)
+        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
         layer_nn = self.hidden_layer_3(layer_nn)
-        layer_nn = F.tanh(layer_nn)
+        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
         layer_nn = self.hidden_layer_4(layer_nn)
         x_hat = F.sigmoid(layer_nn)
         return {"x_input":x, "x_output":x_hat}

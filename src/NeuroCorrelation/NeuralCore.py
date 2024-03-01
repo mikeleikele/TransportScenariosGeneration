@@ -61,15 +61,15 @@ class NeuralCore():
         self.summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
-        fast_test = True
+        fast_test = False
         if fast_test:   
             self.ea_do__training_data = True
             self.ea_do__testing_data = False
             self.ea_do__noised_data = False
-            self.ea_do__reduced_noised_data = True
+            self.ea_do__reduced_noised_data = False
             self.ea_do__copula_data = False
-            self.gan_do__noised_data = False  
-            self.gan_do__reduced_noised_data = False  
+            self.gan_do__noised_data = True  
+            self.gan_do__reduced_noised_data = True  
              
         else:
             self.ea_do__training_data = True
@@ -162,7 +162,7 @@ class NeuralCore():
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
             #self.model = GEN_autoEncoder_16 
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
                 os.makedirs(self.path_folder_gan)

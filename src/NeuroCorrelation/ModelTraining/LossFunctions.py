@@ -274,7 +274,7 @@ class LossFunction(nn.Module):
     
         for val in spearman_values:
             loss_ret += val
-        #loss_ret /= len(spearman_values)
+        loss_ret /= -len(spearman_values)
         return loss_ret
 
     def MSE_similarities(self, values):
@@ -374,6 +374,6 @@ class LossFunction(nn.Module):
             b = kl(x_out.log(), m)
             jsd_value = 0.5 * (a + b)
             loss_ret += jsd_value
-        return loss_ret
+        return loss_ret/self.univar_count
 
 ##mahalanobis
