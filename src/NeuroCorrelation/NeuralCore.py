@@ -249,7 +249,7 @@ class NeuralCore():
             
         # Chengdu
         elif self.model_case=="GAN_linear_pretrained_5943_CHENGDU_bt":
-            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="Chengdu_5943", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_5943", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)

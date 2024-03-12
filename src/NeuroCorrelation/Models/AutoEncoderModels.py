@@ -1142,27 +1142,27 @@ class GEN_autoEncoder_Decoder_64(nn.Module):
     
     #-----------------------------------------------------------------------------
     
-    class GEN_autoEncoder_5943(nn.Module):
-        def __init__(self, **kwargs):
-            super().__init__()
-            self.encoder = GEN_autoEncoder_Encoder_5943()
-            self.decoder = GEN_autoEncoder_Decoder_5943()
+class GEN_autoEncoder_5943(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_5943()
+        self.decoder = GEN_autoEncoder_Decoder_5943()
 
-        def forward(self, x):
-            x_latent = self.encoder(x)
-            x_hat = self.decoder(x_latent["x_output"])
-            return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
 
-        def get_decoder(self):
-            return self.decoder
+    def get_decoder(self):
+        return self.decoder
 
-        def summary(self):
-            
-            enc_summary = torchinfo.summary(self.encoder, input_size=(1, 5943), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
-            dec_summary = torchinfo.summary(self.decoder, input_size=(1, 2048), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 5943), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 2048), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
 
-            summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
-            return summary_dict
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
 
 class GEN_autoEncoder_Encoder_5943(nn.Module):
     def __init__(self):

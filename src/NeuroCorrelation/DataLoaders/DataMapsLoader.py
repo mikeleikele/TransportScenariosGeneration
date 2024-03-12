@@ -50,6 +50,10 @@ class DataMapsLoader():
         elif self.name_dataset=="MetrLA_64":
             filename = Path("data","neuroCorrelation_data","METR_LA_S64_START7_END9.csv")
         
+        elif self.name_dataset=="China_Chengdu_5943":
+            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_5943.csv")
+        
+        
         elif self.name_dataset=="PEMS_all":
             filename = Path("data","neuroCorrelation_data","PEMSBAY_S325_START17_END19_MF.csv")
         elif self.name_dataset=="MetrLA_all":
