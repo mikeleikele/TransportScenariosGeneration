@@ -155,7 +155,7 @@ class NeuralCore():
                 os.makedirs(self.path_folder_gan)
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
 
-        # MetrLA
+        # MetrLa
         elif self.model_case=="GAN_linear_pretrained_16_METR_bt":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
@@ -201,7 +201,7 @@ class NeuralCore():
                 os.makedirs(self.path_folder_gan)
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
-        # PEMSbay
+        # PemsBay
         elif self.model_case=="GAN_linear_pretrained_16_PEMS_bt":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PemsBay_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
@@ -247,6 +247,18 @@ class NeuralCore():
                 os.makedirs(self.path_folder_gan)
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
+        # Chengdu
+        elif self.model_case=="GAN_linear_pretrained_5943_CHENGDU_bt":
+            dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="Chengdu_5943", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            self.path_folder_ae = Path(self.path_folder,'AE')
+            if not os.path.exists(self.path_folder_ae):
+                os.makedirs(self.path_folder_ae)
+            self.model = GEN_autoEncoder_5943
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.path_folder_gan = Path(self.path_folder,'GAN')
+            if not os.path.exists(self.path_folder_gan):
+                os.makedirs(self.path_folder_gan)
+            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
             
         
@@ -424,7 +436,7 @@ class NeuralCore():
             model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
-        #METR
+        # MetrLa
         elif self.model_case=="GAN_linear_pretrained_16_METR_bt":            
             self.model['AE'] = GEN_autoEncoder_16
             model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
@@ -463,7 +475,7 @@ class NeuralCore():
             model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
-        #PEMS
+        # PemsBay
         elif self.model_case=="GAN_linear_pretrained_16_PEMS_bt":            
             self.model['AE'] = GEN_autoEncoder_16
             model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
@@ -498,6 +510,18 @@ class NeuralCore():
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
             self.model_gan = GAN_neural_mixed_64(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
+        
+        
+        # Chengdu
+        elif self.model_case=="GAN_linear_pretrained_5943_CHENGDU_bt":            
+            self.model_ae = GEN_autoEncoder_5943
+            print(self.loss_obj['AE'].get_lossTerms())
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
+            self.model_gan = GAN_neural_mixed_5943(generator=model_ae_decoder)
             model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
