@@ -13,7 +13,7 @@ import numpy as np
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None):
+    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150):
         
         self.mode = mode
         self.seed = seed
@@ -40,8 +40,9 @@ class DataLoader:
             os.makedirs(self.summary_path)
         self.statsData = None
         self.vc_dict = vc_dict
+        self.univ_limit = univ_limit
 
-    def dataset_load(self, draw_plots=True, save_summary=True, loss=None):
+    def dataset_load(self, draw_plots=True, save_summary=True, loss=None, correlationCoeff=True):
         self.loss = loss
         if self.mode=="random_var" and self.name_dataset=="3var_defined":
             print("DATASET PHASE: Sample generation")
@@ -71,15 +72,15 @@ class DataLoader:
         if self.mode =="graph_roads":
             print("DATASET PHASE: Load maps data")
             
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             
-            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots)
-            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots)
+            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, correlationCoeff=correlationCoeff)
+            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, correlationCoeff=correlationCoeff)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
-
+            
         if self.mode=="graph_statics":
             print("to implement")
             #self.train_data = self.dataGenerator.graphGen(num_of_samples = train_samples, with_cov=True)
@@ -174,7 +175,7 @@ class DataLoader:
         if not os.path.exists(noise_red_path_folder):
             os.makedirs(noise_red_path_folder)
             
-        
+        print("\tNoiseReduced method: ",method)
         noise_redux_samples = list()
         if method=='all':
             redux_noise = list()
@@ -185,6 +186,7 @@ class DataLoader:
             
             for c_item in c:
                 noise_redux_samples.append({'sample': torch.Tensor(c_item).to(device=self.device), 'noise': torch.Tensor(c_item).to(device=self.device)})
+            print("\tNoiseReduced samples - all: done")
         elif method== 'percentile':
             mu, sigma = 0, math.sqrt(1) # mean and standard deviation
             s = np.random.normal(mu, sigma, 1000)
@@ -202,7 +204,7 @@ class DataLoader:
                 c = np.random.uniform(l, r, self.lat_dim)
                 noise_redux_samples.append({'sample': torch.Tensor(c).to(device=self.device), 'noise': torch.Tensor(c).to(device=self.device)})
                 k += window
-                    
+        print("\tNoiseReduced samples: done")            
         return noise_redux_samples
 
     def generateNoisePercentile(self, high, redux_noise_values):

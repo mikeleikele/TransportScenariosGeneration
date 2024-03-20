@@ -31,7 +31,7 @@ class NeuroExperiment():
         
             id_experiments = int(num_case)
             experiments_list = self.getExperimentsList(seed=0)
-            experiments_selected = experiments_list[id_experiments]
+            experiments_selected = experiments_list['experiments_list'][id_experiments]
             univar_count=experiments_selected["univar_count"]
             
             aResult = AnalysisResult(univar_count)
@@ -41,27 +41,29 @@ class NeuroExperiment():
         experiments_list = [
             {"id":  0, "model_case":"autoencoder_3_copula_optimization",  "epoch":{'AE':   3,'GAN':   2}, "univar_count": 7, "lat_dim": 3, "dataset_setting":{"batch_size":  32, "train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
             
-            {"id":  1, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE':  50,'GAN':  50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size": 128, "train_percentual":0.5,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
+            {"id":  1, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size": 32, "train_percentual":0.5,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
             {"id":  2, "model_case":"GAN_linear_pretrained_16_METR_bt",   "epoch":{'AE': 200,'GAN': 1000}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  128, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
-            {"id":  3, "model_case":"GAN_linear_pretrained_32_METR_bt",   "epoch":{'AE': 50,'GAN': 3}, "univar_count":32, "lat_dim":28, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
-            {"id":  4, "model_case":"GAN_linear_pretrained_48_METR_bt",   "epoch":{'AE': 50,'GAN': 2}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
-            {"id":  5, "model_case":"GAN_linear_pretrained_64_METR_bt",   "epoch":{'AE': 20,'GAN': 2}, "univar_count":64, "lat_dim":60, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
+            {"id":  3, "model_case":"GAN_linear_pretrained_32_METR_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":32, "lat_dim":96, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
+            {"id":  4, "model_case":"GAN_linear_pretrained_48_METR_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  64, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
+            {"id":  5, "model_case":"GAN_linear_pretrained_64_METR_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":64, "lat_dim":60, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
             
-            {"id":  6, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE': 3,'GAN': 2}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":1000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
-            {"id":  7, "model_case":"GAN_linear_pretrained_32_PEMS_bt",   "epoch":{'AE': 50,'GAN': 2}, "univar_count":32, "lat_dim":28, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
-            {"id":  8, "model_case":"GAN_linear_pretrained_48_PEMS_bt",   "epoch":{'AE': 2,'GAN': 200}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  96, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
-            {"id":  9, "model_case":"GAN_linear_pretrained_64_PEMS_bt",   "epoch":{'AE': 20,'GAN': 2}, "univar_count":64, "lat_dim":60, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
+            {"id":  6, "model_case":"GAN_linear_pretrained_16_PEMS_bt",   "epoch":{'AE': 20,'GAN': 50}, "univar_count":16, "lat_dim":12, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":1000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
+            {"id":  7, "model_case":"GAN_linear_pretrained_32_PEMS_bt",   "epoch":{'AE': 50,'GAN': 50}, "univar_count":32, "lat_dim":96, "dataset_setting":{"batch_size":  32, "train_percentual":0.4,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},            
+            {"id":  8, "model_case":"GAN_linear_pretrained_48_PEMS_bt",   "epoch":{'AE': 20,'GAN': 50}, "univar_count":48, "lat_dim":44, "dataset_setting":{"batch_size":  96, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
+            {"id":  9, "model_case":"GAN_linear_pretrained_64_PEMS_bt",   "epoch":{'AE': 20,'GAN': 50}, "univar_count":64, "lat_dim":60, "dataset_setting":{"batch_size":  32, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
             
-            {"id":  10, "model_case":"GAN_linear_pretrained_5943_CHENGDU_bt",   "epoch":{'AE': 2,'GAN': 2}, "univar_count":5943, "lat_dim":2048, "dataset_setting":{"batch_size":  128, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
+            {"id":  10, "model_case":"GAN_linear_pretrained_5943_CHENGDU_bt",   "epoch":{'AE': 100,'GAN': 100}, "univar_count":5943, "lat_dim":4896, "dataset_setting":{"batch_size":  128, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                    
         ]   
-        return experiments_list
+        
+        run_mode = "train_only"
+        return {"experiments_list":experiments_list, "run_mode":run_mode}
         
     def experiment(self, num_case, main_folder, seed, experiment_name, load_model):
         
         id_experiments = int(num_case)
         experiments_list = self.getExperimentsList(seed)
-        experiments_selected = experiments_list[id_experiments]
-        
+        experiments_selected = experiments_list["experiments_list"][id_experiments]
+        run_mode = experiments_list["run_mode"]
             
         folder_experiment = Path(main_folder, experiment_name)  
 
@@ -71,7 +73,8 @@ class NeuroExperiment():
         print(f"|             : {experiments_selected}")
         print(f"|------------------------")
         print(f" ")
-        nc = NeuralCore(device=None,epoch=experiments_selected["epoch"], model_case=experiments_selected["model_case"], univar_count=experiments_selected["univar_count"], lat_dim=experiments_selected["lat_dim"], dataset_setting=experiments_selected['dataset_setting'], instaces_size= experiments_selected["instaces_size"], input_shape= experiments_selected["input_shape"], path_folder=folder_experiment, seed=seed)
+        
+        nc = NeuralCore(device=None,epoch=experiments_selected["epoch"], model_case=experiments_selected["model_case"], univar_count=experiments_selected["univar_count"], lat_dim=experiments_selected["lat_dim"], dataset_setting=experiments_selected['dataset_setting'], instaces_size= experiments_selected["instaces_size"], input_shape= experiments_selected["input_shape"], path_folder=folder_experiment, seed=seed, run_mode=run_mode)
         if load_model=="--load":
             nc.start_experiment(load_model=True)
         else:

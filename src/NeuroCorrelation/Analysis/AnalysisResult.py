@@ -69,7 +69,7 @@ class AnalysisResult():
                 self.rand_var_out[i].append(float(res[i]))
 
         copula = GaussianMultivariate()
-        real_data = pd.DataFrame.from_dict(self.rand_var_out)
+        real_data = pd.DataFrame.from_dict(self.rand_var_in)
         copula.fit(real_data)
         self.n_sample_considered = len(self.rand_var_in[0])
         print(f"Generate {len(self.rand_var_in[0])} istances with copula")

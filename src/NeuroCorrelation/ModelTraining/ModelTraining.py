@@ -38,8 +38,8 @@ class ModelTraining():
         self.vc_mapping = vc_mapping
         self.rangeData = rangeData
         self.device = device
-        self.append_count = 150
-        self.n_critic = 5
+        self.append_count = 150 #ogni quanti batch aggiungo val della loss
+        self.n_critic = 2
         self.opt_scheduler_ae = "ReduceLROnPlateau"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "StepLR"
@@ -94,6 +94,7 @@ class ModelTraining():
 
 
             model_dis = self.model.get_discriminator()
+            
             self.model_dis = model_dis()
             self.model_dis.to(device=self.device)
             dis_params = self.model_dis.parameters()
@@ -416,6 +417,7 @@ class ModelTraining():
                         xarr_real = torch.stack(x_real).to(device=self.device) 
                         xarr_fake = torch.stack(x_fake).to(device=self.device) 
                         batch_size = len(noise_batch)
+                        
                         wgan_grad_penality = self.wasser_gradient_penalty(self.model_dis, xr=xarr_real, xf=xarr_fake, batch_size=batch_size)
                         batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean + (WGAN_coef * wgan_grad_penality)
                         if batch_num%30 == 0:
@@ -695,7 +697,8 @@ class ModelTraining():
                     layers.append(n)
                     ave_grads.append(p.grad.abs().mean().cpu())
                     max_grads.append(p.grad.abs().max().cpu())
-        plt.figure(figsize=(12,8))
+            
+        plt.figure(figsize=(12,15))
         plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
         plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
         plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )

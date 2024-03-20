@@ -26,8 +26,8 @@ import os
 
 class NeuralCore():
 
-    def __init__(self, device, path_folder, epoch, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, seed=0):
-        device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
+    def __init__(self, device, path_folder, epoch, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, seed=0, run_mode="all"):
+        device =("cuda:0" if (torch.cuda.is_available()) else "cpu")
         self.seed_torch = seed
         self.seed_data = seed
         self.seed_noise = seed
@@ -62,7 +62,7 @@ class NeuralCore():
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
         fast_test = False
-        if fast_test:   
+        if run_mode=="fast":   
             self.ea_do__training_data = True
             self.ea_do__testing_data = False
             self.ea_do__noised_data = False
@@ -70,8 +70,17 @@ class NeuralCore():
             self.ea_do__copula_data = False
             self.gan_do__noised_data = True  
             self.gan_do__reduced_noised_data = True  
-             
-        else:
+            self.correlationCoeff = False
+        elif run_mode=="train_only":
+            self.ea_do__training_data = True
+            self.ea_do__testing_data = False
+            self.ea_do__noised_data = True
+            self.ea_do__reduced_noised_data = True
+            self.ea_do__copula_data = False
+            self.gan_do__noised_data = True    
+            self.gan_do__reduced_noised_data = True     
+            self.correlationCoeff = False
+        elif run_mode=="all":
             self.ea_do__training_data = True
             self.ea_do__testing_data = True
             self.ea_do__noised_data = True
@@ -79,6 +88,16 @@ class NeuralCore():
             self.ea_do__copula_data = True
             self.gan_do__noised_data = True    
             self.gan_do__reduced_noised_data = True
+            self.correlationCoeff = True
+        elif run_mode=="test":
+            self.ea_do__training_data = True
+            self.ea_do__testing_data = True
+            self.ea_do__noised_data = True
+            self.ea_do__reduced_noised_data = True
+            self.ea_do__copula_data = True
+            self.gan_do__noised_data = True    
+            self.gan_do__reduced_noised_data = True
+            self.correlationCoeff = False
             
         print("SETTING PHASE: Model creation")
         print("\tmodel_case:\t",model_case)
@@ -86,46 +105,37 @@ class NeuralCore():
         
         if self.model_case=="autoencoder_3_copula_optimization":            
             dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_3
             self.loss_obj['AE'] = LossFunction({"MSE_LOSS":  1, "SPEARMAN_CORRELATION_LOSS":1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_3_defined":
             dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="3var_defined", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_3
             self.loss_obj['AE'] = LossFunction({"MSE_LOSS":  1, "SPEARMAN_CORRELATION_LOSS":1, "COVARIANCE_LOSS": 1, "DECORRELATION_LATENT_LOSS":  0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         
         elif self.model_case=="autoencoder_16_PEMS":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.5, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_16_MetrLa":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
         
         elif self.model_case=="autoencoder_ALL_PEMS":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_all", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_325
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
         elif self.model_case=="autoencoder_ALL_MetrLa":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="MetrLA_all", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_207
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.5}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
             
         elif self.model_case=="GAN_linear_16_PEMS":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="PEMS_16", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GAN_neural_16()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
             
         elif self.model_case=="GAN_linear_vc_copula":
             dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GAN_LinearNeural_7()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)      
 
         elif self.model_case=="GAN_conv_vc_7_copula":
             dataloader = DataLoader(mode="random_var", seed=self.seed_data, name_dataset="copula", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GAN_Conv_neural_7()
             self.loss_obj['AE'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
 
         elif self.model_case=="GAN_linear_pretrained_vc_copula":
@@ -146,7 +156,7 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_16
+            
             
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_dataset":0.005, "SPEARMAN_CORRELATION_LOSS":0.05}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             
@@ -161,7 +171,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            #self.model = GEN_autoEncoder_16 
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -172,7 +181,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_32 
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -183,7 +191,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_48
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -194,7 +201,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_64
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":0.5}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -218,8 +224,7 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_32 
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.8, "MEDIAN_LOSS_batch":0.0005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1.2, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
                 os.makedirs(self.path_folder_gan)
@@ -229,7 +234,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_48
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.05, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -240,7 +244,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_64
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -253,7 +256,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_5943
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -267,7 +269,6 @@ class NeuralCore():
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_16 
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.05}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
@@ -287,29 +288,22 @@ class NeuralCore():
             self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device) 
         elif self.model_case=="autoencoder_6k_Chengdu":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_6k
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.0005, "SPEARMAN_CORRELATION_LOSS":0.1,  "DECORRELATION_LATENT_LOSS":  0.1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_05k_Chengdu":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0500", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_05k
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.1, "MEDIAN_LOSS_batch":0.05,  "SPEARMAN_CORRELATION_LOSS":1}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="autoencoder_0016_Chengdu":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0016", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_16
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8,  "DECORRELATION_LATENT_LOSS":  0.01}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)       
         elif self.model_case=="autoencoder_0064_Chengdu":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.model = GEN_autoEncoder_64
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         elif self.model_case=="GAN_linear_pretrained_0064_Chengdu":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0064", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_ae = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_ae):
                 os.makedirs(self.path_folder_ae)
-            self.model = GEN_autoEncoder_64
-            
             self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":0.6, "MEDIAN_LOSS_batch":0.00005, "SPEARMAN_CORRELATION_LOSS":0.8}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
-            
             self.path_folder_gan = Path(self.path_folder,'GAN')
             if not os.path.exists(self.path_folder_gan):
                 os.makedirs(self.path_folder_gan)
@@ -321,7 +315,7 @@ class NeuralCore():
         
         
                 
-        self.data_splitted = dataloader.dataset_load(draw_plots=True, save_summary=True, loss=self.loss_obj)
+        self.data_splitted = dataloader.dataset_load(draw_plots=True, save_summary=True, loss=self.loss_obj, correlationCoeff=self.correlationCoeff)
         self.dataGenerator = dataloader.getDataGenerator()
         self.vc_mapping = dataloader.get_vcMapping()
         self.rangeData = dataloader.getRangeData()
@@ -395,16 +389,16 @@ class NeuralCore():
                 
             ]
         elif self.model_case=="GAN_linear_pretrained_vc_copula":
-            self.model_ae = GEN_autoEncoder_3
+            self.model['AE'] = GEN_autoEncoder_3
             
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=10)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=10)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             
-            self.model_gan = GAN_neural_mixed_7(generator=model_ae_decoder)
+            self.model['GAN'] = GAN_neural_mixed_7(generator=model_ae_decoder)
             
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=30)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=30)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
             comparison_corr_list = [
                 # original data
@@ -425,15 +419,15 @@ class NeuralCore():
                 [('AE_copulaLat','output'),('GAN_noise','output')],
             ] 
         elif self.model_case=="GAN_linear_pretrained_16_PEMS_ds":            
-            self.model_ae = GEN_autoEncoder_16
+            self.model['AE'] = GEN_autoEncoder_16
             
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             
-            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
         # MetrLa
@@ -448,31 +442,31 @@ class NeuralCore():
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
             
         elif self.model_case=="GAN_linear_pretrained_32_METR_bt":            
-            self.model_ae = GEN_autoEncoder_32
+            self.model['AE'] = GEN_autoEncoder_32
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_32(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_32(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_48_METR_bt":            
-            self.model_ae = GEN_autoEncoder_48
+            self.model['AE'] = GEN_autoEncoder_48
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_48(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_48(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_64_METR_bt":            
-            self.model_ae = GEN_autoEncoder_64
+            self.model['AE'] = GEN_autoEncoder_64
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
         # PemsBay
@@ -486,70 +480,70 @@ class NeuralCore():
             model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_32_PEMS_bt":            
-            self.model_ae = GEN_autoEncoder_32
+            self.model['AE'] = GEN_autoEncoder_32
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_32(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_32(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_48_PEMS_bt":            
-            self.model_ae = GEN_autoEncoder_48
+            self.model['AE'] = GEN_autoEncoder_48
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_48(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_48(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         elif self.model_case=="GAN_linear_pretrained_64_PEMS_bt":            
-            self.model_ae = GEN_autoEncoder_64
+            self.model['AE'] = GEN_autoEncoder_64
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
         
         # Chengdu
         elif self.model_case=="GAN_linear_pretrained_5943_CHENGDU_bt":            
-            self.model_ae = GEN_autoEncoder_5943
+            self.model['AE'] = GEN_autoEncoder_5943
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model_gan = GAN_neural_mixed_5943(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_5943(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
         
         
         
         elif self.model_case=="GAN_linear_pretrained_16_CHENGDU_bt":            
-            self.model_ae = GEN_autoEncoder_16
+            self.model['AE'] = GEN_autoEncoder_16
             print(self.loss_obj['AE'].get_lossTerms())
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=self.epoch)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             
-            self.model_gan = GAN_neural_mixed_16(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
+            self.model['GAN'] = GAN_neural_mixed_16(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")      
         elif self.model_case=="AE_conv_vc_copula":
-            self.model_ae = GEN_ConvAutoEncoder_7
+            self.model['AE'] = GEN_ConvAutoEncoder_7
             
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=10, model_flatten_in=False)
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=10, model_flatten_in=False)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector")
             
             #model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             
-            #self.model_gan = GAN_neural_mixed_7(generator=model_ae_decoder)
+            #self.model['GAN'] = GAN_neural_mixed_7(generator=model_ae_decoder)
             #
 
-            #model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=30)
+            #model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=30)
             #self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector")
             #comparison_corr_list = [['train_data','train_data'],['train_data','test_data'],['train_data','noise_out_data_GAN'], ['train_in_data_AE','train_out_data_AE'],['train_in_data_AE','noise_out_data_AE'],['train_in_data_AE','copula_out_data_AE'],['noise_out_data_AE', 'copula_out_data_AE'],['train_data','noise_out_data_GAN'],['noise_out_data_AE','noise_out_data_GAN'],['copula_out_data_AE','noise_out_data_GAN']]    
         elif self.model_case=="autoencoder_6k_Chengdu":
@@ -602,15 +596,15 @@ class NeuralCore():
                 
             ]    
         elif self.model_case=="GAN_linear_pretrained_0064_Chengdu":            
-            self.model_ae = GEN_autoEncoder_64
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model_ae, loss_obj=self.loss_obj['AE'], epoch=100)
+            self.model['AE'] = GEN_autoEncoder_64
+            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=100)
             self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_ae, input_shape="vector", draw_plot=True)
             
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
             
             
-            self.model_gan = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model_gan, loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=25)
+            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
+            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=25)
             self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_gan, input_shape="vector") 
             comparison_corr_list = [
                 # original data
@@ -689,7 +683,7 @@ class NeuralCore():
             if model is not None:
                 modelAE = model.getModel("all")
                 if self.ea_do__training_data:
-                    print("PREDICT PHASE: Training data")
+                    print("AE - PREDICT PHASE: Training data")
                     plot_name = "AE_train"
                     train_analysis_folder = Path(path_folder_pred,"train_analysis")
                     if not os.path.exists(train_analysis_folder):
@@ -700,17 +694,18 @@ class NeuralCore():
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_train = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, data=train_predict, path_folder=train_analysis_folder)
                     datastats_latent = True
-                    self.corrCoeff[plot_name] = datastats_train.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_train.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
                         distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'], 'color':plot_colors['input']}, "train_reconstructed":{'data':train_predict['prediction_data_byvar']['output'], 'color':plot_colors['output']}}
-                        datastats_train.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                        datastats_train.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
 
                 #
                 if self.ea_do__testing_data:
-                    print("PREDICT PHASE: Testing data")
+                    print("AE - PREDICT PHASE: Testing data")
                     plot_name = "AE_test"
                     test_analysis_folder = Path(path_folder_pred,"test_data_analysis")
                     if not os.path.exists(test_analysis_folder):
@@ -721,56 +716,60 @@ class NeuralCore():
                     print("\t\t Statistics data")
                     datastats_test = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, data=test_predict, path_folder=test_analysis_folder)
                     datastats_latent = True
-                    self.corrCoeff[plot_name] = datastats_test.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_test.get_corrCoeff(latent=datastats_latent)
+                        
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
                         distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "test_input":{'data':test_predict['prediction_data_byvar']['input'],'color':plot_colors['input']}, "test_reconstructed":{'data':test_predict['prediction_data_byvar']['output'],'color':plot_colors['output']}}
-                        datastats_test.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                        datastats_test.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
                 #do__noised_data
                 if self.ea_do__noised_data:
-                    print("PREDICT PHASE: Noised data generation")
+                    print("AE - PREDICT PHASE: Noised data generation")
                     plot_name = "AE_noise"
                     noise_analysis_folder = Path(path_folder_pred,"noise_data_analysis")
                     if not os.path.exists(noise_analysis_folder):
                         os.makedirs(noise_analysis_folder)
                     modelTrainedDecoder = modelAE.get_decoder()
                     
-                    noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)                
+                    noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder, isnoise_in=True)                
                     noise_predict = noise_modelPrediction.compute_prediction(experiment_name="noise_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_noiseAE = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=noise_predict, path_folder=noise_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_noiseAE.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_noiseAE.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green","output":"m"}
                         distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                        datastats_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
                 
                 if self.ea_do__reduced_noised_data:
-                    print("PREDICT PHASE: reduced noised data generation")
+                    print("AE - PREDICT PHASE: reduced noised data generation")
                     plot_name = "AE_reduced_noise"
                     reduced_noise_analysis_folder = Path(path_folder_pred,"reduced_noise_data_analysis")
                     if not os.path.exists(reduced_noise_analysis_folder):
                         os.makedirs(reduced_noise_analysis_folder)
                     modelTrainedDecoder = modelAE.get_decoder()
                     
-                    reduced_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder)                
+                    reduced_noise_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder, isnoise_in=True)                
                     reduced_noise_predict = reduced_noise_modelPrediction.compute_prediction(experiment_name="reduced_noise_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_reduced_noiseAE = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=reduced_noise_predict, path_folder=reduced_noise_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_reduced_noiseAE.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_reduced_noiseAE.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green","output":"m"}
                         reduced_distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':reduced_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_reduced_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent)
+                        datastats_reduced_noiseAE.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent, correlationCoeff=self.correlationCoeff)
                         datastats_reduced_noiseAE.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.lat_dim, points=reduced_noise_data,  distr=None)
                         reduced_noise_data_dict = list()
                         for pred in reduced_noise_predict['prediction_data']['output']:
@@ -779,7 +778,7 @@ class NeuralCore():
                         
 
                 if self.ea_do__copula_data:
-                    print("PREDICT PHASE: Copula Latent data")
+                    print("AE - PREDICT PHASE: Copula Latent data")
                     plot_name = "AE_copulaLat"
                     copulaLat_analysis_folder = Path(path_folder_pred,"copulaLat_data_analysis")
                     if not os.path.exists(copulaLat_analysis_folder):
@@ -788,19 +787,20 @@ class NeuralCore():
                     copulaLat_data, self.corrCoeff['copulaLatent_data_AE'] = self.dataGenerator.casualVC_generation(name_data="copulaLatent", real_data=copulaLat_samples_starting, univar_count=self.lat_dim, num_of_samples = noise_samples,  draw_plots=True)
                     modelTrainedDecoder = modelAE.get_decoder()
                     
-                    copulaLat_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=copulaLat_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=copulaLat_analysis_folder)                
+                    copulaLat_modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=copulaLat_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=copulaLat_analysis_folder, isnoise_in =True)                
                     copulaLat_predict = copulaLat_modelPrediction.compute_prediction(experiment_name="copula_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_copLatent = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=copulaLat_predict, path_folder=copulaLat_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_copLatent.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_copLatent.get_corrCoeff(latent=datastats_latent)
                             
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green", "output":"darkviolet"}                    
                         distribution_compare = {"train_input":{'data':train_predict['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "copulaLatent_generated":{'data':copulaLat_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_copLatent.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                        datastats_copLatent.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
             
         
         elif model_type =="GAN":
@@ -812,47 +812,49 @@ class NeuralCore():
                 noise_data = data_dict['noise_data']
                 #
                 if self.gan_do__noised_data:
-                    print("PREDICT PHASE: Noised data generation")
+                    print("GAN - PREDICT PHASE: Noised data generation")
                     plot_name = "GAN_noise"
                     noise_analysis_folder = Path(path_folder_pred,"noise_data_analysis")
                     if not os.path.exists(noise_analysis_folder):
                         os.makedirs(noise_analysis_folder)
                     traindata_input = self.dataset2var(train_data)
-                    noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder)
+                    noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=noise_analysis_folder, isnoise_in = True)
                     noise_predict = noise_modelPrediction.compute_prediction(experiment_name="noise_test_data", remapping_data=True)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_noiseGAN = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=noise_predict, path_folder=noise_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_noiseGAN.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_noiseGAN.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green", "output":"m"}                    
                         distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent)
+                        datastats_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
 
                 if self.gan_do__reduced_noised_data:
-                    print("PREDICT PHASE: reduced noised data generation")
+                    print("GAN - PREDICT PHASE: reduced noised data generation")
                     plot_name = "GAN_reduced_noise"
                     reduced_noise_analysis_folder = Path(path_folder_pred,"reduced_noise_data_analysis")
                     if not os.path.exists(reduced_noise_analysis_folder):
                         os.makedirs(reduced_noise_analysis_folder)
                                        
-                    reduced_noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder)
+                    reduced_noise_modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=reduced_noise_data, vc_mapping= self.vc_mapping, univar_count_in=self.lat_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=input_shape, path_folder=reduced_noise_analysis_folder, isnoise_in =True)
                     reduced_noise_predict = reduced_noise_modelPrediction.compute_prediction(experiment_name="reduced_noise_test_data", remapping_data=True)
                     traindata_input = self.dataset2var(train_data)
                     
                     print("\tSTATS PHASE:  Correlation and distribution")
                     datastats_reduced_noiseGAN = DataStatistics(univar_count_in=self.lat_dim, univar_count_out=self.univar_count, dim_latent=None, data=reduced_noise_predict, path_folder=reduced_noise_analysis_folder)
                     datastats_latent=False
-                    self.corrCoeff[plot_name] = datastats_reduced_noiseGAN.get_corrCoeff(latent=datastats_latent)
+                    if self.correlationCoeff:
+                        self.corrCoeff[plot_name] = datastats_reduced_noiseGAN.get_corrCoeff(latent=datastats_latent)
                     
                     if draw_plot:
                         print("\tSTATS PHASE:  Plots")
                         plot_colors = {"input":"green","output":"m"}
                         reduced_distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':reduced_noise_predict['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
-                        datastats_reduced_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent)
+                        datastats_reduced_noiseGAN.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=reduced_distribution_compare, latent=datastats_latent,correlationCoeff=self.correlationCoeff)
                         datastats_reduced_noiseGAN.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.lat_dim, points=reduced_noise_data,  distr=None)
                         reduced_noise_data_dict = list()
                         for pred in reduced_noise_predict['prediction_data']['output']:

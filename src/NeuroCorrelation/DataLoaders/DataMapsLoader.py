@@ -20,7 +20,7 @@ from random import shuffle
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder, seed):
+    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder, seed, univ_limit=150):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
         self.univar_count = univar_count
@@ -31,6 +31,7 @@ class DataMapsLoader():
         self.mean_vc_val = dict()
         self.median_vc_val = dict()
         self.variance_vc_val = dict()
+        self.univ_limit = univ_limit
         
         if self.name_dataset=="PemsBay_16":
             filename = Path("data","neuroCorrelation_data","PEMS_BAY_S16_START7_END9.csv")
@@ -51,7 +52,7 @@ class DataMapsLoader():
             filename = Path("data","neuroCorrelation_data","METR_LA_S64_START7_END9.csv")
         
         elif self.name_dataset=="China_Chengdu_5943":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_5943.csv")
+            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut300_5943.csv")
         
         
         elif self.name_dataset=="PEMS_all":
@@ -207,11 +208,11 @@ class DataMapsLoader():
             #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
             
 
-    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1):
+    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1, correlationCoeff=True):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
-            
+        
         if name_data=="train":
             data = self.train_data_vc
             n_istances = self.train_samples
@@ -230,12 +231,13 @@ class DataMapsLoader():
             for id_var in range(self.univar_count):
                 for j in range(instaces_size):
                     maps_data_vc[id_var].append(item['sample'][id_var].detach().cpu().numpy().tolist())
-            
-            
+        
         self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
         df_data = pd.DataFrame(maps_data_vc)
-        rho = self.comparison_datamaps.correlationCoeff(df_data)
-        
+        if correlationCoeff:
+            rho = self.comparison_datamaps.correlationCoeff(df_data)
+        else:
+            rho = None
         return dataset_couple, rho
 
     def getSample(self, data, key_sample):
@@ -294,7 +296,7 @@ class DataMapsLoader():
         return df_data  
     
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, color_data='blue'):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 5000, draw_plots=True, color_data='blue'):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
@@ -328,7 +330,7 @@ class DataMapsLoader():
                 self.sample_synthetic[id_univar][0].append(value_vc)
                 
         samples_origin_path = Path(self.path_folder, "samples_copula_"+name_data+".txt")
-        with open(samples_origin_path, 'w') as fp:
+        with open(samples_origin_path, 'w+') as fp:
             json.dump(self.sample_synthetic, fp, sort_keys=True, indent=4)
 
         dataset_couple = []
@@ -377,7 +379,7 @@ class DataMapsLoader():
     def plot_correlation(self, rho_corr, ticks_list, name_plot, path_fold, draw_plots=True):
         corrcoef_Path = Path(path_fold, name_plot+"_corrcoef_mapsData.csv")
         np.savetxt(corrcoef_Path, rho_corr, delimiter=",")
-        if draw_plots: 
+        if draw_plots and self.univar_count<self.univ_limit: 
             fig, ax = plt.subplots(figsize=(14,14))
             im = ax.imshow(rho_corr)
             im.set_clim(-1, 1)

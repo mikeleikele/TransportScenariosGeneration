@@ -21,9 +21,7 @@ class DataStatistics():
 
         return self.corrCoeff
 
-    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True):
-        corrCoeff = self.get_corrCoeff(latent)
-
+    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True, correlationCoeff=True):
         if verbose:
             print("\tPLOT: Predicted Test")
             print("\t\tdistribution analysis")
@@ -40,21 +38,22 @@ class DataStatistics():
             print("\t\tdistribution analysis: real and generated")
         self.dataComparison.data_comparison_plot(distribution_compare, plot_name=f"{plot_name}", mode="out")
 
-
-        if verbose:
-            print("\t\tcorrelation analysis")
-            print("\t\t\tcorrelation analysis: input")
-        
-        self.dataComparison.plot_vc_correlationCoeff(self.data["inp_data_vc"], plot_name=f"{plot_name}_input", corrMatrix=corrCoeff['input'])
-        if latent:
+        if correlationCoeff:
+            corrCoeff = self.get_corrCoeff(latent)
             if verbose:
-                print("\t\t\tcorrelation analysis: latent")
+                print("\t\tcorrelation analysis")
+                print("\t\t\tcorrelation analysis: input")
             
-            self.dataComparison.plot_vc_correlationCoeff(self.data['latent_data_bycomp']['latent'], plot_name=f"{plot_name}_latent", is_latent=True, corrMatrix=corrCoeff['latent'])
-        if verbose:
-            print("\t\t\tcorrelation analysis: output")
-        
-        self.dataComparison.plot_vc_correlationCoeff(self.data["out_data_vc"], plot_name=f"{plot_name}_output", corrMatrix=corrCoeff['output'])                 
+            self.dataComparison.plot_vc_correlationCoeff(self.data["inp_data_vc"], plot_name=f"{plot_name}_input", corrMatrix=corrCoeff['input'])
+            if latent:
+                if verbose:
+                    print("\t\t\tcorrelation analysis: latent")
+                
+                self.dataComparison.plot_vc_correlationCoeff(self.data['latent_data_bycomp']['latent'], plot_name=f"{plot_name}_latent", is_latent=True, corrMatrix=corrCoeff['latent'])
+            if verbose:
+                print("\t\t\tcorrelation analysis: output")
+            
+            self.dataComparison.plot_vc_correlationCoeff(self.data["out_data_vc"], plot_name=f"{plot_name}_output", corrMatrix=corrCoeff['output'])                 
 
     def draw_point_overDistribution(self, plotname, n_var, points,  distr=None):
         self.dataComparison.draw_point_overDistribution(plotname, self.path_folder, n_var, points,  distr)

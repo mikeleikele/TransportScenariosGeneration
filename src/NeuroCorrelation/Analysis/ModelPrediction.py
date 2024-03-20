@@ -11,7 +11,7 @@ from matplotlib.ticker import PercentFormatter
 
 class ModelPrediction():
 
-    def __init__(self, model, device, dataset, univar_count_in, univar_count_out, latent_dim, path_folder, vc_mapping, data_range=None, input_shape="vector"):
+    def __init__(self, model, device, dataset, univar_count_in, univar_count_out, latent_dim, path_folder, vc_mapping, data_range=None, input_shape="vector", isnoise_in = False, isnoise_out = False):
         self.model = model
         self.dataset = dataset
         self.univar_count_in = univar_count_in
@@ -33,6 +33,8 @@ class ModelPrediction():
         self.late_byComp = dict()
 
         self.input_shape = input_shape
+        self.isnoise_in = isnoise_in
+        self.isnoise_out = isnoise_out
         
     
     def predict(self, input_sample, pred2numpy=True, latent=True, save=True, experiment_name=None, remapping=False):
@@ -203,14 +205,20 @@ class ModelPrediction():
         
         inp_data_vc = pd.DataFrame()
         for id_univar in range(self.univar_count_in):
-            var_name = self.vc_mapping[id_univar]
+            if self.isnoise_in:
+                var_name = f"{id_univar}"
+            else:
+                var_name = self.vc_mapping[id_univar]
             inp_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['input'][id_univar]]
         resultDict["inp_data_vc"] = inp_data_vc
 
         out_data_vc = pd.DataFrame()
         for id_univar in range(self.univar_count_out):
-                var_name = self.vc_mapping[id_univar]
-                out_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['output'][id_univar]]
+            if self.isnoise_out:
+                var_name = f"{id_univar}"
+            else:
+                var_name = self.vc_mapping[id_univar]                
+            out_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['output'][id_univar]]
         resultDict["out_data_vc"] = out_data_vc
 
         if self.latent_dim is not None:

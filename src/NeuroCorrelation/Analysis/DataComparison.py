@@ -185,7 +185,7 @@ class DataComparison():
             corrMatrix = self.correlationCoeff(df_data)
         rho = corrMatrix
         
-        
+        return
         for key in rho:
             csvFile_Path = Path(path_fold_dist, f"data_{key}_"+plot_name+".csv")
             np.savetxt(csvFile_Path, rho[key], delimiter=",")
@@ -196,7 +196,9 @@ class DataComparison():
             plt.savefig(filename)
         
 
-    def correlationCoeff(self, df_data):    
+    def correlationCoeff(self, df_data, select_subset=True):    
+        raise Exception("correlationCoeff")
+        num_to_select = 200
         rho_val_list = list()
         for key_vc in df_data:
             if isinstance(df_data[key_vc][0], (np.ndarray) ):
@@ -214,20 +216,44 @@ class DataComparison():
         
         #rho_pearson = np.corrcoef(rho_val_list)
         
+        
+        rho_val_dict_cuted  = dict()
+        
+        for j in range(len(rho_val_list)):
+            
+            if select_subset:
+                if select_subset:
+                    if num_to_select>len(list(rho_val_list[j])):
+                        num_to_selected = len(list(rho_val_list[j]))
+                    else:
+                        num_to_selected = num_to_select   
+                        
+                rho_val_dict_cuted[j] = random.sample(list(rho_val_list[j]), num_to_selected)
+                
+            else:
+                rho_val_dict_cuted[j] = rho_val_list[j]
         for i in range(len(rho_val_list)):
             row = dict()
             for key in rho:          
-                row[key] = list()
+                row[key] = [None for i in range(len(rho_val_list))]
             
-            for j in range(len(rho_val_list)):
-                a_array = rho_val_list[i]
-                b_array = rho_val_list[j]
-                row['pearson'].append(stats.pearsonr(a_array,b_array).statistic)
-                row['spearman'].append(stats.spearmanr(a_array,b_array).statistic)
-                row['kendall'].append(stats.kendalltau(a_array,b_array).statistic)
-            
+            for j in range(i+1):
+                
+                a_array = rho_val_dict_cuted[i]
+                b_array = rho_val_dict_cuted[j]
+                #row['pearson'][j] = stats.pearsonr(a_array,b_array).statistic
+                #row['spearman'][j] = stats.spearmanr(a_array,b_array).statistic
+                #row['kendall'][j] = stats.kendalltau(a_array,b_array).statistic
+                
             for key in rho:          
                 rho[key].append(row[key])
+            
+        
+        for key in rho:
+           for i in range(len(rho_val_list)):
+               for j in range(i):
+                  rho[key][j][i]  = rho[key][i][j]
+                   
         
         covar_array = list()
         for j in range(len(rho_val_list)):
@@ -236,9 +262,9 @@ class DataComparison():
             covar_array.append(_array)
         cov_matrix = np.cov(covar_array, bias=False)        
         rho['covar'] = cov_matrix
-        
         for key in rho:     
             rho[key] = np.array(rho[key])
+            
         return rho
 
     
@@ -326,15 +352,15 @@ class DataComparison():
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
         return array[idx]
-    
-    def draw_point_overDistribution(self, plotname, folder, n_var, points,  distr):
+     
+    def draw_point_overDistribution(self, plotname, folder, n_var, points,  distr, n_sample = 1000):
         if distr is None:
             distr = list()
-            for i in range(1000):
+            for i in range(n_sample):
                 mu, sigma = 0, math.sqrt(1) # mean and standard deviation
-                s = np.random.normal(mu, sigma, 1000)  
+                s = np.random.normal(mu, sigma, n_var)  
                 distr.append({'sample': torch.Tensor(s), 'noise': torch.Tensor(s)})
-
+        
 
         fig = plt.figure(figsize=(18,18))
         n_col = math.ceil(math.sqrt(n_var))
