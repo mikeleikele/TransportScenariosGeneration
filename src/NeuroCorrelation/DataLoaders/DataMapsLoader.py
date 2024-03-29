@@ -33,26 +33,44 @@ class DataMapsLoader():
         self.variance_vc_val = dict()
         self.univ_limit = univ_limit
         
-        if self.name_dataset=="PemsBay_16":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S16_START7_END9.csv")
-        elif self.name_dataset=="PemsBay_32":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S32_START7_END9.csv")
-        elif self.name_dataset=="PemsBay_48":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S48_START7_END9.csv")
-        elif self.name_dataset=="PemsBay_64":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY_S64_START7_END9.csv")
-            
-        elif self.name_dataset=="MetrLA_16":
-            filename = Path("data","neuroCorrelation_data","METR_LA_S16_START7_END9.csv")
-        elif self.name_dataset=="MetrLA_32":
-            filename = Path("data","neuroCorrelation_data","METR_LA_S32_START7_END9.csv")
-        elif self.name_dataset=="MetrLA_48":
-            filename = Path("data","neuroCorrelation_data","METR_LA_S48_START7_END9.csv")
-        elif self.name_dataset=="MetrLA_64":
-            filename = Path("data","neuroCorrelation_data","METR_LA_S64_START7_END9.csv")
+        #PEMS_BAY
+        if self.name_dataset=="PEMS_BAY_S16":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16__map.csv")
+        elif self.name_dataset=="PEMS_BAY_S32":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S32","PEMS_BAY_S32_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S32","PEMS_BAY_S32__map.csv")
+        elif self.name_dataset=="PEMS_BAY_S48":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S48","PEMS_BAY_S48_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S48","PEMS_BAY_S48__map.csv")
+        elif self.name_dataset=="PEMS_BAY_S64":
+            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64__map.csv")
         
+        
+        #METR_LA
+        if self.name_dataset=="METR_LA_S16":
+            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16__map.csv")
+        elif self.name_dataset=="METR_LA_S32":
+            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S32","METR_LA_S32_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S32","METR_LA_S32__map.csv")
+        elif self.name_dataset=="METR_LA_S48":
+            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S48","METR_LA_S48_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S48","METR_LA_S48__map.csv")
+        elif self.name_dataset=="METR_LA_S64":
+            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64_START7_END9__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64__map.csv")
+        
+        elif self.name_dataset=="China_Chengdu_A0032":
+            filename = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0032","CHENGDU_SLOT_A_S0032__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0032","CHENGDU_SLOT_S0032__map.csv")
+        elif self.name_dataset=="China_Chengdu_A0064":
+            filename = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0064","CHENGDU_SLOT_A_S0064__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0064","CHENGDU_SLOT_S0064__map.csv")
         elif self.name_dataset=="China_Chengdu_5943":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut300_5943.csv")
+            filename = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S5943","CHENGDU_SLOT_A_S5943_cut300__data.csv")
+            pathMap  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S5943","CHENGDU_SLOT_S5943__map.csv")
         
         
         elif self.name_dataset=="PEMS_all":
@@ -70,7 +88,7 @@ class DataMapsLoader():
             filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_64.csv")   
             
         self.data_df = pd.read_csv(filename, sep=',')
-        
+        self.pathMap = pathMap
         self.path_folder = Path(path_folder,"maps_analysis_"+self.name_dataset)
         if not os.path.exists(self.path_folder):
             os.makedirs(self.path_folder)
@@ -90,7 +108,10 @@ class DataMapsLoader():
             return {"mu":self.mu, "r_psd": self.r_psd}
         else:
             return {"mu":None, "r_psd": None}
-
+    
+    def get_pathMap(self):
+        return self.pathMap
+    
     def mapsVC_load(self, train_percentual=0.70, draw_plots=True, verbose=False):
         all_values_vc = dict()
         vc_mapping = list()
@@ -159,6 +180,7 @@ class DataMapsLoader():
             rho_train_list.append(train_values_vc[key_vc]['values'])
             self.train_samples = len(train_values_vc[key_vc]['values'])
 
+
             test_values_vc[key_vc] = dict()
             test_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc[key_vc]['values'])) if i in shuffle_indexes[train_istance:]]
             
@@ -175,8 +197,14 @@ class DataMapsLoader():
         
         filename_train = Path(self.path_folder,"samples_train.csv")
         filename_test = Path(self.path_folder,"samples_train.csv")
+        filename_vc_mapping = Path(self.path_folder,"vc_mapping.csv")
+        list_vcmapping_str = list()
+        for item in self.vc_mapping_list:
+            list_vcmapping_str.append(f'{item}')
         np.savetxt(filename_train, train_values_vc[key_vc]['values'], delimiter=",")
         np.savetxt(filename_test, test_values_vc[key_vc]['values'], delimiter=",")
+        df_vc_mapping = pd.DataFrame(list_vcmapping_str, columns=['vc_name'])
+        df_vc_mapping.to_csv(filename_vc_mapping, sep='\t')
 
         print("\ttrain samples: done")
         print("\ttest samples: done")
@@ -193,6 +221,7 @@ class DataMapsLoader():
         for key_vc in train_values_vc:
             self.train_data_vc[key_vc] = train_values_vc[key_vc]['values']
         
+        
         self.test_data_vc = pd.DataFrame()
         for key_vc in test_values_vc:
             self.test_data_vc[key_vc] = test_values_vc[key_vc]['values']
@@ -208,10 +237,10 @@ class DataMapsLoader():
             #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
             
 
-    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1, correlationCoeff=True):
-        path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
-        if not os.path.exists(path_fold_copulagenAnalysis):
-            os.makedirs(path_fold_copulagenAnalysis)
+    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1, do__correlationCoeff=True):
+        path_fold_Analysis = Path(self.path_folder,name_data+"_data_analysis")
+        if not os.path.exists(path_fold_Analysis):
+            os.makedirs(path_fold_Analysis)
         
         if name_data=="train":
             data = self.train_data_vc
@@ -232,25 +261,25 @@ class DataMapsLoader():
                 for j in range(instaces_size):
                     maps_data_vc[id_var].append(item['sample'][id_var].detach().cpu().numpy().tolist())
         
-        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
-        df_data = pd.DataFrame(maps_data_vc)
-        if correlationCoeff:
+        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=self.lat_dim, path_folder= path_fold_Analysis)
+        if do__correlationCoeff:
+            df_data = pd.DataFrame(maps_data_vc)
             rho = self.comparison_datamaps.correlationCoeff(df_data)
         else:
             rho = None
         return dataset_couple, rho
 
     def getSample(self, data, key_sample):
-        sample = []
+        sample = []                
         for ed in data:
             sample.append(data[ed][key_sample])  
-        return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+        return torch.from_numpy(np.array(sample)).type(torch.float32).to(self.torch_device)
 
     def getSample_synthetic(self, data, key_sample):
         sample = []
         for ed in data:    
             sample.append(ed[0][key_sample])  
-        return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+        return torch.from_numpy(np.array(sample)).type(torch.float32).to(self.torch_device)
     
     def get_synthetic_noise_data(self, name_data=None, num_of_samples = 5000,  draw_plots=True):
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")
@@ -296,7 +325,7 @@ class DataMapsLoader():
         return df_data  
     
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 5000, draw_plots=True, color_data='blue'):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 5000, draw_plots=True, color_data='blue', do__correlationCoeff=True):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
@@ -349,7 +378,10 @@ class DataMapsLoader():
             self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
 
             self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data=color_data)
-            rho = self.comparison_plot_noise.correlationCoeff(noise_data_vc)
+            if do__correlationCoeff:
+                rho = self.comparison_plot_noise.correlationCoeff(noise_data_vc)
+            else:
+                rho = None
         return dataset_couple, rho
         
     def get_vc_mapping(self):
@@ -358,7 +390,7 @@ class DataMapsLoader():
     def getRandom(self, dim):
         randomNoise =  torch.randn(1, dim).to(self.torch_device)
         #torch.randn(dim).uniform_(0,1).to(self.torch_device)
-        return randomNoise.float()
+        return randomNoise.type(torch.float32)
 
     
     def plot_dataDist(self):

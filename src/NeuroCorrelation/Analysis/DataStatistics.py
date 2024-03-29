@@ -21,7 +21,7 @@ class DataStatistics():
 
         return self.corrCoeff
 
-    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True, correlationCoeff=True):
+    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True, do__correlationCoeff=True):
         if verbose:
             print("\tPLOT: Predicted Test")
             print("\t\tdistribution analysis")
@@ -38,7 +38,7 @@ class DataStatistics():
             print("\t\tdistribution analysis: real and generated")
         self.dataComparison.data_comparison_plot(distribution_compare, plot_name=f"{plot_name}", mode="out")
 
-        if correlationCoeff:
+        if do__correlationCoeff:
             corrCoeff = self.get_corrCoeff(latent)
             if verbose:
                 print("\t\tcorrelation analysis")

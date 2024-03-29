@@ -11,8 +11,8 @@
                 batch_real_err_D = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(dataBatch):
                     samplef = item['sample']
-                    sample = samplef.float()
-                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
+                    sample = samplef.type(torch.float32)
+                    label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
                     output = self.model_dis(sample)['x_output'].view(-1)                    
                     item_err = self.criterion(output, label)
                     batch_real_err_D += item_err
@@ -36,7 +36,7 @@
                 batch_fake_err_D = torch.zeros(1).to(device=self.device) 
                 for i, item in enumerate(noise_batch):
                     fake = self.model_gen(item)['x_output'] 
-                    label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                    label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
                     output = self.model_dis(fake.detach())['x_output'].view(-1)
                     item_err = self.criterion(output, label)
                     batch_fake_err_D += item_err
@@ -60,7 +60,7 @@
 
                 for i, item in enumerate(noise_batch):
                     fake = self.model_gen(item)['x_output']                    
-                    label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                    label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
                     output = self.model_dis(fake)['x_output'].view(-1)                    
                     item_err = self.criterion(output, label)
                     batch_fake_err_G += item_err 
@@ -90,7 +90,7 @@
             
             for i, item in enumerate(dataBatch)
                 samplef = item['sample']
-                sample = samplef.float()
+                sample = samplef.type(torch.float32)
                 
                 ###########################
                 # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
@@ -102,7 +102,7 @@
                 self.model_dis.zero_grad()
                 self.optimizer_dis.zero_grad()               
                 
-                label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
+                label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
                 output = self.model_dis(sample)['x_output'].view(-1)                    
                 item_err = self.criterion(output, label)
                 item_err.backward()
@@ -114,7 +114,7 @@
                 self.optimizer_dis.zero_grad()                
                 noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
                 fake = self.model_gen(noise)['x_output'] 
-                label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
                 output = self.model_dis(fake.detach())['x_output'].view(-1)
                 item_err = self.criterion(output, label)
                 item_err.backward()
@@ -134,7 +134,7 @@
                     print("================================================================================================================================================\n\n")
                     first = False
                     
-                label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
                 output = self.model_dis(fake)['x_output'].view(-1)                    
                 item_err = self.criterion(output, label)
                 item_err.backward()

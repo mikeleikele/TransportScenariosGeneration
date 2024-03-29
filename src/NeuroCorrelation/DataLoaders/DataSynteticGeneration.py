@@ -33,6 +33,7 @@ class DataSynteticGeneration():
         self.mean_vc_val = dict()
         self.median_vc_val = dict()
         self.variance_vc_val = dict()
+        
 
     def get_muR(self):
         if self.with_cov:
@@ -256,6 +257,7 @@ class DataSynteticGeneration():
             self.median_vc_val[key_vc] = statistics.median(vc_values)
             self.variance_vc_val[key_vc] = statistics.variance(vc_values)
             
+            
         self.mu = list()
         rho_val_list = list()
 
@@ -304,7 +306,7 @@ class DataSynteticGeneration():
             df_data.loc[i] = tensor_list        
         return df_data
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1, do__correlationCoeff=True):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
@@ -363,25 +365,29 @@ class DataSynteticGeneration():
         if draw_plots:
             self.comparison_plot.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
         df_data = pd.DataFrame(noise_data_vc)
-        
-        rho = self.comparison_plot.correlationCoeff(df_data)
+        if do__correlationCoeff:
+            rho = self.comparison_plot.correlationCoeff(df_data)
+        else:
+            rho = None
         return dataset_couple, rho
 
 
     def getSample(self, key_sample):
         sample = []
         for ed in self.sample_synthetic:    
-            sample.append(ed[0][key_sample])  
-        return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+            sample.append(ed[0][key_sample])
+        sample_torch = torch.from_numpy(np.array([float(x) for x in sample])).type(torch.float32).to(self.torch_device)
+        return sample_torch
+  
     
     def getDataStats(self):
         statsData = {"mean_val": self.mean_vc_val, "median_val":self.median_vc_val, "variance_val":self.variance_vc_val}
         return statsData
     
     def getRandom(self, dim):
-        randomNoise =  torch.randn(1, dim).to(self.torch_device)
+        randomNoise =  torch.randn(1, dim).type(torch.float32).to(self.torch_device)
         #torch.randn(dim).uniform_(0,1).to(self.torch_device)
-        return randomNoise.float()
+        return randomNoise.type(torch.float32)
     
     def get_synthetic_noise_data(self, name_data, num_of_samples = 5000,  draw_plots=True, instaces_size=1):
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")

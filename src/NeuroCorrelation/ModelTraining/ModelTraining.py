@@ -187,13 +187,14 @@ class ModelTraining():
             print(f"\tSAVE TRAINED MODEL GAN DIS:\t",path_save_model_dis)
             
                
-    def training_AE(self, model_flatten_in, batch_size, plot_loss=True):
+    def training_AE(self, model_flatten_in, batch_size, plot_loss=True, save_trainingTime=True):
         self.loss_dict = dict()
         self.model.train()
-        
+        epoch_train = list()
         print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
         for epoch in range(self.epoch['AE']):
-            epoch_start_time = datetime.datetime.now()            
+            epoch_start_time = datetime.datetime.now()
+            
             dataBatches = self.dataLoaded.generate()
             loss_batch = list()
             loss_batch_partial = dict()
@@ -207,9 +208,9 @@ class ModelTraining():
                     for i, item in enumerate(dataBatch):
                         samplef = item['sample']
                         #noisef = item['noise']
-                        sample = samplef.float()
+                        sample = samplef.type(torch.float32)
                         sample_list.append(sample)
-                        #noise = noisef.float()
+                        #noise = noisef.type(torch.float32)
                     x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
                     
                     
@@ -233,7 +234,7 @@ class ModelTraining():
                     #print(y_hat.shape)
                         
                     #y_hat_list.append(y_hat)
-                    
+                    print(y_hat_list)
                     loss_dict = self.loss_obj.computate_loss(y_hat_list)
 
                     loss = loss_dict['loss_total']
@@ -255,7 +256,7 @@ class ModelTraining():
                 self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
             epoch_end_time = datetime.datetime.now()
             epoch_time = epoch_end_time - epoch_start_time
-            
+            epoch_train.append({"epoch":epoch,"time":epoch_time})
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
                 self.scheduler_ae.step(np.mean(loss_batch))
             elif self.opt_scheduler_ae == "StepLR":
@@ -268,13 +269,14 @@ class ModelTraining():
             print("\tepoch:\t",epoch+1,"/",self.epoch['AE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tlr: ",self.optimizer.param_groups[0]['lr'])
         if plot_loss:
             self.loss_plot(self.loss_dict)
-            
+        if save_trainingTime:
+            self.save_training_time(epoch_train)
 
-    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=10):
+    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=10, save_trainingTime=True):
         
         real_label = 1.
         fake_label = 0.
-
+        epoch_train = list()
         self.loss_dict = dict()
         self.model_gen.train()
         self.model_dis.train()
@@ -301,23 +303,23 @@ class ModelTraining():
             err_G_list = list()
             
             loss_batch_partial = dict()
+            epoch_start_time = datetime.datetime.now()
+            
             for batch_num, dataBatch in enumerate(dataBatches):
                 if not train4batch:
                     for i, item in enumerate(dataBatch):
                         samplef = item['sample']
-                        sample = samplef.float()
+                        sample = samplef.type(torch.float32)
                         
-                        ###########################
+                        ########################### 
                         # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                         ###########################
-                    
                         ###########################
                         ##  A Update D with real data
                         ###########################
                         self.model_dis.zero_grad()
-                        self.optimizer_dis.zero_grad()               
-                        
-                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
+                        self.optimizer_dis.zero_grad()     
+                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
                         output = self.model_dis(sample)['x_output'].view(-1)                    
                         item_err = self.criterion(output, label)
                         
@@ -329,7 +331,7 @@ class ModelTraining():
                         self.optimizer_dis.zero_grad()                
                         noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
                         fake = self.model_gen(noise)['x_output'] 
-                        label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                        label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
                         output = self.model_dis(fake.detach())['x_output'].view(-1)
                         item_err = self.criterion(output, label)
                         item_err.backward()
@@ -349,7 +351,7 @@ class ModelTraining():
                             print("================================================================================================================================================\n\n")
                             first = False
                             
-                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
                         output = self.model_dis(fake)['x_output'].view(-1)                    
                         item_err = self.criterion(output, label)
                         item_err.backward()
@@ -365,16 +367,15 @@ class ModelTraining():
                     ###########################
                     #self.model_dis.zero_grad()
                     self.optimizer_dis.zero_grad()
-                    batch_real_err_D = torch.zeros(1).to(device=self.device) 
+                    batch_real_err_D = torch.zeros(1).type(torch.float32).to(device=self.device) 
                     x_real = list()
                     
                     for i, item in enumerate(dataBatch):
                         samplef = item['sample']
-                        sample = samplef.float()
+                        sample = samplef.type(torch.float32)
                         x_real.append(sample)
-                        
-                        label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device)      
-                        output = self.model_dis(sample)['x_output'].view(-1)                    
+                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
+                        output = self.model_dis(sample)['x_output'].view(-1)   
                         item_err = output #self.criterion(output, label)
                         batch_real_err_D += item_err
                     
@@ -403,7 +404,7 @@ class ModelTraining():
                     for i, item in enumerate(noise_batch):
                         fake = self.model_gen(item)['x_output'] 
                         x_fake.append(sample)
-                        label = torch.full((1,), fake_label, dtype=torch.float).to(device=self.device)                    
+                        label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
                         output = self.model_dis(fake.detach())['x_output'].view(-1)
                         item_err = output #self.criterion(output, label)
                         batch_fake_err_D += item_err
@@ -444,7 +445,7 @@ class ModelTraining():
 
                         for i, item in enumerate(noise_batch):
                             fake = self.model_gen(item)['x_output']                    
-                            label = torch.full((1,), real_label, dtype=torch.float).to(device=self.device) 
+                            label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
                             output = self.model_dis(fake)['x_output'].view(-1)                    
                             item_err = output #self.criterion(output, label)
                             batch_fake_err_G += item_err 
@@ -482,6 +483,9 @@ class ModelTraining():
             self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
             
             self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
+            epoch_end_time = datetime.datetime.now()
+            epoch_time = epoch_end_time - epoch_start_time
+            epoch_train.append({"epoch":epoch,"time":epoch_time})
             print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
             print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
             print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
@@ -501,7 +505,9 @@ class ModelTraining():
 
         if plot_loss:
             self.loss_plot(self.loss_dict)
-            
+        
+        if save_trainingTime:
+            self.save_training_time(epoch_train)    
         
    
     def weights_init_uniform(self, m):
@@ -656,30 +662,16 @@ class ModelTraining():
         plt.savefig(filename)
         df = pd.DataFrame(loss_plot_dict).T.reset_index()
         
-
-    #deprecato
-    def compute_correlationMatrix(self):
-        correlationList = list()
-        correlationList_txt = list()
-        for univ_id in range(self.univar_count):
-
-            self.generated_dict[univ_id] = np.array( self.generated_dict[univ_id], dtype = float) 
-            correlationList.append(self.generated_dict[univ_id])
-            correlationList_txt.append(self.generated_dict[univ_id].tolist())
-
-        corrCoeff_list_gen_Path = Path(self.path_folder, self.model_type, "corrCoeffList_generated.txt")
-        with open(corrCoeff_list_gen_Path, 'w') as fp:
-            json.dump(correlationList_txt, fp, sort_keys=True, indent=4)
-
-        corrCoeff_matrix_gen = np.corrcoef(correlationList)
-        corrCoeff_matrix_gen_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_generated.csv")
-        np.savetxt(corrCoeff_matrix_gen_Path, corrCoeff_matrix_gen, delimiter=",")
-        corrCoeff_matrix_orig_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_original.csv")
-        corrCoeff_matrix_orig = np.loadtxt(corrCoeff_matrix_orig_Path,delimiter=",")
-
-        sub_correlation_matrix = np.subtract(corrCoeff_matrix_gen,corrCoeff_matrix_orig)
-        sub_correlation_matrix_Path = Path(self.path_folder, self.model_type, "corrCoeffMatrix_sub.csv")
-        np.savetxt(sub_correlation_matrix_Path, sub_correlation_matrix, delimiter=",")
+    def save_training_time(self, list_training_time):
+        path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
+        if not os.path.exists(path_fold_lossplot):
+            os.makedirs(path_fold_lossplot)
+        dftrainingTime = pd.DataFrame(columns=['epoch',"time"]) 
+        for item in list_training_time:
+            dftrainingTime = dftrainingTime.append({'epoch': item["epoch"], 'time': item["time"] }, ignore_index=True)
+        time_file = Path(path_fold_lossplot ,"epochs_time.csv")
+        dftrainingTime.to_csv(time_file, sep='\t')  
+          
               
     def plot_grad_flow(self, named_parameters, epoch, model_section):
         

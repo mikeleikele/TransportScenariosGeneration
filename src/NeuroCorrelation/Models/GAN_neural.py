@@ -315,27 +315,43 @@ class GAN_LinearDiscriminator_32(nn.Module):
         self.hidden_layer_4 = nn.Linear(in_features=8, out_features=4)
         self.hidden_layer_5 = nn.Linear(in_features=4, out_features=1)
         
-        #self.activation_function_1 = nn.LeakyReLU(0.2, inplace=True)
-        #self.activation_function_2 = nn.LeakyReLU(0.2, inplace=True)
-        #self.activation_function_3 = nn.LeakyReLU(0.2, inplace=True)
+        self.act_1 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_2 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_3 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_4 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
 
     def forward(self, x):
-        layer_nn = self.hidden_layer_1(x)
-        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)
+        layer_nn = self.act_1(layer_nn)
+        
+        #== layer 01  ===================
         layer_nn = self.hidden_layer_2(layer_nn)
-        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        
+        #== layer 03  ===================
         layer_nn = self.hidden_layer_3(layer_nn)
-        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        
+        #== layer 04  ===================
         layer_nn = self.hidden_layer_4(layer_nn)    
-        layer_nn = nn.LeakyReLU(0.2, inplace=True)(layer_nn)
+        layer_nn = self.act_4(layer_nn)
+        
+        #== layer 05  ===================
         layer_nn = self.hidden_layer_5(layer_nn)
-        x_hat = F.sigmoid(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        x_hat = F.sigmoid(x_out)
         return {"x_input":x, "x_output":x_hat}
 
 class GAN_LinearGenerator_32(nn.Module):
     def __init__(self):       
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=96, out_features=48)
+        self.hidden_layer_1 = nn.Linear(in_features=30, out_features=48)
         self.hidden_layer_2 = nn.Linear(in_features=48, out_features=40)
         self.hidden_layer_3 = nn.Linear(in_features=40, out_features=32)
         #self.hidden_layer_4 = nn.Linear(in_features=32, out_features=48)
@@ -380,7 +396,7 @@ class GAN_neural_mixed_32(nn.Module):
         return self.D
 
     def summary(self):
-        gen_summary = torchinfo.summary(self.G, input_size=(1, 96), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        gen_summary = torchinfo.summary(self.G, input_size=(1, 30), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         dis_summary = torchinfo.summary(self.D(), input_size=(1, 32), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         summary_dict = {"generator": gen_summary, "discriminator": dis_summary}
         return summary_dict
@@ -632,6 +648,120 @@ class GAN_neural_mixed_64(nn.Module):
         return summary_dict
 #---------------------------
 
+
+#---------------------------
+# MODEL 128
+class GAN_LinearDiscriminator_128(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=128, out_features=64)
+        self.hidden_layer_2 = nn.Linear(in_features=64, out_features=32)
+        self.hidden_layer_3 = nn.Linear(in_features=32, out_features=16)        
+        self.hidden_layer_4 = nn.Linear(in_features=16, out_features=4)
+        self.hidden_layer_5 = nn.Linear(in_features=4, out_features=1)
+        
+        self.act_1 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_2 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_3 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_4 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)
+        layer_nn = self.act_1(layer_nn)
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)    
+        layer_nn = self.act_4(layer_nn)
+        
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_5(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        x_hat = F.sigmoid(x_out)
+        return {"x_input":x, "x_output":x_hat}
+
+class GAN_LinearGenerator_128(nn.Module):
+    def __init__(self):       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=128, out_features=512)
+        self.hidden_layer_2 = nn.Linear(in_features=512, out_features=414)
+        self.hidden_layer_3 = nn.Linear(in_features=414, out_features=316)        
+        self.hidden_layer_4 = nn.Linear(in_features=316, out_features=256)
+        self.hidden_layer_5 = nn.Linear(in_features=256, out_features=128)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2, inplace=True)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2, inplace=True)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2, inplace=True)#
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2, inplace=True)#
+
+    def forward(self, x):
+         #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)
+        layer_nn = self.act_1(layer_nn)
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)    
+        layer_nn = self.act_4(layer_nn)
+        
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_5(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GAN_neural_mixed_128(nn.Module):
+    def __init__(self, generator=None, discriminator=None):
+        super().__init__()
+        if generator is None:
+            self.G = GAN_LinearGenerator_128
+        else:
+            self.G = generator
+        
+        if discriminator is None:
+            self.D = GAN_LinearDiscriminator_128
+        else:
+            self.D = discriminator
+
+    def get_generator(self):
+        return self.G
+
+    def get_discriminator(self):
+        return self.D
+
+    def summary(self):
+        gen_summary = torchinfo.summary(self.G, input_size=(1, 120), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dis_summary = torchinfo.summary(self.D(), input_size=(1, 128), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary_dict = {"generator": gen_summary, "discriminator": dis_summary}
+        return summary_dict
+#---------------------------
+
 #---------------------------
 # MODEL 5943
 class GAN_LinearDiscriminator_5943(nn.Module):
@@ -744,7 +874,7 @@ class GAN_neural_mixed_5943(nn.Module):
         return self.D
     
     def summary(self):
-        gen_summary = torchinfo.summary(self.G, input_size=(1, 4896), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        gen_summary = torchinfo.summary(self.G, input_size=(1, 2048), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         dis_summary = torchinfo.summary(self.D(), input_size=(1, 5943), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         summary_dict = {"generator": gen_summary, "discriminator": dis_summary}
         return summary_dict

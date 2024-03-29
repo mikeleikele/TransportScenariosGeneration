@@ -1,6 +1,5 @@
 osmnx
 ogr2osm
-sklearn
 shapely
 pandas
 geopandas
@@ -17,3 +16,4 @@ seaborn
 torch_geometric
 torchmetrics
 visdom
+folium

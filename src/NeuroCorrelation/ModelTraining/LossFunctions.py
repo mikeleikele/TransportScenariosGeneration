@@ -101,15 +101,6 @@ class LossFunction(nn.Module):
             if verbose:
                 print("COVARIANCE_LOSS - ", loss_coeff)
         
-        if "COVARIANCE_LOSS" in self.loss_case:
-            covariance_similarities_loss = self.covariance_similarities(values)
-            coeff = self.loss_case["COVARIANCE_LOSS"]
-            loss_coeff = covariance_similarities_loss.mul(coeff)
-            loss_total += loss_coeff
-            loss_dict["COVARIANCE_LOSS"] = loss_coeff
-            if verbose:
-                print("COVARIANCE_LOSS - ", loss_coeff)
-
         if "DECORRELATION_LATENT_LOSS" in self.loss_case:
             decorrelation_latent_loss = self.decorrelation_latent(values)
             coeff = self.loss_case["DECORRELATION_LATENT_LOSS"]
@@ -185,25 +176,33 @@ class LossFunction(nn.Module):
             loss_ret += torch.square(torch.norm(torch.sub(inp,oup,alpha=1), p=2))
         return loss_ret#torch.mul(loss_ret,1)
 
-    def variance_similarities(self, values):
+    def variance_similarities(self, values, compute_on="batch"):
         loss_ret = torch.zeros(1).to(device=self.device)
         variance_list_in = []
         variance_list_out = []
-        #variance_list= [list() for i in range(self.univar_count)]
+        #median_list= [list() for i in range(self.univar_count)]
         
         for id_item, val in enumerate(values):
             variance_list_in.append(val['x_input'])
             variance_list_out.append(val['x_output'])
-
-        variance_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
-        variance_matr_in = torch.reshape(torch.cat(variance_list_in), (len(values),self.univar_count))
-        variance_in = torch.var(variance_matr_in, axis=0)
-
-        variance_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
-        variance_matr_out = torch.reshape(torch.cat(variance_list_out), (len(values),self.univar_count))
         
-        variance_out = torch.var(variance_matr_out, axis=0)
-        #loss_mse = nn.MSELoss()
+        if compute_on=="batch" or compute_on=="B":
+            variance_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
+            variance_matr_in = torch.reshape(torch.cat(variance_list_in), (len(values),self.univar_count))
+            variance_in = torch.median(variance_matr_in, axis=0)[0]
+            
+        elif compute_on=="dataset" or compute_on=="D":
+            variance_list_stats = []
+            
+            for key in self.vc_mapping:
+                variance_list_stats.append(self.statsData['variance_val'][key])
+            variance_in = torch.FloatTensor(variance_list_stats)
+            
+            
+        variance_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
+        variance_matr_out = torch.reshape(torch.cat(variance_list_out), (len(values),self.univar_count))        
+        variance_out = torch.median(variance_matr_out, axis=0)[0]
+        
         for inp,oup in zip(variance_in, variance_out):
             loss_ret += torch.square(torch.norm(torch.sub(inp,oup,alpha=1), p=2))
         return loss_ret#torch.mul(loss_ret,1)
@@ -232,6 +231,7 @@ class LossFunction(nn.Module):
             for inp_item,oup_item in zip(inp_row,oup_row):
                 loss_ret += torch.square(torch.norm(torch.sub(inp_item,oup_item, alpha=1), p=2))
         return loss_ret
+
     
     def kendall_correlation(self, values):
         loss_ret = torch.zeros(1).to(device=self.device)

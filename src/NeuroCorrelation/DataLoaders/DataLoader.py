@@ -41,8 +41,9 @@ class DataLoader:
         self.statsData = None
         self.vc_dict = vc_dict
         self.univ_limit = univ_limit
-
-    def dataset_load(self, draw_plots=True, save_summary=True, loss=None, correlationCoeff=True):
+        self.pathMap = None
+        
+    def dataset_load(self, draw_plots=True, save_summary=True, loss=None, do__correlationCoeff=True):
         self.loss = loss
         if self.mode=="random_var" and self.name_dataset=="3var_defined":
             print("DATASET PHASE: Sample generation")
@@ -52,7 +53,8 @@ class DataLoader:
             train_data, self.corrCoeff['data']['train_data'] = self.dataGenerator.casualVC_generation(name_data="train", num_of_samples = self.train_samples, draw_plots=draw_plots)
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.casualVC_generation(name_data="test", num_of_samples = self.test_samples,  draw_plots=draw_plots)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
-            self.vc_mapping = ['X', 'Y','Z']
+            self.vc_mapping = ['X', 'Y', 'Z']
+            self.pathMap = None
 
         if self.mode=="random_var" and self.name_dataset=="copula":
             print("DATASET PHASE: Sample copula generation")
@@ -68,6 +70,7 @@ class DataLoader:
             train_data, self.corrCoeff['data']['train'] = self.dataGenerator.casualVC_generation(name_data="train", univar_count=self.univar_count, num_of_samples = self.train_samples, draw_plots=draw_plots, instaces_size=self.instaces_size)
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.casualVC_generation(name_data="test", univar_count=self.univar_count, num_of_samples = self.test_samples,  draw_plots=draw_plots, instaces_size=self.instaces_size)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots, instaces_size=self.instaces_size)
+            self.pathMap = None
         
         if self.mode =="graph_roads":
             print("DATASET PHASE: Load maps data")
@@ -76,10 +79,11 @@ class DataLoader:
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             
-            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, correlationCoeff=correlationCoeff)
-            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, correlationCoeff=correlationCoeff)
+            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, do__correlationCoeff=do__correlationCoeff)
+            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, do__correlationCoeff=do__correlationCoeff)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
+            self.pathMap = self.dataGenerator.get_pathMap()
             
         if self.mode=="graph_statics":
             print("to implement")
@@ -113,6 +117,9 @@ class DataLoader:
         if self.rangeData is None:
             raise Exception("rangeData not defined.")
         return self.rangeData
+    
+    def get_pathMap(self):
+        return self.pathMap
         
     def checkInDict(self, dict_obj, key, value_default):
         if key in dict_obj:
