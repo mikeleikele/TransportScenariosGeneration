@@ -1,6 +1,5 @@
 osmnx
 ogr2osm
-sklearn
 shapely
 pandas
 geopandas
@@ -11,4 +10,10 @@ xmltodict
 scikit-mobility
 copulas
 torchviz
-optuna
+scikit-optimize
+torchinfo
+seaborn
+torch_geometric
+torchmetrics
+visdom
+folium

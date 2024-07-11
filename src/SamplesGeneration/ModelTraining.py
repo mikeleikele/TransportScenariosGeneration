@@ -46,8 +46,8 @@ class ModelTraining():
                 loss = torch.zeros([1])
                 self.optimizer.zero_grad()
                 for i, (samplef, noisef) in enumerate(dataBatch):
-                    sample = samplef.float()
-                    noise = noisef.float()
+                    sample = samplef.type(torch.float32)
+                    noise = noisef.type(torch.float32)
                     # compute the model output
                     y_hat = self.model.forward(x=noise)
                     # calculate loss

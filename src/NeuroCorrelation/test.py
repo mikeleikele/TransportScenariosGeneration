@@ -149,7 +149,7 @@ if __name__ == "__main__":
         
         print("end")
         print("========================================")
-        print("folder:\t",args[3])
+        print("folder:\t",args[-1])
     
     elif args[0] ==  "--help":
         print("--neuroD")

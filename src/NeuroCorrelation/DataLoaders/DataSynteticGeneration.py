@@ -11,7 +11,7 @@ from sklearn.datasets import make_spd_matrix
 from pathlib import Path
 import json
 import os
-
+import statistics
 from copulas.multivariate import GaussianMultivariate
 import matplotlib.pyplot as plt
 
@@ -27,10 +27,13 @@ class DataSynteticGeneration():
         self.univar_count = univar_count
         self.lat_dim = lat_dim
         self.path_folder = path_folder
-        self.univar_count = None
+        
         self.min_val = None
         self.max_val = None
-
+        self.mean_vc_val = dict()
+        self.median_vc_val = dict()
+        self.variance_vc_val = dict()
+        
 
     def get_muR(self):
         if self.with_cov:
@@ -209,7 +212,7 @@ class DataSynteticGeneration():
             
         corrMatrix = self.comparison_plot_syntetic.correlationCoeff(self.real_data_vc)
         if draw_plots:
-            self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc,plot_name="syntetic", color_data="olive")
+            self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc, plot_name="syntetic", color_data="olive")
             self.comparison_plot_syntetic.plot_vc_correlationCoeff(self.real_data_vc, "syntetic", corrMatrix=corrMatrix)
         return corrMatrix
 
@@ -249,6 +252,12 @@ class DataSynteticGeneration():
             else:
                 max_vc = max(vc_values)
                 self.max_val = max(max_vc, self.max_val)
+                
+            self.mean_vc_val[key_vc] = statistics.mean(vc_values)
+            self.median_vc_val[key_vc] = statistics.median(vc_values)
+            self.variance_vc_val[key_vc] = statistics.variance(vc_values)
+            
+            
         self.mu = list()
         rho_val_list = list()
 
@@ -297,7 +306,7 @@ class DataSynteticGeneration():
             df_data.loc[i] = tensor_list        
         return df_data
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1, draw_correlationCoeff=True):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
@@ -310,11 +319,10 @@ class DataSynteticGeneration():
                 real_data = self.data2Copula(real_data)
             else:
                 real_data = real_data
-            vc_mapping =list(real_data.columns.values)
+            vc_mapping = list(real_data.columns.values)
         if univar_count == None:
             univar_count = self.univar_count
-
-        
+         
         copula = GaussianMultivariate()
         print("\t"+name_data+"\tcopula.fit : start")
         copula.fit(real_data)
@@ -341,37 +349,46 @@ class DataSynteticGeneration():
             for j in range(instaces_size):
                 sample.append(self.getSample(i))
             
-            matrix_sample = torch.Tensor(instaces_size, univar_count)
+            matrix_sample = torch.Tensor(instaces_size, univar_count).to(self.torch_device)
             torch.cat(sample, out=matrix_sample)
             matrix_sample = matrix_sample.view(1, 1, univar_count, instaces_size)
             dataset_couple.append({"sample":matrix_sample, "noise":self.getRandom(dim=univar_count)})
-        self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, dim_latent=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
+        self.comparison_plot = DataComparison(univar_count_in=univar_count, univar_count_out=univar_count, dim_latent=None, path_folder= path_fold_copulagenAnalysis)
         noise_data_vc = dict()
         for id_var in range(univar_count):
             noise_data_vc[id_var] = list()
         for item in dataset_couple:
             for id_var in range(univar_count):
                 for j in range(instaces_size):
-                    noise_data_vc[id_var].append(item['sample'][0][0][id_var][j].detach().numpy().tolist())
+                    noise_data_vc[id_var].append(item['sample'][0][0][id_var][j].detach().cpu().numpy().tolist())
                     
         if draw_plots:
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
+            self.comparison_plot.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
         df_data = pd.DataFrame(noise_data_vc)
-        
-        rho = self.comparison_plot_noise.correlationCoeff(df_data)
+        if draw_correlationCoeff:
+            rho = self.comparison_plot.correlationCoeff(df_data)
+        else:
+            rho = None
         return dataset_couple, rho
 
 
     def getSample(self, key_sample):
         sample = []
         for ed in self.sample_synthetic:    
-            sample.append(ed[0][key_sample])  
-        return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+            sample.append(ed[0][key_sample])
+        sample_torch = torch.from_numpy(np.array([float(x) for x in sample])).type(torch.float32).to(self.torch_device)
+        return sample_torch
+  
+    
+    def getDataStats(self):
+        statsData = {"mean_val": self.mean_vc_val, "median_val":self.median_vc_val, "variance_val":self.variance_vc_val}
+        return statsData
     
     def getRandom(self, dim):
-        randomNoise =  torch.randn(1, dim).to(self.torch_device)
-        #torch.randn(dim).uniform_(0,1).to(self.torch_device)
-        return randomNoise.float()
+        randomNoise =  torch.randn(1, dim).type(torch.float32).to(self.torch_device)
+        #torch.randn(1, dim).type(torch.float32).to(self.torch_device)
+        #torch.randn(1, dim).uniform_(0,1).type(torch.float32).to(self.torch_device)
+        return randomNoise.type(torch.float32)
     
     def get_synthetic_noise_data(self, name_data, num_of_samples = 5000,  draw_plots=True, instaces_size=1):
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")
@@ -387,9 +404,10 @@ class DataSynteticGeneration():
                 for lat_id in range(self.lat_dim):
                     random_sampled.append(random_values[lat_id][0][s_id])
                 sample.append(torch.stack(random_sampled))
-            matrix_sample = torch.Tensor(instaces_size, lat_id)
+            matrix_sample = torch.Tensor(instaces_size, lat_id).to(self.torch_device)
             torch.cat(sample, out=matrix_sample)       
             matrix_sample = matrix_sample.view(1, 1, self.lat_dim,instaces_size)
+            
             
             dataset_couple.append({"sample":matrix_sample, "noise":matrix_sample})
 

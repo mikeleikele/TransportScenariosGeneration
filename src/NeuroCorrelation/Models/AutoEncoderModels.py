@@ -1,3 +1,5 @@
+import torchinfo 
+import torch
 from torch import Tensor, zeros
 from torch.nn import Linear
 from torch.nn import ReLU
@@ -8,6 +10,7 @@ from torch.nn import BCELoss
 import torch.nn as nn
 import torch.nn.functional as F
 from torchviz import make_dot
+import torch_geometric.nn as gm
 from pathlib import Path
 import os
 
@@ -138,6 +141,13 @@ class GEN_autoEncoder_3(nn.Module):
     def get_decoder(self):
         return self.decoder
 
+    def summary(self):       
+        enc_summary = []#torchinfo.summary(self.encoder, (1, 1, 1, 7), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = []#torchinfo.summary(self.decoder, (1, 1, 1, 4), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
 class GEN_autoEncoder_Encoder_3(nn.Module):
     def __init__(self):
        
@@ -198,36 +208,47 @@ class GEN_autoEncoder_16(nn.Module):
     def get_decoder(self):
         return self.decoder
 
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 16), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 12), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
 class GEN_autoEncoder_Encoder_16(nn.Module):
     def __init__(self):
-       
-        super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=48)
-        self.hidden_layer_2 = nn.Linear(in_features=48, out_features=64)
-        self.hidden_layer_3 = nn.Linear(in_features=64, out_features=48)
-        self.hidden_layer_4 = nn.Linear(in_features=48, out_features=32)
-        self.hidden_layer_5 = nn.Linear(in_features=32, out_features=16)
-        self.hidden_layer_6 = nn.Linear(in_features=16, out_features=14)
-        self.hidden_layer_7 = nn.Linear(in_features=14, out_features=12)
-        #BN without any learning associated to it
-        #self.batch_norm_1 = nn.BatchNorm1d(12, affine=True)
 
-    def forward(self, x):
-        layer_nn = self.hidden_layer_1(x)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_2(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_3(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_4(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_5(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_6(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        x_out = self.hidden_layer_7(layer_nn)
-        #x_out = self.batch_norm_1(layer_nn)
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=14)
+        self.hidden_layer_2 = nn.Linear(in_features=14, out_features=12)
         
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
+        
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+                
+        #== layer OUT ===================
+        x_out = layer_nn
         return {"x_input":x, "x_output":x_out}
 
 class GEN_autoEncoder_Decoder_16(nn.Module):
@@ -235,33 +256,30 @@ class GEN_autoEncoder_Decoder_16(nn.Module):
     def __init__(self):
        
         super().__init__()
+        
         self.hidden_layer_1 = nn.Linear(in_features=12, out_features=14)
         self.hidden_layer_2 = nn.Linear(in_features=14, out_features=16)
-        self.hidden_layer_3 = nn.Linear(in_features=16, out_features=32)
-        self.hidden_layer_4 = nn.Linear(in_features=32, out_features=48)
-        self.hidden_layer_5 = nn.Linear(in_features=48, out_features=64)
-        self.hidden_layer_6 = nn.Linear(in_features=64, out_features=48)
-        self.hidden_layer_7 = nn.Linear(in_features=48, out_features=16)
-
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
+        
+        self.dp_1 = nn.Dropout(p=0.2)        
+        
     def forward(self, x):
-        #layer_nn = self.bn_1(x)
-        layer_nn = self.hidden_layer_1(x)
-        layer_nn = F.tanh(layer_nn)
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        #layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
         layer_nn = self.hidden_layer_2(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_3(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_4(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_5(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        layer_nn = self.hidden_layer_6(layer_nn)
-        layer_nn = F.tanh(layer_nn)
-        x_out = self.hidden_layer_7(layer_nn)
         
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
         
-        return {"x_input":x, "x_output":x_out}
-    
 
 class GEN_autoEncoder_325(nn.Module):
     def __init__(self, **kwargs):
@@ -416,11 +434,7 @@ class GEN_ConvAutoEncoder_7(nn.Module):
         self.decoder = GEN_ConvAutoEncoder_Decoder_7()
 
     def forward(self, x):
-        print("419-----------------")
-        print(x.shape)
-        print("********************")
         x_latent = self.encoder(x)
-        print(x_latent["x_output"].shape)
         x_hat = self.decoder(x_latent["x_output"])
         return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
 
@@ -550,3 +564,1441 @@ class GEN_autoEncoder_Decoder_6k(nn.Module):
         
         
         return {"x_input":x, "x_output":x_out}
+    
+    
+##########
+
+class GEN_autoEncoder_05k(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_05k()
+        self.decoder = GEN_autoEncoder_Decoder_05k()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+class GEN_autoEncoder_Encoder_05k(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=200, out_features=400)
+        self.hidden_layer_2 = n# The code appears to be a Python script that may be related to a
+        # Generative Adversarial Network (GAN) using Graph Convolutional
+        # Networks (GCN) with linear layers, possibly utilizing a pretrained
+        # ResNet-0128 model. The script may be designed for a specific task or
+        # project related to image generation or manipulation. The mention of
+        # "CHENGDU" and "bt" is not clear from the code snippet provided.
+        n.Linear(in_features=400, out_features=300)
+        self.hidden_layer_3 = nn.Linear(in_features=300, out_features=250)
+        self.hidden_layer_4 = nn.Linear(in_features=250, out_features=200)
+        self.hidden_layer_5 = nn.Linear(in_features=200, out_features=150)
+    
+        #BN without any learning associated to it
+        #self.batch_norm_1 = nn.BatchNorm1d(12, affine=True)
+
+    def forward(self, x):
+        layer_nn = self.hidden_layer_1(x)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        x_out = self.hidden_layer_5(layer_nn)
+        #x_out = self.batch_norm_1(layer_nn)
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_05k(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_3 = nn.Linear(in_features=150, out_features=200)
+        self.hidden_layer_4 = nn.Linear(in_features=200, out_features=250)
+        self.hidden_layer_5 = nn.Linear(in_features=250, out_features=300)
+        self.hidden_layer_6 = nn.Linear(in_features=300, out_features=400)
+        self.hidden_layer_7 = nn.Linear(in_features=400, out_features=200)
+
+    def forward(self, x):
+        #layer_nn = self.bn_1(x)
+        layer_nn = self.hidden_layer_3(x)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        x_out = self.hidden_layer_7(layer_nn)
+        
+        
+        return {"x_input":x, "x_output":x_out}
+    
+    
+
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_64()
+        self.decoder = GEN_autoEncoder_Decoder_64()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        enc_summary = torchsummary.summary(self.encoder, (1, 1, 64), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchsummary.summary(self.decoder, (1, 1, 48), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+#---------------------------
+
+#---------------------------
+# MODEL EXOGENOUS  
+class GEN_autoEncoder_Encoder_exogenous_7(nn.Module):
+    def __init__(self,):
+       
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=7, out_features=5)
+        self.hidden_layer_2 = nn.Linear(in_features=5, out_features=3)
+        
+        self.act_1 = nn.LeakyReLU(0.2)        
+        self.dp_1 = nn.Dropout(p=0.2)
+       
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+#---------------------------
+
+#---------------------------
+# MODEL 32  
+class GEN_autoEncoder_32(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_32()
+        self.decoder = GEN_autoEncoder_Decoder_32()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 32), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 30), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_32(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=32, out_features=28)
+        self.hidden_layer_2 = nn.Linear(in_features=28, out_features=22)
+        
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_32(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=22, out_features=28)
+        self.hidden_layer_2 = nn.Linear(in_features=28, out_features=32)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)    
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 48
+class GEN_autoEncoder_48(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_48()
+        self.decoder = GEN_autoEncoder_Decoder_48()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 48), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 44), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_48(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=96)
+        #self.hidden_layer_2 = nn.Linear(in_features=64, out_features=96)        
+        #self.hidden_layer_3 = nn.Linear(in_features=96, out_features=128)
+        self.hidden_layer_4 = nn.Linear(in_features=96, out_features=64)        
+        self.hidden_layer_5 = nn.Linear(in_features=64, out_features=58)
+        self.hidden_layer_6 = nn.Linear(in_features=58, out_features=52)
+        self.hidden_layer_7 = nn.Linear(in_features=52, out_features=48)
+        self.hidden_layer_8 = nn.Linear(in_features=48, out_features=44)
+        #BN without any learning associated to it
+        #self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+
+    def forward(self, x):
+        
+        layer_nn = self.hidden_layer_1(x)
+        layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.batch_norm_1(layer_nn)
+        
+        #layer_nn = self.hidden_layer_2(layer_nn)
+        #layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.hidden_layer_3(layer_nn)
+        #layer_nn = F.tanh(layer_nn)        
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)        
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)        
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = F.tanh(layer_nn)        
+        layer_nn = self.hidden_layer_7(layer_nn)
+        layer_nn = F.tanh(layer_nn)        
+        layer_nn = self.hidden_layer_8(layer_nn)        
+        
+        #layer_nn = self.batch_norm_1(layer_nn)
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_48(nn.Module):
+           
+    
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=44, out_features=48)
+        self.hidden_layer_2 = nn.Linear(in_features=48, out_features=52)
+        self.hidden_layer_3 = nn.Linear(in_features=52, out_features=58)
+        self.hidden_layer_4 = nn.Linear(in_features=58, out_features=64)
+        self.hidden_layer_5 = nn.Linear(in_features=64, out_features=96)
+        #self.hidden_layer_6 = nn.Linear(in_features=128, out_features=96)
+        #self.hidden_layer_7 = nn.Linear(in_features=96, out_features=64)
+        self.hidden_layer_8 = nn.Linear(in_features=96, out_features=48)
+                
+    def forward(self, x):
+        #layer_nn = self.bn_1(x)
+        layer_nn = self.hidden_layer_1(x)
+        layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_1(layer_nn)
+        
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_2(layer_nn)
+        
+        
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_3(layer_nn)
+        
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_4(layer_nn)
+        
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = F.tanh(layer_nn)
+        ##layer_nn = self.dropout_5(layer_nn)
+        
+        ##layer_nn = self.hidden_layer_6(layer_nn)
+        ##layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_6(layer_nn)
+        
+        ##layer_nn = self.hidden_layer_7(layer_nn)
+        ##layer_nn = F.tanh(layer_nn)
+        #layer_nn = self.dropout_6(layer_nn)
+        
+        x_out = self.hidden_layer_8(layer_nn)
+        
+        
+        return {"x_input":x, "x_output":x_out}
+   
+#---------------------------
+
+#---------------------------
+# MODEL 64
+class GEN_autoEncoder_64(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_64()
+        self.decoder = GEN_autoEncoder_Decoder_64()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 64), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 50), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_64(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=64, out_features=60)
+        self.hidden_layer_2 = nn.Linear(in_features=60, out_features=56)
+        self.hidden_layer_3 = nn.Linear(in_features=56, out_features=52)        
+        self.hidden_layer_4 = nn.Linear(in_features=52, out_features=50)
+        
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_64(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=50, out_features=52)
+        self.hidden_layer_2 = nn.Linear(in_features=52, out_features=56)
+        self.hidden_layer_3 = nn.Linear(in_features=56, out_features=60)
+        self.hidden_layer_4 = nn.Linear(in_features=60, out_features=64)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)       
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 64GCN
+class GEN_autoEncoderGCN_64(nn.Module):
+    def __init__(self, edge_index, **kwargs):
+        super().__init__()
+        self.edge_index = edge_index
+        self.encoder = GEN_autoEncoderGCN_Encoder_64(edge_index)
+        self.decoder = GEN_autoEncoderGCN_Decoder_64(edge_index)
+        
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=[(1, 64), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=[(1, 50), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoderGCN_Encoder_64(nn.Module):
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        #self.edge_index = edge_index
+        
+        
+        self.hidden_layer_1 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.hidden_layer_2 = nn.Linear(in_features=64, out_features=56)
+        self.hidden_layer_3 = nn.Linear(in_features=56, out_features=52)        
+        self.hidden_layer_4 = nn.Linear(in_features=52, out_features=50)
+        self.edge_index = edge_index
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_1(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoderGCN_Decoder_64(nn.Module):
+    
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        
+        #self.edge_index = edge_index
+        self.hidden_layer_1 = nn.Linear(in_features=50, out_features=52)
+        self.hidden_layer_2 = nn.Linear(in_features=52, out_features=56)
+        self.hidden_layer_3 = nn.Linear(in_features=56, out_features=64)
+        self.hidden_layer_4 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.edge_index = edge_index
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_4(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 128  
+class GEN_autoEncoder_128(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_128()
+        self.decoder = GEN_autoEncoder_Decoder_128()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 128), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 80), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_128(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=128, out_features=112)
+        self.hidden_layer_2 = nn.Linear(in_features=112, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=84)        
+        self.hidden_layer_4 = nn.Linear(in_features=84, out_features=80)
+        
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_128(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=80, out_features=84)
+        self.hidden_layer_2 = nn.Linear(in_features=84, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=112)
+        self.hidden_layer_4 = nn.Linear(in_features=112, out_features=128)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)       
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 128
+class GEN_autoEncoderGCN_128(nn.Module):
+    def __init__(self, edge_index, **kwargs):
+        super().__init__()
+        self.edge_index = edge_index
+        self.encoder = GEN_autoEncoderGCN_Encoder_graph_128(edge_index)
+        self.decoder = GEN_autoEncoderGCN_Decoder_128(edge_index)
+        
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=[(1, 128), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=[(1, 80), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoderGCN_Encoder_graph_128(nn.Module):
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        #self.edge_index = edge_index
+        
+        
+        self.hidden_layer_1 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.hidden_layer_2 = nn.Linear(in_features=128, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=84)        
+        self.hidden_layer_4 = nn.Linear(in_features=84, out_features=80)
+        self.edge_index = edge_index
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_1(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+                
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoderGCN_Decoder_128(nn.Module):
+    
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        
+        #self.edge_index = edge_index
+        self.hidden_layer_1 = nn.Linear(in_features=80, out_features=84)
+        self.hidden_layer_2 = nn.Linear(in_features=84, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=128)
+        self.hidden_layer_4 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.edge_index = edge_index
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+                
+        #== layer 04  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_4(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#+++++++++++++++++++++++++++
+# MODEL GCN EXO 128
+class GEN_autoEncoderGCN_exo_128(nn.Module):
+    def __init__(self, edge_index, **kwargs):
+        super().__init__()
+        self.edge_index = edge_index
+        self.encoder_exo = GEN_autoEncoder_Encoder_exogenous_7()
+        self.encoder_graph = GEN_autoEncoderGCN_Encoder_graph_128(edge_index)
+        self.decoder = GEN_autoEncoderGCN_Decoder_exo_128(edge_index)
+        
+
+    def forward(self, x_graph, x_exo):
+        x_latent_graph = self.encoder_graph(x_graph)
+        x_latent_exo = self.encoder_exo(x_exo)
+        x_latent = torch.cat((x_latent_graph["x_output"], x_latent_exo["x_output"]), dim=2)
+        x_hat = self.decoder(x_latent)
+        return {"x_input":x_graph, "x_input_exo":x_exo, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_graph_summary = torchinfo.summary(self.encoder_graph, input_size=[(1, 128), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        enc_exo_summary = torchinfo.summary(self.encoder_exo, input_size=[(1, 7), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=[(1, 83), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder_graph": enc_graph_summary, "encoder_exo": enc_exo_summary, "decoder": dec_summary}
+        return summary_dict
+    
+class GEN_autoEncoderGCN_Encoder_graph_128(nn.Module):
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        #self.edge_index = edge_index
+        
+        
+        self.hidden_layer_1 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.hidden_layer_2 = nn.Linear(in_features=128, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=84)        
+        self.hidden_layer_4 = nn.Linear(in_features=84, out_features=80)
+        self.edge_index = edge_index
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_1(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+                
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoderGCN_Decoder_exo_128(nn.Module):
+    
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        
+        #self.edge_index = edge_index
+        self.hidden_layer_1 = nn.Linear(in_features=83, out_features=84)
+        self.hidden_layer_2 = nn.Linear(in_features=84, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=128)
+        self.hidden_layer_4 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.edge_index = edge_index
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+                
+        #== layer 04  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_4(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+
+#---------------------------
+# MODEL 256
+class GEN_autoEncoder_256(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_256()
+        self.decoder = GEN_autoEncoder_Decoder_256()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 256), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 80), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_256(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=256, out_features=112)
+        self.hidden_layer_2 = nn.Linear(in_features=112, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=80)        
+        
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_256(nn.Module):
+    
+    def __init__(self):
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=80,out_features=96)
+        self.hidden_layer_2 = nn.Linear(in_features=96, out_features=112)
+        self.hidden_layer_3 = nn.Linear(in_features=112, out_features=256)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 742
+class GEN_autoEncoderGCN_742(nn.Module):
+    def __init__(self, edge_index, **kwargs):
+        super().__init__()
+        self.edge_index = edge_index
+        self.encoder = GEN_autoEncoderGCN_Encoder_742(edge_index)
+        self.decoder = GEN_autoEncoderGCN_Decoder_742(edge_index)
+        
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=[(1, 742), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=[(1, 400), self.edge_index[0].shape], batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoderGCN_Encoder_742(nn.Module):
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        #self.edge_index = edge_index
+        
+        
+        self.hidden_layer_1 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.hidden_layer_2 = nn.Linear(in_features=742, out_features=628)
+        self.hidden_layer_3 = nn.Linear(in_features=628, out_features=514)        
+        self.hidden_layer_4 = nn.Linear(in_features=514, out_features=400)
+        self.edge_index = edge_index
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+       
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_1(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+                
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoderGCN_Decoder_742(nn.Module):
+    
+    def __init__(self, edge_index):
+       
+        super().__init__()
+        
+        #self.edge_index = edge_index
+        self.hidden_layer_1 = nn.Linear(in_features=400, out_features=514)
+        self.hidden_layer_2 = nn.Linear(in_features=514, out_features=628)
+        self.hidden_layer_3 = nn.Linear(in_features=628, out_features=742)
+        self.hidden_layer_4 = gm.GCNConv(in_channels=1, out_channels=1)
+        self.edge_index = edge_index
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.Tanh()#nn.LeakyReLU(0.2)#
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+                
+        #== layer 04  ===================
+        layer_nn = layer_nn.permute(0, 2, 1)
+        layer_nn = self.hidden_layer_4(layer_nn, self.edge_index)
+        layer_nn = layer_nn.permute(0, 2, 1)
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+#---------------------------
+
+#---------------------------
+# MODEL 5943  
+class GEN_autoEncoder_5943(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.encoder = GEN_autoEncoder_Encoder_5943()
+        self.decoder = GEN_autoEncoder_Decoder_5943()
+
+    def forward(self, x):
+        x_latent = self.encoder(x)
+        x_hat = self.decoder(x_latent["x_output"])
+        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+
+    def get_decoder(self):
+        return self.decoder
+
+    def summary(self):
+        
+        enc_summary = torchinfo.summary(self.encoder, input_size=(1, 5943), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 2048), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+
+        summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
+        return summary_dict
+
+class GEN_autoEncoder_Encoder_5943(nn.Module):
+    def __init__(self):
+       
+        super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=5943, out_features=11886)
+        self.hidden_layer_2 = nn.Linear(in_features=11886, out_features=23772)
+        self.hidden_layer_3 = nn.Linear(in_features=23772, out_features=14334)
+        self.hidden_layer_4 = nn.Linear(in_features=14334, out_features=9792)
+        self.hidden_layer_5 = nn.Linear(in_features=9792, out_features=4896)
+        #self.hidden_layer_6 = nn.Linear(in_features=3383, out_features=2871)
+        #self.hidden_layer_7 = nn.Linear(in_features=2871, out_features=2359)
+        #self.hidden_layer_8 = nn.Linear(in_features=2359, out_features=2048)
+        
+        #BN without any learning associated to it
+        self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
+        self.batch_norm_2 = nn.BatchNorm1d(num_features=1, affine=True)
+        self.batch_norm_3 = nn.BatchNorm1d(num_features=1, affine=True)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_5 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_6 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_7 = nn.Tanh()
+        
+        
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+        self.dp_5 = nn.Dropout(p=0.2)
+        self.dp_6 = nn.Dropout(p=0.2)
+        self.dp_7 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        #layer_nn = F.tanh(layer_nn)
+        layer_nn = self.act_1(layer_nn)
+        layer_nn = self.dp_1(layer_nn)
+        
+        #== layer BN1 ===================
+        layer_nn = self.batch_norm_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        layer_nn = self.dp_3(layer_nn)
+        
+        #== layer BN2 ===================
+        layer_nn = self.batch_norm_2(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = self.act_4(layer_nn)
+        layer_nn = self.dp_4(layer_nn)
+        
+        #== layer 05  ===================
+        layer_nn = self.hidden_layer_5(layer_nn)
+        ##layer_nn = self.act_5(layer_nn)
+        ##layer_nn = self.dp_5(layer_nn)
+        
+        #== layer 06  ===================
+        ##layer_nn = self.hidden_layer_6(layer_nn)
+        ##layer_nn = self.act_6(layer_nn)
+        ##layer_nn = self.dp_6(layer_nn)
+        
+        #== layer 07  ===================
+        ##layer_nn = self.hidden_layer_7(layer_nn)
+        ##layer_nn = self.act_7(layer_nn)
+        ##layer_nn = self.dp_7(layer_nn)
+        
+        #== layer BN3 ===================
+        ##layer_nn = self.batch_norm_3(layer_nn)
+        
+        #== layer 08  ===================
+        ##layer_nn = self.hidden_layer_8(layer_nn)
+        
+        
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}
+
+class GEN_autoEncoder_Decoder_5943(nn.Module):
+    
+    def __init__(self):
+       
+        super().__init__()
+        
+        self.hidden_layer_1 = nn.Linear(in_features=4896, out_features=9792)
+        self.hidden_layer_2 = nn.Linear(in_features=9792, out_features=14334)
+        self.hidden_layer_3 = nn.Linear(in_features=14334, out_features=23772)
+        self.hidden_layer_4 = nn.Linear(in_features=23772, out_features=11886)
+        self.hidden_layer_5 = nn.Linear(in_features=11886, out_features=5943)
+        ##self.hidden_layer_6 = nn.Linear(in_features=4407, out_features=4919)
+        ##self.hidden_layer_7 = nn.Linear(in_features=4919, out_features=5431)
+        ##self.hidden_layer_8 = nn.Linear(in_features=5431, out_features=5943)
+        
+        self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_5 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_6 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_7 = nn.Tanh()#nn.LeakyReLU(0.2)
+        
+        self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
+        self.dp_3 = nn.Dropout(p=0.2)
+        self.dp_4 = nn.Dropout(p=0.2)
+        self.dp_5 = nn.Dropout(p=0.2)
+        self.dp_6 = nn.Dropout(p=0.2)
+        self.dp_7 = nn.Dropout(p=0.2)
+        
+        
+    def forward(self, x):
+        #== layer IN  ===================
+        layer_nn = x       
+        
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.act_1(layer_nn)
+        #layer_nn = self.dp_1(layer_nn)
+        
+        #== layer 02  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.act_2(layer_nn)
+        #layer_nn = self.dp_2(layer_nn)
+        
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
+        layer_nn = self.act_3(layer_nn)
+        #layer_nn = self.dp_3(layer_nn)
+        
+        #== layer 04  ===================
+        layer_nn = self.hidden_layer_4(layer_nn)
+        layer_nn = self.act_4(layer_nn)
+        layer_nn = self.dp_4(layer_nn)
+        
+        #== layer 05  ===================        
+        layer_nn = self.hidden_layer_5(layer_nn)
+        layer_nn = self.act_5(layer_nn)
+        layer_nn = self.dp_5(layer_nn)
+        
+        #== layer 06  ===================
+        layer_nn = self.hidden_layer_6(layer_nn)
+        layer_nn = self.act_6(layer_nn)
+        layer_nn = self.dp_6(layer_nn)
+        
+         #== layer 07  ===================
+        layer_nn = self.hidden_layer_7(layer_nn)
+        layer_nn = self.act_7(layer_nn)
+        layer_nn = self.dp_7(layer_nn)
+        
+        #== layer 08  ===================
+        layer_nn = self.hidden_layer_8(layer_nn)
+        
+        
+        #== layer OUT ===================
+        x_out = layer_nn
+        return {"x_input":x, "x_output":x_out}    
+ 
+    

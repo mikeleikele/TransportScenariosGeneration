@@ -141,11 +141,11 @@ class DataSynteticGeneration():
         sample = []
         for ed in self.sample_synthetic:    
             sample.append(ed[0][key_sample])  
-        return torch.from_numpy(np.array(sample)).float().to(self.torch_device)
+        return torch.from_numpy(np.array(sample)).type(torch.float32).to(self.torch_device)
     
     def getRandom(self):
         randomNoise = torch.randn(self.size_random).uniform_(0,1).to(self.torch_device)
-        return randomNoise.float()
+        return randomNoise.type(torch.float32)
 
     def get_synthetic_data(self):
         return self.sample_synthetic

@@ -5,6 +5,7 @@ from src.NeuroCorrelation.ModelTraining import ModelTraining
 from src.NeuroCorrelation.ModelPrediction import ModelPrediction
 from src.NeuroCorrelation.DataComparison import DataComparison
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm
@@ -51,20 +52,5 @@ class NeuralCore():
 
             data = {"input":{'data':pred_data_byvar['input'],'color':'red'}, "reconstructed":{'data':pred_data_byvar['output'],'color':'blue'}}
             datacomparison_obj.data_comparison_plot(data)
-            
 
-        
-    
-
-            
-        #univar_dict = dict()
-        #self.gen_train.random_sample(random_samples=500)
-        #self.gen_train.compute_correlationMatrix()
-        #for univar_id in range(78):
-        #    best = self.gen_train.overfitting_univariate(univar_id, draw_plot=True)
-        #    univar_dict[univar_id] = best
-        #print(univar_dict)
-
-        
-        
     
