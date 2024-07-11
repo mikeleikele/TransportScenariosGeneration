@@ -10,10 +10,11 @@ import matplotlib.gridspec as gridspec
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150):
+    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
         
         self.mode = mode
         self.seed = seed
@@ -42,8 +43,11 @@ class DataLoader:
         self.vc_dict = vc_dict
         self.univ_limit = univ_limit
         self.pathMap = None
+        self.edge_index = None
+        self.timeweather = timeweather
+        self.time_slot = time_slot
         
-    def dataset_load(self, draw_plots=True, save_summary=True, loss=None, do__correlationCoeff=True):
+    def dataset_load(self, draw_plots=True, save_summary=True, loss=None, draw_correlationCoeff=True):
         self.loss = loss
         if self.mode=="random_var" and self.name_dataset=="3var_defined":
             print("DATASET PHASE: Sample generation")
@@ -55,6 +59,8 @@ class DataLoader:
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = ['X', 'Y', 'Z']
             self.pathMap = None
+            self.edge_index = None
+            timeweather_data = None
 
         if self.mode=="random_var" and self.name_dataset=="copula":
             print("DATASET PHASE: Sample copula generation")
@@ -71,19 +77,26 @@ class DataLoader:
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.casualVC_generation(name_data="test", univar_count=self.univar_count, num_of_samples = self.test_samples,  draw_plots=draw_plots, instaces_size=self.instaces_size)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots, instaces_size=self.instaces_size)
             self.pathMap = None
+            self.edge_index = None
+            timeweather_data = None
         
-        if self.mode =="graph_roads":
-            print("DATASET PHASE: Load maps data")
-            
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit)
+        if self.mode =="graph_roads" or self.mode=="fin_data":
+            if self.mode =="graph_roads":
+                print("DATASET PHASE: Load maps data")
+            elif self.mode=="fin_data":
+                print("DATASET PHASE: Load maps data")
+                
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             
-            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, do__correlationCoeff=do__correlationCoeff)
-            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, do__correlationCoeff=do__correlationCoeff)
+            train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
+            test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
             self.pathMap = self.dataGenerator.get_pathMap()
+            self.edge_index = self.dataGenerator.get_edgeIndex()
+                
             
         if self.mode=="graph_statics":
             print("to implement")
@@ -93,8 +106,14 @@ class DataLoader:
         self.statsData = self.dataGenerator.getDataStats()
         
         reduced_noise_data = self.generateNoiseReduced(method="percentile", percentile_points=10)
-         
-        data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data, "reduced_noise_data":reduced_noise_data}
+        
+        self.export_datasplit(data=train_data, name_split="train_data", key="sample")
+        self.export_datasplit(data=train_data, name_split="train_data", key="sample_timeweather")
+        
+        self.export_datasplit(data=test_data, name_split="test_data", key="sample")
+        self.export_datasplit(data=test_data, name_split="test_data", key="sample_timeweather")
+        
+        data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data, "reduced_noise_data":reduced_noise_data, "edge_index":self.edge_index}
         
         if save_summary:
             self.saveDataset_setting()
@@ -121,6 +140,9 @@ class DataLoader:
     def get_pathMap(self):
         return self.pathMap
         
+    def get_edgeIndex(self):
+        return self.edge_index
+    
     def checkInDict(self, dict_obj, key, value_default):
         if key in dict_obj:
             if dict_obj[key] is not None:
@@ -137,7 +159,10 @@ class DataLoader:
         settings_list.append(f"================") 
         settings_list.append(f"mode_dataset:: {self.mode}") 
         settings_list.append(f"name_dataset:: {self.name_dataset}")
+        if self.time_slot is not None:
+            settings_list.append(f"time_slot:: {self.time_slot}") 
         settings_list.append(f"mode_dataset:: {self.epoch}") 
+        
          
         for key in self.dataset_setting:
             print("saveDataset_setting\t",key)
@@ -233,3 +258,27 @@ class DataLoader:
                         recur_list.append(a)
                 return recur_list    
         
+    def export_datasplit(self, data, name_split, key='sample'):
+        if not torch.any(torch.isnan(data[0][key])):
+            list_data = list()
+            for inp in range(len(data)):            
+                list_data.append(data[inp][key])
+                
+            data_byVar = dict()
+            for univ_id in range(self.univar_count):
+                data_byVar[univ_id] = list()
+            
+            df_export = pd.DataFrame(columns=['x_input']) 
+            max_val = self.rangeData["max_val"]
+            min_val = self.rangeData["min_val"]
+            diff_minmax = max_val - min_val
+            for x in list_data:
+                x_list = [(i*diff_minmax)+ min_val for i in x.detach().cpu().numpy()]
+                new_row = {'x_input': x_list}
+                df_export.loc[len(df_export)] = new_row
+            
+            datasplit_path = Path(self.path_folder,'datasplit')
+            if not os.path.exists(datasplit_path):
+                os.makedirs(datasplit_path)
+            path_file = Path(datasplit_path,f"datasplit_{name_split}_{key}.csv")
+            df_export.to_csv(path_file)

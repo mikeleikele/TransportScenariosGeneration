@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 import os
 import json
 from matplotlib.ticker import PercentFormatter
+import datetime
 
 class ModelPrediction():
 
-    def __init__(self, model, device, dataset, univar_count_in, univar_count_out, latent_dim, path_folder, vc_mapping, data_range=None, input_shape="vector", isnoise_in = False, isnoise_out = False):
+    def __init__(self, model, device, dataset, univar_count_in, univar_count_out, latent_dim, path_folder, vc_mapping, time_performance, data_range=None, input_shape="vector", isnoise_in = False, isnoise_out = False):
         self.model = model
         self.dataset = dataset
         self.univar_count_in = univar_count_in
@@ -20,6 +21,7 @@ class ModelPrediction():
         self.path_folder = path_folder
         self.device = device
         self.vc_mapping = vc_mapping
+        self.time_performance = time_performance
         if data_range is not None:
             self.max_val = data_range['max_val']
             self.min_val = data_range['min_val']
@@ -37,13 +39,17 @@ class ModelPrediction():
         self.isnoise_out = isnoise_out
         
     
-    def predict(self, input_sample, pred2numpy=True, latent=True, save=True, experiment_name=None, remapping=False):
+    def predict(self, input_sample, time_key, pred2numpy=True, latent=True, save=True, experiment_name=None, remapping=False):
         self.inpu_data = list()
         self.late_data = list()
         self.pred_data = list()
-
+        pred_time = datetime.timedelta(0)
+        
+        time_key = f"{time_key}_pred"
+        
         for inp in input_sample:            
             with torch.no_grad():
+                
                 input_2d = [inp["sample"]]
                 x_in = torch.Tensor(1, self.univar_count_in).to(device=self.device)
                 torch.cat(input_2d, out=x_in) 
@@ -52,13 +58,20 @@ class ModelPrediction():
                 elif self.input_shape == "matrix":
                     x_in = x_in
                 x_in.unsqueeze_(1)
-                 
+                
                 with torch.no_grad():
-                    out = self.model(x_in)          
+                    self.time_performance.start_time(time_key)
+
+                    out = self.model(x_in)  
+                    self.time_performance.stop_time(time_key)
+                    
+                    
                 self.inpu_data.append(out["x_input"][0][0])
                 if "x_latent" in out:
                     self.late_data.append(out["x_latent"][0][0])
                 self.pred_data.append(out["x_output"][0][0])
+        self.time_performance.compute_time(time_key, fun = "mean") 
+        print(f"\tTIME to make {time_key} prediction:\t",self.time_performance.get_time(time_key, fun = "mean"))
         self.predict_sortByUnivar(pred2numpy=pred2numpy)
         if latent:
             self.latent_sortByComponent(pred2numpy=pred2numpy)
@@ -188,13 +201,13 @@ class ModelPrediction():
         return comp_dict
     
     # latent_dim, path_folder, data_range=None, input_shape
-    def compute_prediction(self, experiment_name, remapping_data=False):
+    def compute_prediction(self, experiment_name, time_key, remapping_data=False):
         resultDict = dict()
         #modelPrediction = ModelPrediction(model, device=device, univar_count_in=univar_count_in, univar_count_out=univar_count_out, latent_dim=latent_dim, data_range=data_range, input_shape=input_shape, path_folder=folder)
         if self.latent_dim is not None:
-            self.predict(self.dataset, latent=True,  experiment_name=experiment_name, remapping=remapping_data)
+            self.predict(self.dataset, latent=True,  experiment_name=experiment_name, time_key=time_key, remapping=remapping_data)
         else:
-            self.predict(self.dataset, latent=False, experiment_name=experiment_name, remapping=remapping_data)
+            self.predict(self.dataset, latent=False, experiment_name=experiment_name, time_key=time_key, remapping=remapping_data)
 
         prediction_data = self.getPred()
         prediction_data_byvar = self.getPred_byUnivar()     
@@ -226,5 +239,5 @@ class ModelPrediction():
             resultDict["latent_data_bycomp"] = lat_data_bycomp        
             lat2dataInput = self.getLatent2data()
             resultDict["latent_data_input"] = lat2dataInput  
-        resultDict['opt_measure'] = 2
+        
         return resultDict

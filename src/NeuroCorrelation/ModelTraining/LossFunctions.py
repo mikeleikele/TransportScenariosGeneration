@@ -47,19 +47,22 @@ class LossFunction(nn.Module):
         values = values_in
         loss_total = torch.zeros(1).to(device=self.device)
         loss_dict = dict()
+        
+        
+        
         if "MSE_LOSS" in self.loss_case:
-            reconstructed_similarities_loss = self.MSE_similarities(values)
+            mse_similarities_loss = self.MSE_similarities(values)
             coeff = self.loss_case["MSE_LOSS"]
-            loss_coeff = reconstructed_similarities_loss.mul(coeff)
+            loss_coeff = mse_similarities_loss.mul(coeff)
             loss_total += loss_coeff
             loss_dict["MSE_LOSS"] = loss_coeff
             if verbose:
                 print("MSE_LOSS - ", loss_coeff)
         
         if "RMSE_LOSS" in self.loss_case:
-            reconstructed_similarities_loss = self.RMSE_similarities(values)
+            rmse_similarities_loss = self.RMSE_similarities(values)
             coeff = self.loss_case["RMSE_LOSS"]
-            loss_coeff = reconstructed_similarities_loss.mul(coeff)
+            loss_coeff = rmse_similarities_loss.mul(coeff)
             loss_total += loss_coeff
             loss_dict["RMSE_LOSS"] = loss_coeff
             if verbose:
@@ -145,6 +148,7 @@ class LossFunction(nn.Module):
         loss_dict["loss_total"] = loss_total
         return loss_dict
 
+    
     def median_similarities(self, values, compute_on="batch"):
         loss_ret = torch.zeros(1).to(device=self.device)
         median_list_in = []
@@ -189,7 +193,7 @@ class LossFunction(nn.Module):
         if compute_on=="batch" or compute_on=="B":
             variance_matr_in = torch.Tensor(len(values), self.univar_count).to(device=self.device)
             variance_matr_in = torch.reshape(torch.cat(variance_list_in), (len(values),self.univar_count))
-            variance_in = torch.median(variance_matr_in, axis=0)[0]
+            variance_in = torch.std(variance_matr_in, dim=0)
             
         elif compute_on=="dataset" or compute_on=="D":
             variance_list_stats = []
@@ -201,7 +205,8 @@ class LossFunction(nn.Module):
             
         variance_matr_out = torch.Tensor(len(values), self.univar_count).to(device=self.device)
         variance_matr_out = torch.reshape(torch.cat(variance_list_out), (len(values),self.univar_count))        
-        variance_out = torch.median(variance_matr_out, axis=0)[0]
+        
+        variance_out = torch.std(variance_matr_out, dim=0)
         
         for inp,oup in zip(variance_in, variance_out):
             loss_ret += torch.square(torch.norm(torch.sub(inp,oup,alpha=1), p=2))

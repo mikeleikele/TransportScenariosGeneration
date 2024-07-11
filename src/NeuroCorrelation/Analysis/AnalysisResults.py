@@ -221,4 +221,3 @@ class AnalysisResult():
         #tab_cop.to_csv(f"/content/30_compare/{ds_name}/{ds_name}_cop_wass.csv", sep='\t')
         
         
-        

@@ -10,25 +10,38 @@ import math
 import random
 
 import torch
-from torch import Tensor
 import scipy.stats as stats
 from matplotlib import cm # for a scatter plot
 from src.tool.utils_matplot import SeabornFig2Grid
 import matplotlib.gridspec as gridspec
-from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from numpy import dot
 from numpy.linalg import norm
 
+import warnings
+from scipy.stats import wasserstein_distance
+from copulas.multivariate import GaussianMultivariate
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from numpy.linalg import inv, pinv
+
+
 
 class DataComparison():
 
-    def __init__(self, univar_count_in, univar_count_out, dim_latent, path_folder):
+    def __init__(self, univar_count_in, univar_count_out, latent_dim, path_folder):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            warnings.warn("deprecated", DeprecationWarning)
+        np.seterr(divide='ignore')
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        
         self.univar_count_in = univar_count_in
         self.univar_count_out = univar_count_out
-
-        self.dim_latent = dim_latent
+        self.latent_dim = latent_dim
         self.path_folder = path_folder
+
     
     def get_idName(self, id_univar, max_val):
         num_digit = len(str(max_val))
@@ -86,11 +99,14 @@ class DataComparison():
                 mean_plt_txt = f"      {name_data} mean: {mean_val:.3f}"
                 plt.text(mean_val, 0, s=mean_plt_txt, rotation = 90) 
 
+
+                bins = np.linspace(0.0, 1.0, 100)
+
                 #histogram
                 label_hist_txt = f"{name_data}"
-                plt.hist(list_values, weights=np.ones(len(list_values)) / len(list_values), histtype='stepfilled', alpha = alpha_data, color= color_data, label=label_hist_txt)
+                plt.hist(list_values, weights=np.ones(len(list_values)) / len(list_values), bins=bins, histtype='stepfilled', alpha = alpha_data, color= color_data, label=label_hist_txt)
                 #histogram border
-                plt.hist(list_values, weights=np.ones(len(list_values)) / len(list_values), histtype=u'step', edgecolor="gray", fc="None", lw=1)
+                plt.hist(list_values, weights=np.ones(len(list_values)) / len(list_values), bins=bins, histtype=u'step', edgecolor="gray", fc="None", lw=1)
 
                 plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
 
@@ -114,9 +130,9 @@ class DataComparison():
     def latent_comparison_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
         stats_dict = {"univ_id": []}
         
-        for id_comp in range(self.dim_latent):
+        for id_comp in range(self.latent_dim):
             list_values = [x.tolist() for x in data_lat[id_comp]]
-            name_comp = self.get_idName(id_comp, max_val=self.dim_latent)
+            name_comp = self.get_idName(id_comp, max_val=self.latent_dim)
             plt.figure(figsize=(12,8))
             list_values_weights = np.ones(len(list_values)) / len(list_values)
             plt.hist(list_values, weights=list_values_weights, histtype='stepfilled', alpha = 0.2, color= color_data)
@@ -146,7 +162,7 @@ class DataComparison():
                 marginal_plot = True
 
             fig = plt.figure(figsize=(18,18))
-            gs = gridspec.GridSpec(self.dim_latent, self.dim_latent)
+            gs = gridspec.GridSpec(self.latent_dim, self.latent_dim)
             id_sub = 0
             for i,key_i in enumerate(data_lat):
                 i_val = [x.tolist() for x in data_lat[i]]
@@ -197,7 +213,6 @@ class DataComparison():
         
 
     def correlationCoeff(self, df_data, select_subset=True):    
-        raise Exception("correlationCoeff")
         num_to_select = 200
         rho_val_list = list()
         for key_vc in df_data:
@@ -407,6 +422,339 @@ class DataComparison():
         filename = Path(folder, f"{plotname}.png")
         plt.savefig(filename)
 
+
+class DataComparison_Advanced():
+    
+    def __init__(self, univar_count, input_folder, suffix_input, time_performance, gen_copula=True):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            warnings.warn("deprecated", DeprecationWarning)
+        np.seterr(divide='ignore')
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        
+        
+        self.TSNE_components = 2
+        self.PCA_components = 50
+        self.univar_count = univar_count
+        self.n_sample_considered = 1000
+        self.gen_copula = gen_copula
+        self.copula_test = False
+        self.time_performance = time_performance
+        
+        self.loadPrediction_INPUT(input_folder, suffix_input)
+        
+        
+        
+    def loadPrediction_INPUT(self, input_folder, suffix_input):        
+        self.rand_var_in = dict()        
+        self.rand_var_cop = dict()
+        for i in range(self.univar_count):
+            self.rand_var_in[i] = list()
+            self.rand_var_cop[i] = list()
+        
+        
+        #input used to train
+        input_instances = Path(input_folder,f"{suffix_input}.csv")
+        input_data = pd.read_csv(input_instances)
+        
+        if self.copula_test:
+            j_range = 5
+        else:
+            j_range = len(input_data['x_input'])
+        print("copula in_vect values:\t",j_range)
+        for j in range(j_range):
+            res = input_data['x_input'][j].strip('][').split(', ')
+            for i in range(self.univar_count):
+                self.rand_var_in[i].append(float(res[i]))
+        print("\tload truth data: done")
+        if self.gen_copula:
+            self.genCopula()
+        
+        #output used to compare
+    
+    def genCopula(self):
+        real_data = pd.DataFrame.from_dict(self.rand_var_in)
+        print(f"\tfit gaussian copula data: start")
+        self.time_performance.start_time("COPULA_TRAINING")
+        copula = GaussianMultivariate()        
+        copula.fit(real_data)
+        self.time_performance.stop_time("COPULA_TRAINING")
+        print(f"\tfit gaussian copula data: end")
+        cop_train_time = self.time_performance.get_time("COPULA_TRAINING", fun="last")
+        self.time_performance.compute_time("COPULA_TRAINING", fun = "first") 
+        
+        print(f"\tTIME fit gaussian copula data:\t",cop_train_time)
+        self.n_sample_considered = self.n_sample_considered
+        self.time_performance.start_time("COPULA_GENERATION")
+        synthetic_data = copula.sample(self.n_sample_considered)
+        
+        self.time_performance.stop_time("COPULA_GENERATION")
+        cop_gen_time = self.time_performance.get_time("COPULA_GENERATION", fun="last")
+        self.time_performance.compute_time("COPULA_GENERATION", fun = "first") 
+        
+        
+        
+        print(f"\tTIME gen gaussian copula data:\t",cop_gen_time)
+        print(f"\tgenerate gaussian copula data: done \t({self.n_sample_considered} instances)")
+        
+        for i in range(self.univar_count):
+            self.rand_var_cop[i] = synthetic_data[i].tolist()
+
+    def loadPrediction_OUTPUT(self, output_folder, suffix_output):
+        self.path_folder = output_folder
+        self.suffix = suffix_output
+        self.rand_var_out = dict()
+        for i in range(self.univar_count):
+            self.rand_var_out[i] = list()     
+        output_instances = Path(output_folder,f"prediced_instances_{suffix_output}.csv")
+        output_data = pd.read_csv(output_instances)
+        for j in range(len(output_data['x_output'])):
+            res = output_data['x_output'][j].strip('][').split(', ')
+            for i in range(self.univar_count):
+                self.rand_var_out[i].append(float(res[i]))
+        
+        
+    def comparison_measures(self, measures):
+        if 'wasserstein_dist' in measures:
+            self.comparison_wasserstein()
+        if 'mahalanobis_dist' in measures:
+            self.comparison_mahalanobis()
+        if 'tsne_plots' in measures:
+            self.comparison_tsne()
+          
+    def comparison_wasserstein(self): 
+        print("\t\twasserstein measure")
+        wass_values_ae = dict()
+        if self.gen_copula:
+            wass_values_cop = dict()
+        mean_ae = list()
+        mean_cop = list()
+        for i in range(self.univar_count):
+            dist_real = self.rand_var_in[i]
+            dist_fake = self.rand_var_out[i]
+            wd_ae = wasserstein_distance(dist_real,dist_fake)
+            wass_values_ae[i] = wd_ae
+            mean_ae.append(wd_ae)
+            
+            if self.gen_copula:
+                dist_copu = self.rand_var_cop[i]
+                wd_cop = wasserstein_distance(dist_real,dist_copu)
+                wass_values_cop[i] = wd_cop
+                mean_cop.append(wd_cop)
+
+        wass_values_ae['mean'] = np.mean(mean_ae)        
+        ws_pd_ae = pd.DataFrame(wass_values_ae.items())
+        
+        columns=["variable","mean_real","std_real","mean_AE","std_AE"]
+        if self.gen_copula:
+            wass_values_cop['mean'] = np.mean(mean_cop)
+            ws_pd_cop = pd.DataFrame(wass_values_cop.items())
+            columns.append("mean_COP")
+            columns.append("std_COP")
+        pd_stats = pd.DataFrame(columns=columns)
+        
+        for i in range(self.univar_count):
+            in_conf = stats.t.interval( df=len(self.rand_var_in[i])-1, loc=np.mean(self.rand_var_in[i]), scale=stats.sem(self.rand_var_in[i]), confidence=0.90)
+            in_mean = np.mean(self.rand_var_in[i])
+            in_std = np.std(self.rand_var_in[i])
+                
+            out_conf = stats.t.interval( df=len(self.rand_var_out[i])-1, loc=np.mean(self.rand_var_out[i]), scale=stats.sem(self.rand_var_out[i]), confidence=0.90)
+            out_mean = np.mean(self.rand_var_out[i])
+            out_std = np.std(self.rand_var_out[i])
+            
+            variable_dict = {'variable' : i,'mean_real' : in_mean, 'std_real':in_std, 'mean_AE' : out_mean, 'std_AE':out_std,'diff_real_ea': abs(in_mean-out_mean)}
+            
+            
+            if self.gen_copula:
+                cop_conf = stats.t.interval( df=len(self.rand_var_cop[i])-1, loc=np.mean(self.rand_var_cop[i]), scale=stats.sem(self.rand_var_cop[i]), confidence=0.90)
+                cop_mean = np.mean(self.rand_var_cop[i])
+                cop_std = np.std(self.rand_var_cop[i])
+                variable_dict['mean_COP'] = cop_mean
+                variable_dict['std_COP'] = cop_std
+                variable_dict['diff_real_cop'] = abs(in_mean-cop_mean)                
+
+            pd_stats = pd_stats.append(variable_dict, ignore_index = True)
+
+        filename = Path(self.path_folder, f"wasserstein_compare_{self.suffix}.csv")
+        pd_stats.to_csv(filename)
+        return pd_stats
+            
+    
+    def invert_matrix(self, matrix):
+        try:
+            # Check if the matrix is singular by computing its determinant
+            if np.linalg.det(matrix) == 0:
+                print("The matrix is singular and cannot be inverted.")
+                return None
+            
+            # Compute the inverse if the matrix is not singular
+            inv_matrix = np.linalg.inv(matrix)
+            return inv_matrix
+        
+        except np.linalg.LinAlgError as e:
+            print(f"Error: {e}")
+            return None
+
+
+    def comparison_mahalanobis(self):
+        np_dist_real = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
+        np_dist_gen = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
+        np_dist_cop = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
+        
+        mahala_real_gen = self.mahalanobis(np_dist_real,np_dist_gen)
+        print("mahala_real_gen:\t",mahala_real_gen)
+        
+        mahala_real_cop = self.mahalanobis(np_dist_cop, np_dist_real)
+        print("mahala_real_cop:\t",mahala_real_cop)
+        
+        mahalanobis_dict = {'mahalanobis_real_gen':[mahala_real_gen], 'mahalanobis_real_cop':[mahala_real_cop]}
+        pd_stats = pd.DataFrame(mahalanobis_dict)
+        
+        filename = Path(self.path_folder, f"mahalanobis_compare_{self.suffix}.csv")
+        pd_stats.to_csv(filename)
+        return pd_stats
+        
+    def mahalanobis(self, X, Y):
+        mu_X = np.mean(X, axis=0)
+        mu_Y = np.mean(Y, axis=0)
+            
+        cov_X = np.cov(X, rowvar=False)
+        cov_Y = np.cov(Y, rowvar=False)
+        
+        cov_combined = (cov_X + cov_Y) / 2
+        
+        diff = mu_X - mu_Y
+        
+        if np.linalg.det(cov_combined) == 0:
+            print("\t\tThe covariance matrix is singular. Using the pseudo-inverse.")
+            inv_cov = np.linalg.pinv(cov_combined)
+        else:
+            inv_cov = np.linalg.inv(cov_combined)
+
+        dist_mahalanobis = np.sqrt(diff.T @ inv_cov @ diff)
+        
+        return dist_mahalanobis    
+        
+    def comparison_tsne(self, n_points=None):
+        color_list = {"real": (0.122, 0.467, 0.706),"ae":(1.0, 0.498, 0.055)}
+        label_list = {"real": "real data","ae":"GAN+AE gen"}
+        
+            
+        df_tsne = pd.DataFrame()
+        if n_points == None:
+            n_points = self.n_sample_considered
+        
+        
+        len_sample_array = [len(self.rand_var_in[0]), len(self.rand_var_out[0])]
+        
+        if self.gen_copula:
+            color_list["cop"] = (0.173, 0.627, 0.173)
+            label_list["cop"] = "copula gen"
+            len_sample_array.append(len(self.rand_var_cop[0]))
+        
+        if n_points > min(len_sample_array):
+            n_points = min(len_sample_array)
+        
+        print("\t\ttsne plot #points:\t",n_points)
+        real_indeces =  [i for i in range(len(self.rand_var_in[0]))]
+        selected = random.sample(real_indeces, n_points)
+        real_selected = [1 if i in selected else 0 for i in range(len(self.rand_var_in[0]))]
+        
+        neur_indeces =  [i for i in range(len(self.rand_var_out[0]))]
+        selected = random.sample(neur_indeces, n_points)
+        neur_selected = [1 if i in selected else 0 for i in range(len(self.rand_var_out[0]))]
+        
+        if self.gen_copula:
+            copu_indeces =  [i for i in range(len(self.rand_var_cop[0]))]
+            selected = random.sample(copu_indeces, n_points)
+            copu_selected = [1 if i in selected else 0 for i in range(len(self.rand_var_cop[0]))]
+        
+        
+        for i in range(self.univar_count):
+            n_real = 0
+            real_val = list()
+            for j in range(len(self.rand_var_in[i])):
+                if real_selected[j]==1:
+                    real_val.append(self.rand_var_in[i][j])
+                    n_real += 1
+                    
+            
+            n_neur = 0
+            neur_val = list()        
+            for j in range(len(self.rand_var_out[i])):
+                if neur_selected[j]==1:
+                    neur_val.append(self.rand_var_out[i][j])
+                    n_neur += 1
+                    
+            comp_values = real_val + neur_val
+            
+            if self.gen_copula:
+                copu_val = list()
+                n_copu = 0
+                for j in range(len(self.rand_var_cop[i])):
+                    if copu_selected[j]==1:
+                        copu_val.append(self.rand_var_cop[i][j])
+                        n_copu += 1
+                        
+                comp_values += copu_val
+            
+            df_tsne[f'c_{i}'] = comp_values
+                    
+        labels =  ["real" for k in range(n_real)] + ["ae" for k in range(n_neur)] 
+        if self.gen_copula:
+            labels += ["cop" for k in range(n_copu)]
+        
+        tsne = TSNE(n_components=self.TSNE_components)
+        tsne_results = tsne.fit_transform(df_tsne)
+        dftest = pd.DataFrame(tsne_results)
+        dftest['label'] = labels
+        
+        
+        
+        fig = plt.figure(figsize=(16,7))
+        params = {1: {'color': 'k', 'label': 'Pass'},
+          0: {'color': 'r', 'label': 'Fail'}}
+
+
+        sns.scatterplot(
+            x=0, y=1,
+            hue="label",
+            palette=color_list,
+            data=dftest,
+            alpha=0.2,
+            legend="full",
+        )
+        filename = Path(self.path_folder, f"TSNE_plot_{self.suffix}.png")
+        plt.savefig(filename)
+        
+        #print(df_tsne)
+        #raise Exception("--")
+        #pca = PCA(n_components=self.PCA_components)
+        
+        #X_std = StandardScaler().fit_transform(df_tsne)
+        #vecs = pca.fit_transform(X_std)
+
+        
+        #fig, ax = plt.subplots(figsize=(14,8))
+        fig, axs = plt.subplots(figsize=(140,20), ncols=self.univar_count)
+        
+        df_tsne['label'] = labels
+        
+        df_a = df_tsne.loc[df_tsne['label'] == "real"].iloc[0:400]
+        df_b = df_tsne.loc[df_tsne['label'] == "ae"].iloc[0:400]
+        if self.gen_copula:
+            df_c = df_tsne.loc[df_tsne['label'] == "cop"].iloc[0:400]
+            df_swarmplot= pd.concat([df_a, df_b, df_c])
+        else:
+            df_swarmplot= pd.concat([df_a, df_b])
+        
+         
+        for i in range(self.univar_count):
+            sns.violinplot(data=df_tsne[[f'c_{i}',"label"]], y=f'c_{i}', x="label", palette=color_list, hue="label", ax=axs[i])
+            sns.swarmplot(data=df_swarmplot[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=color_list, size=3, ax=axs[i])
+        
+        filename = Path(self.path_folder, f"SWARM_plot_{self.suffix}.png")
+        fig.savefig(filename)        
 
 class CorrelationComparison():
 

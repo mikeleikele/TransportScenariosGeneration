@@ -9,6 +9,9 @@ import torch.optim as optim
 from torch.nn import BCELoss
 from src.NeuroCorrelation.DataLoaders.DataBatchGenerator import DataBatchGenerator
 from src.NeuroCorrelation.Analysis.NeuroDistributions import NeuroDistributions
+from src.NeuroCorrelation.ModelPrediction.ModelPrediction import ModelPrediction
+from src.NeuroCorrelation.Analysis.TimeAnalysis import TimeAnalysis
+
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -24,13 +27,15 @@ from torch.autograd import Variable
 from matplotlib.pyplot import cm
 from torch.nn.utils import parameters_to_vector
 from termcolor import colored, cprint 
+from torch_geometric.nn import GCNConv
 
 class ModelTraining():
 
-    def __init__(self, model, device, loss_obj, epoch, dataset, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim, vc_mapping, input_shape, rangeData, model_type="AE", pre_trained_decoder=False, optimization=False, optimization_function=None,optimization_name=None):
+    def __init__(self, model, device, loss_obj, epoch, train_data, test_data, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim, vc_mapping, input_shape, rangeData, batch_size, time_performance, model_type="AE", pre_trained_decoder=False, optimization=False, graph_topology=False, edge_index=None, is_optimization=False):
         self.loss_obj = loss_obj
         self.epoch = epoch
-        self.dataset = dataset
+        self.train_data = train_data
+        self.test_data = test_data
         self.dataGenerator = dataGenerator
         self.path_folder = path_folder
         self.loss_dict = dict()
@@ -38,9 +43,10 @@ class ModelTraining():
         self.vc_mapping = vc_mapping
         self.rangeData = rangeData
         self.device = device
-        self.append_count = 150 #ogni quanti batch aggiungo val della loss
-        self.n_critic = 2
-        self.opt_scheduler_ae = "ReduceLROnPlateau"
+        self.input_shape = input_shape
+        self.append_count = 1 #ogni quanti batch aggiungo val della loss
+        self.n_critic = 1
+        self.opt_scheduler_ae = "StepLR"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "StepLR"
         cprint(f"PAY ATTENTION: GEN is update every {self.n_critic} batches", "magenta", end="\n")
@@ -48,30 +54,36 @@ class ModelTraining():
         self.univar_count_in = univar_count_in 
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
-        
+        self.edge_index = edge_index
+        self.batchsize = batch_size[self.model_type]
+        self.graph_topology = graph_topology
         self.path_save_model_gradients = Path(self.path_folder, self.model_type,"model_gradients", )
+        self.time_performance = time_performance
+        self.is_optimization = is_optimization
         if not os.path.exists(self.path_save_model_gradients):
             os.makedirs(self.path_save_model_gradients)
         self.chechWeightsUpdate = False    
         if self.chechWeightsUpdate:
             cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
         if self.model_type=="AE":
-            self.model = model()
+            print("________",self.graph_topology)
+            if self.graph_topology:
+                self.model = model(self.edge_index)
+            else:
+                self.model = model()
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
             lr_ae = 0.01
             self.optimizer = optim.Adam(params=model_params, lr=lr_ae)
-            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=15, gamma=0.1)
-            
+            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=30, gamma=0.1)
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
                 self.scheduler_ae = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=5, verbose=True)
             elif self.opt_scheduler_ae == "StepLR":
-                self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.1)
-
+                self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=40, gamma=0.1)
             
         elif self.model_type=="GAN":
-            lr_gen = 0.01
-            lr_dis = 0.01
+            lr_gen = 0.001
+            lr_dis = 0.1
             b1_gen = 0.5   #decay of first order momentum of gradient gen
             b1_dis = 0.5   #decay of first order momentum of gradient dis
             b2_gen = 0.999 #decay of first order momentum of gradient gen
@@ -113,15 +125,24 @@ class ModelTraining():
                 self.criterion = nn.MSE_LOSS()'''
                 
         if optimization:
-            print("optimization!")   
             self.path_opt_results = Path(self.path_folder, self.model_type,"Optimizations") 
             if not os.path.exists(self.path_opt_results):
                 os.makedirs(self.path_opt_results)
-
-    def training(self, batch_size=64, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_function=None, optimization_name=None):
-        self.dataLoaded= DataBatchGenerator(dataset=self.dataset, batch_size=batch_size, shuffle=shuffle_data)
+    
+    def generate_batch_edgeindex(self):
+        edge_indices = []
+        for _ in range(self.batchsize):        
+            edge_indices.append(self.edge_index)
+        return torch.stack(edge_indices, dim=0)
+    
+    def training(self,  training_name, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_name=None):
+        self.dataLoaded_train = DataBatchGenerator(dataset=self.train_data, batch_size=self.batchsize, shuffle=shuffle_data)
+        self.dataLoaded_test = DataBatchGenerator(dataset=self.test_data, batch_size=self.batchsize, shuffle=shuffle_data)
+        
+        
         if load_model:
             if optimization is not None:
+                
                 path_opt_result = Path(self.path_opt_results, f"{optimization_name}")
                 if not os.path.exists(path_opt_result):
                     os.makedirs(path_opt_result)
@@ -137,30 +158,31 @@ class ModelTraining():
             self.getModeModel()
             print("--------------------------------------------------------------------------------------------------------------------------",self.model_type)
             if self.model_type == "AE":
-                train_start_time = datetime.datetime.now()
-
-                self.training_AE(plot_loss=plot_loss, batch_size=batch_size, model_flatten_in=model_flatten_in)
-                train_end_time = datetime.datetime.now()
-                train_time = train_end_time - train_start_time
-                print("\tTIME TRAIN MODEL:\t",train_time)
+                self.time_performance.start_time(f"{training_name}_AE_TRAINING_global")
+                self.training_AE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                self.time_performance.stop_time(f"{training_name}_AE_TRAINING_global")
+                self.time_performance.compute_time(f"{training_name}_AE_TRAINING_global", fun = "diff")                
+                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_AE_TRAINING_global", fun="first"))
                 model_opt_prediction = self.getModel('all')
             elif self.model_type == "GAN":
-                train_start_time = datetime.datetime.now()
-                self.training_GAN(noise_size=noise_size)
-                train_end_time = datetime.datetime.now()
-                train_time = train_end_time - train_start_time
-                print("\tTIME TRAIN MODEL:\t",train_time)
+                self.time_performance.start_time(f"{training_name}_GAN_TRAINING_global")
+                self.training_GAN(training_name=training_name, noise_size=noise_size)
+                self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_global")
+                self.time_performance.compute_time(f"{training_name}_GAN_TRAINING_global", fun = "diff")  
+                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_GAN_TRAINING_global", fun="first"))
                 #model_opt_prediction = self.getModel('all')
            
             if save_model:
                 self.save_model()
             if optimization:
                 if self.model_type == "AE":
+                    path_opt_result = Path(self.path_opt_results, f"{optimization_name}")
+                    if not os.path.exists(path_opt_result):
+                        os.makedirs(path_opt_result)
                 
-                    modelPrediction = ModelPrediction(model=model_opt_prediction, device=self.device,dataset=self.dataset, vc_mapping= self.vc_mapping, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=input_shape,path_folder=path_opt_result)         
-                       
-                    prediction_opt = modelPrediction.compute_prediction(experiment_name=f"{optimizar_trial}", remapping_data=True)
-                    opt_function_result = prediction_opt['opt_measure']
+                    modelPrediction = ModelPrediction(model=model_opt_prediction, device=self.device,dataset=self.test_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=self.input_shape,path_folder=path_opt_result)         
+                    prediction_opt = modelPrediction.compute_prediction(time_key=f"{training_name}_", experiment_name=f"{optimization_name}", remapping_data=True)
+                    opt_function_result = prediction_opt
                     
                 else:
                     print("OPTIMIZATION PROCESS NOT IMPLEMENTED FOR:\t",self.model_type)
@@ -187,56 +209,51 @@ class ModelTraining():
             print(f"\tSAVE TRAINED MODEL GAN DIS:\t",path_save_model_dis)
             
                
-    def training_AE(self, model_flatten_in, batch_size, plot_loss=True, save_trainingTime=True):
+    def training_AE(self, model_flatten_in, training_name, plot_loss=True, save_trainingTime=True):
         self.loss_dict = dict()
         self.model.train()
         epoch_train = list()
         print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
         for epoch in range(self.epoch['AE']):
-            epoch_start_time = datetime.datetime.now()
             
-            dataBatches = self.dataLoaded.generate()
+            self.time_performance.start_time(f"{training_name}_AE_TRAINING_epoch")
+            self.model.train()
+            
             loss_batch = list()
+            loss_batch_test = list()
             loss_batch_partial = dict()
-            for batch_num, dataBatch in enumerate(dataBatches):
+            
+            dataBatches_train = self.dataLoaded_train.generate()
+            
+            for batch_num, dataBatch in enumerate(dataBatches_train):
                 item_batch = len(dataBatch)
-                if True: #item_batch == batch_size:
+                
+                if item_batch == self.batchsize:
                     loss = torch.zeros([1])                    
                     self.optimizer.zero_grad()
                     y_hat_list = list()
                     sample_list = list()
                     for i, item in enumerate(dataBatch):
-                        samplef = item['sample']
-                        #noisef = item['noise']
-                        sample = samplef.type(torch.float32)
+                        sample = item['sample'].type(torch.float32)
                         sample_list.append(sample)
                         #noise = noisef.type(torch.float32)
                     x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
-                    
-                    
                     torch.cat(sample_list, out=x_in) 
-                    
                     if model_flatten_in:
                         x_in = x_in.view(-1,self.univar_count_in)
                         x_in.unsqueeze_(1)
-                                            
-                        
-
                     
                     y_hat = self.model.forward(x=x_in)
-                    
                     y_hat_list = list()
-
-
+                    
                     for i in range(item_batch):
                         item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
                         y_hat_list.append(item_dict)
                     #print(y_hat.shape)
                         
                     #y_hat_list.append(y_hat)
-                    print(y_hat_list)
                     loss_dict = self.loss_obj.computate_loss(y_hat_list)
-
+                    
                     loss = loss_dict['loss_total']
                     if batch_num%self.append_count == 0:
                         loss_batch.append(loss.detach().cpu().numpy())
@@ -249,30 +266,60 @@ class ModelTraining():
                     
                     loss.backward()
                     self.optimizer.step()
+            
+            dataBatches_test = self.dataLoaded_test.generate()
+            self.model.eval() 
+            
+            for batch_num, dataBatch in enumerate(dataBatches_test):
+                item_batch = len(dataBatch)
+                loss = torch.zeros([1])                    
+                y_hat_list = list()
+                sample_list = list()
+                for i, item in enumerate(dataBatch):
+                    
+                    samplef = item['sample']
+                    sample = samplef.type(torch.float32)
+                    sample_list.append(sample)
+                x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
+                torch.cat(sample_list, out=x_in) 
                 
-               
-            self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch}
+                if model_flatten_in:
+                    x_in = x_in.view(-1,self.univar_count_in)
+                    x_in.unsqueeze_(1)
+                    
+                y_hat = self.model.forward(x=x_in)
+                y_hat_list = list()
+                
+                for i in range(item_batch):
+                    item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
+                    y_hat_list.append(item_dict)
+                loss_dict = self.loss_obj.computate_loss(y_hat_list)
+
+                loss = loss_dict['loss_total']
+                if batch_num%self.append_count == 0:
+                    loss_batch_test.append(loss.detach().cpu().numpy())
+            
+            self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch, "TEST_loss": np.mean(loss_batch_test)}
             for loss_part in loss_dict:
                 self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
-            epoch_end_time = datetime.datetime.now()
-            epoch_time = epoch_end_time - epoch_start_time
+            
+            self.time_performance.stop_time(f"{training_name}_AE_TRAINING_epoch")
+            epoch_time = self.time_performance.get_time(f"{training_name}_AE_TRAINING_epoch", fun="last")
             epoch_train.append({"epoch":epoch,"time":epoch_time})
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
                 self.scheduler_ae.step(np.mean(loss_batch))
             elif self.opt_scheduler_ae == "StepLR":
                 self.scheduler_ae.step() 
             
-            
-            
             self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}", model_section="AE")
-            
-            print("\tepoch:\t",epoch+1,"/",self.epoch['AE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tlr: ",self.optimizer.param_groups[0]['lr'])
+            print("\tepoch:\t",epoch+1,"/",self.epoch['AE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tloss_test: ",np.mean(loss_batch_test),"\tlr: ",self.optimizer.param_groups[0]['lr'])
         if plot_loss:
             self.loss_plot(self.loss_dict)
         if save_trainingTime:
+            self.time_performance.compute_time(f"{training_name}_AE_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)
 
-    def training_GAN(self, noise_size, plot_loss=True, train4batch=True, is_WGAN=True, WGAN_coef=10, save_trainingTime=True):
+    def training_GAN(self, noise_size, training_name, plot_loss=True, train4batch=True, is_WGAN=False, WGAN_coef=10, save_trainingTime=True):
         
         real_label = 1.
         fake_label = 0.
@@ -292,7 +339,7 @@ class ModelTraining():
         for epoch in range(self.epoch['GAN']):
             first = False
             
-            dataBatches = self.dataLoaded.generate()
+            dataBatches = self.dataLoaded_train.generate()
             loss_batch = list()
 
             err_D_list = list()
@@ -303,14 +350,13 @@ class ModelTraining():
             err_G_list = list()
             
             loss_batch_partial = dict()
-            epoch_start_time = datetime.datetime.now()
-            
+            self.time_performance.start_time(f"{training_name}_GAN_TRAINING_epoch")
+            print("GAN train4batch:\t", train4batch)
             for batch_num, dataBatch in enumerate(dataBatches):
                 if not train4batch:
                     for i, item in enumerate(dataBatch):
                         samplef = item['sample']
                         sample = samplef.type(torch.float32)
-                        
                         ########################### 
                         # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                         ###########################
@@ -320,7 +366,7 @@ class ModelTraining():
                         self.model_dis.zero_grad()
                         self.optimizer_dis.zero_grad()     
                         label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
-                        output = self.model_dis(sample)['x_output'].view(-1)                    
+                        output = self.model_dis(sample)['x_output'].view(-1)
                         item_err = self.criterion(output, label)
                         
                         self.optimizer_dis.step()
@@ -371,8 +417,7 @@ class ModelTraining():
                     x_real = list()
                     
                     for i, item in enumerate(dataBatch):
-                        samplef = item['sample']
-                        sample = samplef.type(torch.float32)
+                        sample = item['sample'].type(torch.float32)
                         x_real.append(sample)
                         label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
                         output = self.model_dis(sample)['x_output'].view(-1)   
@@ -392,7 +437,7 @@ class ModelTraining():
                     ###########################
                     noise_batch = list()
                     for i, item in enumerate(dataBatch):
-                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
+                        noise = torch.randn(1,  noise_size[0], noise_size[1]).to(device=self.device) 
                         noise_batch.append(noise)
                 
                     ###########################
@@ -438,7 +483,7 @@ class ModelTraining():
                     ###########################
                     
                     if batch_num%self.n_critic == 0:
-                    
+                        
                         batch_fake_err_G = torch.zeros(1).to(device=self.device) 
                         self.optimizer_gen.zero_grad()
                         self.model_gen.train()
@@ -483,8 +528,9 @@ class ModelTraining():
             self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
             
             self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
-            epoch_end_time = datetime.datetime.now()
-            epoch_time = epoch_end_time - epoch_start_time
+            self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_epoch")
+            epoch_time = self.time_performance.get_time(f"{training_name}_GAN_TRAINING_epoch", fun="last")
+                
             epoch_train.append({"epoch":epoch,"time":epoch_time})
             print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
             print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
@@ -507,6 +553,7 @@ class ModelTraining():
             self.loss_plot(self.loss_dict)
         
         if save_trainingTime:
+            self.time_performance.compute_time(f"{training_name}_GAN_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)    
         
    
@@ -636,7 +683,10 @@ class ModelTraining():
         if not os.path.exists(path_fold_lossplot):
             os.makedirs(path_fold_lossplot)
             
-        color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])))
+        if "TEST_loss" in loss_dict[0]:
+            color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])-1))
+        else:
+            color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])))
 
         loss_plot_dict = dict()
         i = 0
@@ -647,16 +697,29 @@ class ModelTraining():
                     loss_list.append(loss_dict[mean_val][key])
                 loss_plot_dict[key] = loss_list
                 plt.figure(figsize=(12,8))  
-                plt.plot(loss_list, color=color[i], marker='o',mfc=color[i])
-                filename = Path(path_fold_lossplot,"loss_training_"+str(key)+".png")
+                if key!='TEST_loss':
+                    cls_loss = color[i]
+                    i += 1
+                else:
+                    cls_loss = [0, 0, 0, 1]
+                    
+                plt.plot(loss_list, color=cls_loss, marker='o', mfc=cls_loss, label=str(key))
+                plt.legend(loc="upper right")
+                filename = Path(path_fold_lossplot, "loss_training_"+str(key)+".png")
                 plt.savefig(filename)
-                i += 1
+                
         i = 0
         plt.figure(figsize=(12,8))
         for key in loss_plot_dict:  
             if key != "allLosses":
-                plt.plot(loss_plot_dict[key], color=color[i], marker='o',mfc=color[i], label=str(key))
-                i += 1
+                if key!='TEST_loss':
+                    cls_loss = color[i]
+                    i += 1
+                else:
+                    cls_loss = [0, 0, 0, 1]
+                plt.plot(loss_plot_dict[key], color=cls_loss, marker='o', mfc=cls_loss, label=str(key))
+                
+                
         plt.legend(loc="upper right")
         filename = Path(path_fold_lossplot,"loss_training_allLosses.png")
         plt.savefig(filename)

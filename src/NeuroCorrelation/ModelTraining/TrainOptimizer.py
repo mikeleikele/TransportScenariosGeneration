@@ -46,11 +46,5 @@ class ModelTraining():
         return opt_list
     
     
-    
-    
-    
-    
-    
-    
     def getOptimizer(self):
         return self.optimizer

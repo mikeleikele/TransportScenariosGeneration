@@ -2,13 +2,13 @@ from src.NeuroCorrelation.Analysis.DataComparison import DataComparison
 
 class DataStatistics():
 
-    def __init__(self, univar_count_in, univar_count_out, dim_latent, data, path_folder):
+    def __init__(self, univar_count_in, univar_count_out, latent_dim, data, path_folder):
         self.univar_count_in = univar_count_in
         self.univar_count_out = univar_count_out
-        self.dim_latent = dim_latent
+        self.latent_dim = latent_dim
         self.data = data
         self.path_folder = path_folder
-        self.dataComparison = DataComparison(univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out, dim_latent=self.dim_latent, path_folder=path_folder)
+        self.dataComparison = DataComparison(univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out, latent_dim=self.latent_dim, path_folder=path_folder)
         self.corrCoeff = None
     
     def get_corrCoeff(self, latent):
@@ -21,7 +21,7 @@ class DataStatistics():
 
         return self.corrCoeff
 
-    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True, do__correlationCoeff=True):
+    def plot(self, plot_colors, plot_name, distribution_compare, latent=False, verbose=True, draw_correlationCoeff=True):
         if verbose:
             print("\tPLOT: Predicted Test")
             print("\t\tdistribution analysis")
@@ -38,7 +38,7 @@ class DataStatistics():
             print("\t\tdistribution analysis: real and generated")
         self.dataComparison.data_comparison_plot(distribution_compare, plot_name=f"{plot_name}", mode="out")
 
-        if do__correlationCoeff:
+        if draw_correlationCoeff:
             corrCoeff = self.get_corrCoeff(latent)
             if verbose:
                 print("\t\tcorrelation analysis")

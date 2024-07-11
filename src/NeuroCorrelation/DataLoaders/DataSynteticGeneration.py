@@ -306,7 +306,7 @@ class DataSynteticGeneration():
             df_data.loc[i] = tensor_list        
         return df_data
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1, do__correlationCoeff=True):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1, draw_correlationCoeff=True):
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
@@ -365,7 +365,7 @@ class DataSynteticGeneration():
         if draw_plots:
             self.comparison_plot.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
         df_data = pd.DataFrame(noise_data_vc)
-        if do__correlationCoeff:
+        if draw_correlationCoeff:
             rho = self.comparison_plot.correlationCoeff(df_data)
         else:
             rho = None
@@ -386,7 +386,8 @@ class DataSynteticGeneration():
     
     def getRandom(self, dim):
         randomNoise =  torch.randn(1, dim).type(torch.float32).to(self.torch_device)
-        #torch.randn(dim).uniform_(0,1).to(self.torch_device)
+        #torch.randn(1, dim).type(torch.float32).to(self.torch_device)
+        #torch.randn(1, dim).uniform_(0,1).type(torch.float32).to(self.torch_device)
         return randomNoise.type(torch.float32)
     
     def get_synthetic_noise_data(self, name_data, num_of_samples = 5000,  draw_plots=True, instaces_size=1):

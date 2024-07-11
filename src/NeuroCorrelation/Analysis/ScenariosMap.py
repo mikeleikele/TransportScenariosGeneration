@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 import folium
 from folium import plugins
-from colormap import rgb2hex, rgb2hls, hls2rgb
 import matplotlib
+from matplotlib import colormaps
+import math
 from pathlib import Path
 import os
 
@@ -35,52 +36,55 @@ class ScenariosMap():
         self.min_val = data_range["min_val"]
         self.center = (np.mean([x[0] for xs in self.case_map['points'] for x in xs]), np.mean([x[1] for xs in self.case_map['points'] for x in xs]))
         
-        
-        
-    def darken_color(self, r, g, b, factor=0.3):
-        return self.adjust_color_lightness(r, g, b, 1 - factor)
-
-    def adjust_color_lightness(self, r, g, b, factor):
-        h, l, s = rgb2hls(r, g, b)
-        l = max(min(l * factor, 1.0), 0.0)
-        r, g, b = hls2rgb(h, l, s)
-        return rgb2hex(int(r*255), int(g*255), int(b*255))
-
     def get_route_color(self, value):
-        cmap = matplotlib.colormaps['RdYlGn']
+        cmap = colormaps['RdYlGn']
         value_x = (value - self.min_val)/(self.max_val - self.min_val)
         if value_x<=0:
             value_x=0
         elif value_x>=1:
             value_x = 1
         rgba = cmap(value_x)
-        lightness_factor = (0.5/1) * float(1)
-        cl = self.darken_color(rgba[0], rgba[1], rgba[2], lightness_factor)
-        return cl
+        
+        return matplotlib.colors.rgb2hex(rgba)    
     
 
-    def draw_scenario(n_scenario, save_html=True):
+    def draw_scenario(self, n_scenario):
         scenario_list = [float(x) for x in self.scenarios[self.label][n_scenario][1:-1].split(", ")]
         scenario = dict()
         for road, value in zip(self.vc_mapping, scenario_list):
             scenario[road] = value
-  
-        maps_scenario = folium.Map(self.center,tiles="cartodbdark_matter",  zoom_start=11)
-        folium.TileLayer('cartodbdark_matter').add_to(maps_scenario)
-        folium.TileLayer('openstreetmap').add_to(maps_scenario)
-  
-        folium.LayerControl().add_to(maps_scenario)
-        for index, row in map.iterrows():
+            
+        scenario_roads = folium.FeatureGroup(name=f"scenario__{n_scenario}",overlay=False).add_to(self.maps_scenario)
+        for index, row in self.case_map.iterrows():
+            
             value = scenario[row["name_road"]]
             route_color = self.get_route_color(value)
-            route = folium.PolyLine(row["points"], color=route_color, weight=5, opacity=0.85).add_to(maps_scenario)
-            route.add_to(maps_scenario)
-        if save_html:
-            folder_html_file = Path(self.path_folder , f"scenario_map_{n_scenario}.html")
-            maps_scenario.save(folder_html_file)
-    
-    def draw_scenarios(self, list_scenarios=None):
+            
+            route = folium.PolyLine(row["points"], color=route_color, weight=5, opacity=0.85)
+            route.add_to(scenario_roads)
+        
+                   
+            
+    def draw_scenarios(self, list_scenarios=None, save_html=True):
+        count = 1
+        self.maps_scenario = folium.Map(self.center,  zoom_start=11)
+        tile_layer = folium.TileLayer(tiles="https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png", attr='darkmatter', max_zoom=19, name='darkmatter', control=False, opacity=0.7)
+        tile_layer.add_to(self.maps_scenario)
+
+        
         if list_scenarios is None:
-            list_scenarios = [i for i in range(len(scenarios))]
-        for i in range(list_scenarios):
-            self.draw_scenario(n_scenario=i, save_html=True)
+            list_scenarios = [i for i in range(1, len(self.scenarios))]        
+        
+        for i in list_scenarios:
+            self.draw_scenario(n_scenario=i)
+            if count%10 == 0:
+                if save_html:
+                    self.maps_scenario.add_child(folium.LayerControl(position='topright', collapsed=False, autoZIndex=True))
+                    folder_html_file = Path(self.path_folder , f"scenarios_map__{i}.html")
+                    self.maps_scenario.save(folder_html_file)
+                
+                self.maps_scenario = folium.Map(self.center,  zoom_start=11)
+                tile_layer = folium.TileLayer(tiles="https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png", attr='darkmatter', max_zoom=19, name='darkmatter', control=False, opacity=0.7)
+                tile_layer.add_to(self.maps_scenario)
+                count = 0
+            count += 1
