@@ -1,0 +1,7 @@
+data/
+src/GeoSimulation/
+src/OrienteeringScenarios/
+src/SamplesGeneration/
+src/test/
+src/tool/
+*.pyc
