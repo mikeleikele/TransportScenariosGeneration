@@ -1,4 +1,5 @@
 data/
+!/data/neuroCorrelation_data
 *.pyc
 GEO_README.txt
 a.txt
