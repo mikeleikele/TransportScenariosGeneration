@@ -8,10 +8,15 @@ from src.NeuroCorrelation.NeuroExperiment import NeuroExperiment
 
 from pathlib import Path
 import sys
-import torch
+import argparse
 
 
-
+def str2bool(v):
+    if v in ['yes', 'true', 't', 'y', '1']:
+        return True
+    else:
+        return False
+    
 def geographic_cities(par,args):
     if par is None:
         #UMBRIA
@@ -75,85 +80,99 @@ def flowview(simulation_name, number_sample):
 
     
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    print(f" ")
+    args = sys.argv
+    parser = argparse.ArgumentParser(description="Description of your program")
+    parser.add_argument('--exp', type=str, required=True, help='Experiment')
+    parser.add_argument('--map_name', type=str, required=False, help='Map name')
+    parser.add_argument('--simulation_name', type=str, required=False, help='Simulation name')
+    parser.add_argument('--number_samples', type=int, required=False, help='Number of samples')
+    parser.add_argument('--par', type=str, required=False, help='par')
+    
+    
+    parser.add_argument('--num_case', type=int, required=True, help='Description for num_case')
+    parser.add_argument('--experiment_name_suffix', type=str, required=True, help='Description for experiment_name_suffix')
+    parser.add_argument('--main_folder', type=str, required=True, help='Description for main_folder')
+    parser.add_argument('--repeation', type=int, required=True, help='Description for repeation')
+    parser.add_argument('--optimization', type=str2bool, required=True, help='Enable or disable optimization')
+    parser.add_argument('--load_model', type=str2bool, required=True, help='Description for load_model')
+    parser.add_argument('--train_models', type=str2bool, required=True, help='Description for train_models')
+        
+    parsed_args = parser.parse_args(sys.argv[1:])
+    
+    print(f"\n")
     print(f"      Welcome - OSG      ")
     print(f"|------------------------")
-    print(f"| Process: {args[0]}")
-    if len(args)>1:
-        print(f"| Maps   : {args[1]}")
+    print(f"| Process: {parsed_args.exp}")
     print(f"|------------------------")
-    print(f" ")
+    print(f"\n")
     
-    if args[0] ==  "--orienteering" or args[0] == "--o":
+    if parsed_args.exp ==  "orienteering" or parsed_args.exp == "o":
         orient_test()
     
     #geographic maps download
-    elif args[0] == "--geo" or args[0] == "--g":      
+    elif parsed_args.exp == "geo" or parsed_args.exp == "g":      
         if len(args)>1:
-            par = args[1]
+            par = parsed_args.par
             
         else:
             par=None
         geographic_cities(par,args)
-    elif args[0] == "--geopoint" or args[0] == "--gp":        
+    elif parsed_args.exp == "geopoint" or parsed_args.exp == "gp":        
         geo_test_point()
 
     
-    elif args[0] == "--simulation" or args[0] == "--s":        
-        name_simulationFile = args[1]
+    elif parsed_args.exp == "simulation" or parsed_args.exp == "s":        
+        name_simulationFile = parsed_args.simulation_name
         simul_test(name_simulationFile)
         print(3)
     
-    elif args[0] ==  "--geosimulation" or args[0] == "--gs":
-        name_simulationFile = args[1]
+    elif parsed_args.exp ==  "geosimulation" or parsed_args.exp == "gs":
+        name_simulationFile = parsed_args.simulation_name
         print(name_simulationFile)
         geo_simul_test(name_simulationFile)
         print(5)
-    elif args[0] ==  "--prediction" or args[0] == "--p":
+    elif parsed_args.exp ==  "prediction" or parsed_args.exp == "p":
         ml_test()
         print(6)
-    elif args[0] ==  "--statsMaps" or args[0] == "--sm":
-        maps_name = args[1]
+    elif parsed_args.exp ==  "statsMaps" or parsed_args.exp == "sm":
+        maps_name = parsed_args.map_name
         #data\maps\GEO__bassa.osm
         statsMaps(maps_name)
         print(7)
-    elif args[0] ==  "--statsRoad" or args[0] == "--sr":
-        #python test.py --sr grid5
-        simulation_name = args[1]
+    elif parsed_args.exp ==  "statsRoad" or parsed_args.exp == "sr":
+        #python test.py sr grid5
+        simulation_name = parsed_args.simulation_name
         statsRoads(simulation_name)
         print(8)
-    elif args[0] ==  "--flowgen" or args[0] == "--fg":
-        #python test.py --sr grid5
-        simulation_name = args[1]
+    elif parsed_args.exp ==  "flowgen" or parsed_args.exp == "fg":
+        #python test.py sr grid5
+        simulation_name = parsed_args.simulation_name
         if len(args)==2:
             number_samples = 1            
         else:
             try:
-                number_samples = int(args[2])
+                number_samples = parsed_args.number_sample
             except ValueError:
                 print("number_samples require a number.")
                 number_samples=1            
         flowgen(simulation_name,number_samples)
         print(9)
-    elif args[0] ==  "--flowView" or args[0] == "--fv":
-        simulation_name = args[1]
-        number_sample = args[2]                   
+    elif parsed_args.exp ==  "flowView" or parsed_args.exp == "fv":
+        simulation_name = parsed_args.simulation_name
+        number_sample = parsed_args.number_sample
         flowview(simulation_name,number_sample)
         print(10)
     
     
-    elif args[0] ==  "--neuroD":        
-        neuroExp = NeuroExperiment(args[1:])
+    elif parsed_args.exp ==  "neuroD":        
+    
+        neuroExp = NeuroExperiment(sys.argv[1:])
         
         print("end")
         print("========================================")
-        print("folder:\t",args[3])
+        print("folder:\t",parsed_args.main_folder)
     
-    elif args[0] ==  "--help":
-        print("--neuroD")
-        print("--neuroD (1)num_case::int  (2)experiment_name_suffix::int (3)main_folder::string (4)repeat::int (5)load_model::--load/None (6)train_models::yes/no)")
+    
     else:
         print(0," no opt recognized")
         
-    

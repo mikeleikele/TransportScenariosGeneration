@@ -5,3 +5,8 @@ src/SamplesGeneration/
 src/test/
 src/tool/
 *.pyc
+github_k
+github_k.pub
+gitk.pub
+.gitignore
+gitk
