@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 sudo apt-get update
 sudo apt-get install sumo sumo-tools sumo-doc  -y
 sudo apt-get install -y binutils libproj-dev gdal-bin ffmpeg libgdal-dev
@@ -7,4 +8,15 @@ sudo export SUMO_HOME=/usr/share/sumo
 
 sudo add-apt-repository ppa:ubuntugis/ppa
 sudo apt-get update
+=======
+sudo apt-get update
+sudo apt-get install sumo sumo-tools sumo-doc  -y
+sudo apt-get install -y binutils libproj-dev gdal-bin ffmpeg libgdal-dev
+sudo export SUMO_HOME=/usr/share/sumo
+
+
+
+sudo add-apt-repository ppa:ubuntugis/ppa
+sudo apt-get update
+>>>>>>> 37fbe91 (old)
 sudo apt-get install gdal-bin
