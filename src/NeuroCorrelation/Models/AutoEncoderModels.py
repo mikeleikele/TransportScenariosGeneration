@@ -53,8 +53,8 @@ class AutoEncoderModels(nn.Module):
     
     def summary(self):
         summary = dict()
-        summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['decoder'][0]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
-        summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder'][0]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['encoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
     
     def forward(self, x):
         x_latent = self.models['encoder'](x)
@@ -63,15 +63,15 @@ class AutoEncoderModels(nn.Module):
 
     def list_to_model(self, layers_list):
         layers = list()
-        size = [None, None]
+        size = {"input_size":None, "output_size":None}
         for layer_item in layers_list:
             
             #layer
             if layer_item['layer'] == "Linear":
                 layers.append(nn.Linear(in_features=layer_item['in_features'], out_features=layer_item['out_features']))
-                if size[0] == None:
-                    size[0] = layer_item['in_features']
-                size[1] = layer_item['out_features']
+                if size["input_size"] == None:
+                    size["input_size"] = layer_item['in_features']
+                size["output_size"] = layer_item['out_features']
             elif layer_item['layer'] == "GCNConv":
                 layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
             
