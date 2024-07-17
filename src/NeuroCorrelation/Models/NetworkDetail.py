@@ -30,9 +30,9 @@ class NetworkDetails():
             net_summary = model_net.summary()
         elif key =="AE":
             if self.edge_index is None:
-                net_summary = model_net().summary()
+                net_summary = model_net.summary()
             else:
-                net_summary = model_net(edge_index=self.edge_index).summary()
+                net_summary = model_net.summary()
         return f"{key}::\n {net_summary}"
     
     def saveModel_loss(self):
