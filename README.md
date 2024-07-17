@@ -11,16 +11,16 @@ This repository contains a script for running Traffic Scenarios Generation exper
     - Description: The case number for the experiment. You can find the different experiment cases in `NeuroExperiment.py`.
     - Example: `--num_case 1`
 
-2. **experiment_name_suffix** (type: int)
-    - Description: Suffix to add to the experiment name for identification.
-    - Example: `--experiment_name_suffix 2`
+2. **experiment_name_suffix** (type: string)
+    - Description: Suffix to add to the experiment name for identification. When performing multiple repetitions of an experiment, this string will indicate the folder suffix, followed by the seed number used .
+    - Example: `--experiment_name_suffix METR16_experiment`
 
 3. **main_folder** (type: string)
     - Description: The folder path where experiment results will be saved.
     - Example: `--main_folder "experiments"`
 
 4. **repeat** (type: int)
-    - Description: The number of times to repeat the experiment.
+    - Description: The number of times to repeat the experiment with several random seeds.
     - Example: `--repeat 5`
 
 5. **optimization** (type: yes/no)
@@ -29,7 +29,7 @@ This repository contains a script for running Traffic Scenarios Generation exper
 
 6. **load_model** (type: yes/no)
     - Description: Whether to load a pre-trained model.
-    - Example: `--load_model --load`
+    - Example: `--load_model yes`
 
 7. **train_models** (type: yes/no)
     - Description: Whether to train the model again.
