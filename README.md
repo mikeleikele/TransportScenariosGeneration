@@ -3,7 +3,7 @@
 
 # Script Usage
 
-This repository contains a script for running Traffic Scenarios Generation experiments with various configurations. Below are the command-line arguments and their descriptions.
+This repository contains a script for running Traffic Scenarios Generation experiments with several configurations. Below are the command-line arguments and their descriptions.
 
 ## Command-Line Arguments
 
