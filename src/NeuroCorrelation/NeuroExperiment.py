@@ -65,15 +65,15 @@ class NeuroExperiment():
         experiments_list = [
             {"id":   0, "model_case":"autoencoder_3_copula_optimization", "epoch":{'AE':   3,'GAN':   2}, "univar_count": 7, "lat_dim": 3, "dataset_setting":{"batch_size":  32, "train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
             
-            {"id":   1, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_16_METR_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   2, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_METR_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":32,   "lat_dim":22,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   3, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_48_METR_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   4, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_METR_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":64,   "lat_dim":48,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   1, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_16_METR_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   2, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_METR_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE' :  64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   3, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_48_METR_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   4, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_METR_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
             
-            {"id":   5, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_16_PEMS_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   6, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_PEMS_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":32,   "lat_dim":30,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   7, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_48_PEMS_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":48,   "lat_dim":44,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   8, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_PEMS_bt",  "epoch":{'AE': 100,'GAN': 100},  "univar_count":64,   "lat_dim":60,   "dataset_setting":{"batch_size": {'AE': 3854,'GAN': 3854}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   5, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_16_PEMS_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':  128,'GAN':  128}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   6, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_PEMS_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6, "starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   7, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_48_PEMS_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   8, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_PEMS_bt",  "epoch":{'AE':  50,'GAN':  50},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
              
             
             {"id":   9, "model_case":"GAN_linear_pretrained_0032_CHENGDU_bt",     "epoch":{'AE': 50,'GAN': 50}, "univar_count":32,   "lat_dim":30,   "dataset_setting":{"batch_size":  1583, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":1000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},                                
@@ -115,7 +115,6 @@ class NeuroExperiment():
         return {"experiments_list":experiments_list, "run_mode":run_mode,  "optimization_settings":optimization_settings}
         
     def experiment(self, num_case, main_folder, seed, experiment_name, optimization, load_model):
-        
         id_experiments = int(num_case)
         experiments_list = self.getExperimentsList(seed, optimization)
         experiments_selected = experiments_list["experiments_list"][id_experiments]
@@ -129,16 +128,24 @@ class NeuroExperiment():
         print(f"|------------------------")
         print(f"| Modelcase   : {experiments_selected['model_case']}")
         print(f"|             : {experiments_selected}")
+        print(f"| seed        : {seed}")
         print(f"|------------------------")
         print(f" ")
         
+        
+        '''try:'''
         nc = NeuralCore(device=None,epoch=experiments_selected["epoch"], case=experiments_selected['case'], model_case=experiments_selected["model_case"], univar_count=experiments_selected["univar_count"], lat_dim=experiments_selected["lat_dim"], dataset_setting=experiments_selected['dataset_setting'], instaces_size= experiments_selected["instaces_size"], input_shape= experiments_selected["input_shape"], do_optimization=experiments_selected["optimization"],path_folder=folder_experiment, seed=seed, run_mode=run_mode, opt_settings=opt_settings)
         if load_model:
             nc.start_experiment(load_model=True)
         else:
             nc.start_experiment()
-        res = {"univar_count": experiments_selected["univar_count"]}
-        return res
+        '''except Exception as e:
+            print(f"Unexpected error: {e}")
+        else:
+            print("No exceptions were thrown.")
+        finally:
+            res = {"univar_count": experiments_selected["univar_count"]}
+            return res'''
     
     def str2bool(self, v):
         if v in ['yes', 'true', 't', 'y', '1']:

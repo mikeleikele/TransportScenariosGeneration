@@ -32,7 +32,7 @@ import os
 class NeuralCore():
 
     def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, do_optimization, opt_settings, seed=0, run_mode="all", ):
-        device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        device = "cpu"#("cuda:0" if (torch.cuda.is_available()) else "cpu")
         #device = "cpu"
         
         self.seed_torch = seed

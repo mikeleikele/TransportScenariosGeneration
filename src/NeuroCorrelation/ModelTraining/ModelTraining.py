@@ -67,10 +67,7 @@ class ModelTraining():
             cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
         if self.model_type=="AE":
             print("________",self.graph_topology)
-            if self.graph_topology:
-                self.model = model(self.edge_index)
-            else:
-                self.model = model()
+            self.model = model
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
             lr_ae = 0.01
@@ -136,6 +133,7 @@ class ModelTraining():
         return torch.stack(edge_indices, dim=0)
     
     def training(self,  training_name, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_name=None):
+        
         self.dataLoaded_train = DataBatchGenerator(dataset=self.train_data, batch_size=self.batchsize, shuffle=shuffle_data)
         self.dataLoaded_test = DataBatchGenerator(dataset=self.test_data, batch_size=self.batchsize, shuffle=shuffle_data)
         
@@ -228,6 +226,7 @@ class ModelTraining():
             for batch_num, dataBatch in enumerate(dataBatches_train):
                 item_batch = len(dataBatch)
                 
+                
                 if item_batch == self.batchsize:
                     loss = torch.zeros([1])                    
                     self.optimizer.zero_grad()
@@ -245,6 +244,7 @@ class ModelTraining():
                     
                     y_hat = self.model.forward(x=x_in)
                     y_hat_list = list()
+                    
                     
                     for i in range(item_batch):
                         item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
@@ -275,8 +275,7 @@ class ModelTraining():
                 loss = torch.zeros([1])                    
                 y_hat_list = list()
                 sample_list = list()
-                for i, item in enumerate(dataBatch):
-                    
+                for i, item in enumerate(dataBatch):                    
                     samplef = item['sample']
                     sample = samplef.type(torch.float32)
                     sample_list.append(sample)
@@ -508,7 +507,7 @@ class ModelTraining():
                 
             
             if self.chechWeightsUpdate:
-                print(len(list(self.model_gen.parameters())))
+                
                 layer_gen_trained = dict()
                 for lay in range(len(list(self.model_gen.parameters()))):                
                     lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
