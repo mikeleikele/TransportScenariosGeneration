@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from src.NeuroCorrelation.Models.AutoEncoderModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
 from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_models import *
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
@@ -27,12 +28,12 @@ class PEMS_METR_settings():
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_16
-            self.model['GAN'] =PEMS_METR_GAN_16
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_16
             
         elif self.model_case == "AE>GAN_linear_pretrained_32_METR_bt":
             self.mode = "graph_roads"
@@ -40,38 +41,38 @@ class PEMS_METR_settings():
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_32
-            self.model['GAN'] =PEMS_METR_GAN_32
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_32
             
         elif self.model_case == "AE>GAN_linear_pretrained_48_METR_bt":
             self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S32"
+            self.name_dataset = "METR_LA_S48"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_48
-            self.model['GAN'] =PEMS_METR_GAN_48
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_48
             
         elif self.model_case == "AE>GAN_linear_pretrained_64_METR_bt":
             self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S32"
+            self.name_dataset = "METR_LA_S48"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_64
-            self.model['GAN'] =PEMS_METR_GAN_64
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_64
             
         if   self.model_case == "AE>GAN_linear_pretrained_16_PEMS_bt":
             self.mode = "graph_roads"
@@ -79,12 +80,12 @@ class PEMS_METR_settings():
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_16
-            self.model['GAN'] =PEMS_METR_GAN_16
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_16
             
         elif self.model_case == "AE>GAN_linear_pretrained_32_PEMS_bt":
             self.mode = "graph_roads"
@@ -92,42 +93,42 @@ class PEMS_METR_settings():
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_32
-            self.model['GAN'] =PEMS_METR_GAN_32
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_32
             
         elif self.model_case == "AE>GAN_linear_pretrained_48_PEMS_bt":
             self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S32"
+            self.name_dataset = "PEMS_BAY_S48"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_48
-            self.model['GAN'] =PEMS_METR_GAN_48
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_48
             
         elif self.model_case == "AE>GAN_linear_pretrained_64_PEMS_bt":
             self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S32"
+            self.name_dataset = "PEMS_BAY_S64"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
                 }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_64
-            self.model['GAN'] =PEMS_METR_GAN_64
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None)
+            self.model['GAN'] = PEMS_METR_GAN_64
             
         self.path_folder_nets = dict()
         for key in self.nets:
-            self.path_folder_nets[key] = Path(self.path_folder,'AE')
+            self.path_folder_nets[key] = Path(self.path_folder, key)
             if not os.path.exists(self.path_folder_nets[key]):
                 os.makedirs(self.path_folder_nets[key])
     
@@ -147,7 +148,7 @@ class PEMS_METR_settings():
         return self.graph_topology
     
     def get_DataLoader(self, seed_data):      
-        dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset="METR_LA_S16", time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+        dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset=self.name_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
         return dataloader
     
     def get_LossFunction(self):

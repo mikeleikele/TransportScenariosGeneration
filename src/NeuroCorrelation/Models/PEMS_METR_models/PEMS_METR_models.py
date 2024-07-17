@@ -42,15 +42,18 @@ class PEMS_METR_AE_Encoder_16(nn.Module):
     def __init__(self):
 
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=14)
-        self.hidden_layer_2 = nn.Linear(in_features=14, out_features=12)
+        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=24)
+        self.hidden_layer_2 = nn.Linear(in_features=24, out_features=18)
+        self.hidden_layer_3 = nn.Linear(in_features=18, out_features=12)
+        
         #BN without any learning associated to it
         self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
-        
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)        
         
         self.dp_1 = nn.Dropout(p=0.2)
+        self.dp_2 = nn.Dropout(p=0.2)
         
         
     def forward(self, x):
@@ -58,16 +61,15 @@ class PEMS_METR_AE_Encoder_16(nn.Module):
         layer_nn = x       
         
         #== layer 01  ===================
-        layer_nn = self.hidden_layer_1(layer_nn)        
+        layer_nn = self.hidden_layer_1(layer_nn)
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer BN1 ===================
         layer_nn = self.batch_norm_1(layer_nn)
-        
         #== layer 02  ===================
         layer_nn = self.hidden_layer_2(layer_nn)
-                
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
         #== layer OUT ===================
         x_out = layer_nn
         return {"x_input":x, "x_output":x_out}
@@ -78,12 +80,15 @@ class PEMS_METR_AE_Decoder_16(nn.Module):
        
         super().__init__()
         
-        self.hidden_layer_1 = nn.Linear(in_features=12, out_features=14)
-        self.hidden_layer_2 = nn.Linear(in_features=14, out_features=16)
+        self.hidden_layer_1 = nn.Linear(in_features=12, out_features=18)
+        self.hidden_layer_2 = nn.Linear(in_features=18, out_features=24)
+        self.hidden_layer_3 = nn.Linear(in_features=24, out_features=16)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)
         
         self.dp_1 = nn.Dropout(p=0.2)        
+        self.dp_2 = nn.Dropout(p=0.2)        
         
     def forward(self, x):
         #== layer IN  ===================
@@ -92,10 +97,11 @@ class PEMS_METR_AE_Decoder_16(nn.Module):
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        #layer_nn = self.dp_1(layer_nn)
-        
-        #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)
+        #== layer 01  ===================
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
         
         #== layer OUT ===================
         x_out = layer_nn
@@ -208,7 +214,7 @@ class PEMS_METR_AE_32(nn.Module):
     def summary(self):
         
         enc_summary = torchinfo.summary(self.encoder, input_size=(1, 32), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
-        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 30), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        dec_summary = torchinfo.summary(self.decoder, input_size=(1, 28), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
 
         summary_dict = {"encoder": enc_summary, "decoder": dec_summary}
         return summary_dict
@@ -217,31 +223,35 @@ class PEMS_METR_AE_Encoder_32(nn.Module):
     def __init__(self):
        
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=32, out_features=28)
-        self.hidden_layer_2 = nn.Linear(in_features=28, out_features=22)
+        self.hidden_layer_1 = nn.Linear(in_features=32, out_features=64)
+        self.hidden_layer_2 = nn.Linear(in_features=64, out_features=48)
+        self.hidden_layer_3 = nn.Linear(in_features=48, out_features=28)
         
         #BN without any learning associated to it
         self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_5 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         self.dp_1 = nn.Dropout(p=0.2)
        
         
     def forward(self, x):
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
-        layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
+        layer_nn = self.act_1(layer_nn)  
         #== layer BN1 ===================
-        layer_nn = self.batch_norm_1(layer_nn)
-        
+        layer_nn = self.batch_norm_1(layer_nn)     
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)        
         
         #== layer OUT ===================
         x_out = layer_nn
@@ -252,30 +262,33 @@ class PEMS_METR_AE_Decoder_32(nn.Module):
     def __init__(self):
        
         super().__init__()
+        self.hidden_layer_1 = nn.Linear(in_features=28, out_features=48)
+        self.hidden_layer_2 = nn.Linear(in_features=48, out_features=64)
+        self.hidden_layer_3 = nn.Linear(in_features=64, out_features=32)
         
-        self.hidden_layer_1 = nn.Linear(in_features=22, out_features=28)
-        self.hidden_layer_2 = nn.Linear(in_features=28, out_features=32)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
-        
-        self.dp_1 = nn.Dropout(p=0.2)
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_3 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_4 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_5 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         
     def forward(self, x):
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)    
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)        
         
         #== layer OUT ===================
         x_out = layer_nn
-        return {"x_input":x, "x_output":x_out}    
+        return {"x_input":x, "x_output":x_out} 
 
 class PEMS_METR_GAN_LinearDiscriminator_32(nn.Module):
 
@@ -368,7 +381,7 @@ class PEMS_METR_GAN_32(nn.Module):
         return self.D
 
     def summary(self):
-        gen_summary = torchinfo.summary(self.G, input_size=(1, 22), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        gen_summary = torchinfo.summary(self.G, input_size=(1, 28), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         dis_summary = torchinfo.summary(self.D(), input_size=(1, 32), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         summary_dict = {"generator": gen_summary, "discriminator": dis_summary}
         return summary_dict
@@ -402,32 +415,32 @@ class PEMS_METR_AE_Encoder_48(nn.Module):
     def __init__(self):
        
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=42)
-        self.hidden_layer_2 = nn.Linear(in_features=42, out_features=36)
+        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=64)
+        self.hidden_layer_2 = nn.Linear(in_features=64, out_features=44)
+        self.hidden_layer_3 = nn.Linear(in_features=44, out_features=36)
         
         #BN without any learning associated to it
         self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         self.dp_1 = nn.Dropout(p=0.2)
        
         
     def forward(self, x):
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer BN1 ===================
         layer_nn = self.batch_norm_1(layer_nn)
-        
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)
-        
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)        
         #== layer OUT ===================
         x_out = layer_nn
         return {"x_input":x, "x_output":x_out}
@@ -438,26 +451,27 @@ class PEMS_METR_AE_Decoder_48(nn.Module):
        
         super().__init__()
         
-        self.hidden_layer_1 = nn.Linear(in_features=36, out_features=42)
-        self.hidden_layer_2 = nn.Linear(in_features=42, out_features=48)
+        self.hidden_layer_1 = nn.Linear(in_features=36, out_features=44)
+        self.hidden_layer_2 = nn.Linear(in_features=44, out_features=64)
+        self.hidden_layer_3 = nn.Linear(in_features=64, out_features=48)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         self.dp_1 = nn.Dropout(p=0.2)
         
         
     def forward(self, x):
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)    
-        
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
         #== layer OUT ===================
         x_out = layer_nn
         return {"x_input":x, "x_output":x_out}    
@@ -587,32 +601,32 @@ class PEMS_METR_AE_Encoder_64(nn.Module):
     def __init__(self):
        
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=64, out_features=54)
-        self.hidden_layer_2 = nn.Linear(in_features=54, out_features=48)
+        self.hidden_layer_1 = nn.Linear(in_features=64, out_features=96)
+        self.hidden_layer_2 = nn.Linear(in_features=96, out_features=80)
+        self.hidden_layer_3 = nn.Linear(in_features=80, out_features=54)
         
         #BN without any learning associated to it
         self.batch_norm_1 = nn.BatchNorm1d(num_features=1, affine=True)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         self.dp_1 = nn.Dropout(p=0.2)
        
         
-    def forward(self, x):
+    def forward(self, x):    
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer BN1 ===================
         layer_nn = self.batch_norm_1(layer_nn)
-        
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)
-        
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)        
         #== layer OUT ===================
         x_out = layer_nn
         return {"x_input":x, "x_output":x_out}
@@ -623,26 +637,27 @@ class PEMS_METR_AE_Decoder_64(nn.Module):
        
         super().__init__()
         
-        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=54)
-        self.hidden_layer_2 = nn.Linear(in_features=54, out_features=64)
+        self.hidden_layer_1 = nn.Linear(in_features=54, out_features=80)
+        self.hidden_layer_2 = nn.Linear(in_features=80, out_features=96)
+        self.hidden_layer_3 = nn.Linear(in_features=96, out_features=64)
         
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
+        self.act_2 = nn.Tanh()#nn.LeakyReLU(0.2)#
         
         self.dp_1 = nn.Dropout(p=0.2)
         
         
     def forward(self, x):
         #== layer IN  ===================
-        layer_nn = x       
-        
+        layer_nn = x
         #== layer 01  ===================
         layer_nn = self.hidden_layer_1(layer_nn)        
         layer_nn = self.act_1(layer_nn)
-        layer_nn = self.dp_1(layer_nn)
-        
         #== layer 02  ===================
-        layer_nn = self.hidden_layer_2(layer_nn)    
-        
+        layer_nn = self.hidden_layer_2(layer_nn)        
+        layer_nn = self.act_2(layer_nn)
+        #== layer 03  ===================
+        layer_nn = self.hidden_layer_3(layer_nn)
         #== layer OUT ===================
         x_out = layer_nn
         return {"x_input":x, "x_output":x_out}    
@@ -687,7 +702,7 @@ class PEMS_METR_GAN_LinearDiscriminator_64(nn.Module):
 class PEMS_METR_GAN_LinearGenerator_64(nn.Module):
     def __init__(self):       
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=48, out_features=52)
+        self.hidden_layer_1 = nn.Linear(in_features=54, out_features=52)
         self.hidden_layer_2 = nn.Linear(in_features=52, out_features=58)
         self.hidden_layer_3 = nn.Linear(in_features=58, out_features=64)
         self.act_1 = nn.Tanh()#nn.LeakyReLU(0.2)#
@@ -738,7 +753,7 @@ class PEMS_METR_GAN_64(nn.Module):
         return self.D
 
     def summary(self):
-        gen_summary = torchinfo.summary(self.G, input_size=(1, 48), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        gen_summary = torchinfo.summary(self.G, input_size=(1, 54), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         dis_summary = torchinfo.summary(self.D(), input_size=(1, 64), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
         summary_dict = {"generator": gen_summary, "discriminator": dis_summary}
         return summary_dict
