@@ -13,7 +13,10 @@ class DataBatchGenerator():
         self.number_of_batches = self.number_of_samples / batch_size
         self.shuffle = shuffle
         
-
+    def size(self):
+            batches = len(self.dataset)//self.batch_size
+            return batches
+    
     def generate(self):
         data_samples = self.dataset        
         n_instances = len(data_samples)

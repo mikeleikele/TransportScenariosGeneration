@@ -1,6 +1,8 @@
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 2 --experiment_name_suffix 2024_07_15_METR32  --main_folder 2024_07_15_METR32__10BEST
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 3 --experiment_name_suffix 2024_07_15_METR48  --main_folder 2024_07_15_METR48__10BEST
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 4 --experiment_name_suffix 2024_07_15_METR64  --main_folder 2024_07_15_METR64__10BEST
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 6 --experiment_name_suffix 2024_07_15_PEMS32  --main_folder 2024_07_15_PEMS32__10BEST
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 7 --experiment_name_suffix 2024_07_15_PEMS48  --main_folder 2024_07_15_PEMS48__10BEST
-python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 8 --experiment_name_suffix 2024_07_15_PEMS64  --main_folder 2024_07_15_PEMS64__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 1 --experiment_name_suffix 2024_07_16_METR16  --main_folder 2024_07_16_METR16__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 2 --experiment_name_suffix 2024_07_16_METR32  --main_folder 2024_07_16_METR32__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 3 --experiment_name_suffix 2024_07_16_METR48  --main_folder 2024_07_16_METR48__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 4 --experiment_name_suffix 2024_07_16_METR64  --main_folder 2024_07_16_METR64__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 5 --experiment_name_suffix 2024_07_16_PEMS16  --main_folder 2024_07_16_PEMS16__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 6 --experiment_name_suffix 2024_07_16_PEMS32  --main_folder 2024_07_16_PEMS32__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 7 --experiment_name_suffix 2024_07_16_PEMS48  --main_folder 2024_07_16_PEMS48__10BEST
+python3 test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes --num_case 8 --experiment_name_suffix 2024_07_16_PEMS64  --main_folder 2024_07_16_PEMS64__10BEST

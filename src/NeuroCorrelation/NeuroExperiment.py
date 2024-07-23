@@ -50,7 +50,6 @@ class NeuroExperiment():
         #7--pems48 ok
         
         for seed in range(0, int(repeation)):
-            print(repeation)
             experiment_name = f"{experiments_name}_{seed}"
             if train_models:
                 univar_count = self.experiment(num_case=num_case, main_folder=path_folder, seed=seed, experiment_name=experiment_name, optimization=optimization, load_model=load_model)
@@ -71,7 +70,7 @@ class NeuroExperiment():
             {"id":   4, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_METR_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
             
             {"id":   5, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_16_PEMS_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':  128,'GAN':  128}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
-            {"id":   6, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_PEMS_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6, "starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
+            {"id":   6, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_32_PEMS_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
             {"id":   7, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_48_PEMS_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
             {"id":   8, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_64_PEMS_bt",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   64,'GAN':   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
              
@@ -100,7 +99,7 @@ class NeuroExperiment():
         ]
         
         optimization_settings = {
-            "epochs":{'AE': 30,'GAN': 1}, "n_calls":{'AE': 25,'GAN': 1},"modeltype":"AE", "base_estimator":"GP", "n_initial_points":10, "optimization_function":"mahalanobis", 
+            "epochs":{'AE': 30,'GAN': 1}, "n_calls":{'AE': 35,'GAN': 1},"modeltype":"AE", "base_estimator":"GP", "n_initial_points":10, "optimization_function":"mahalanobis", 
             "search_space":[
                 {"type":"Real","min":5e-4,"max":2, "values_list":None, "name":"loss", "network_part":"AE", "param":"SPEARMAN_CORRELATION_LOSS"},
                 {"type":"Real","min":5e-4,"max":2, "values_list":None, "name":"loss", "network_part":"AE",  "param":"JENSEN_SHANNON_DIVERGENCE_LOSS"},
