@@ -11,7 +11,7 @@ from src.NeuroCorrelation.DataLoaders.DataBatchGenerator import DataBatchGenerat
 from src.NeuroCorrelation.Analysis.NeuroDistributions import NeuroDistributions
 from src.NeuroCorrelation.ModelPrediction.ModelPrediction import ModelPrediction
 from src.NeuroCorrelation.Analysis.TimeAnalysis import TimeAnalysis
-
+from termcolor import colored, cprint 
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -62,11 +62,10 @@ class ModelTraining():
         self.is_optimization = is_optimization
         if not os.path.exists(self.path_save_model_gradients):
             os.makedirs(self.path_save_model_gradients)
-        self.chechWeightsUpdate = False    
-        if self.chechWeightsUpdate:
+        self.checkWeightsUpdate = True    
+        if self.checkWeightsUpdate:
             cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
         if self.model_type=="AE":
-            print("________",self.graph_topology)
             self.model = model
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
@@ -80,7 +79,7 @@ class ModelTraining():
             
         elif self.model_type=="GAN":
             lr_gen = 0.001
-            lr_dis = 0.1
+            lr_dis = 0.001
             b1_gen = 0.5   #decay of first order momentum of gradient gen
             b1_dis = 0.5   #decay of first order momentum of gradient dis
             b2_gen = 0.999 #decay of first order momentum of gradient gen
@@ -114,9 +113,9 @@ class ModelTraining():
             elif self.opt_scheduler_dis == "StepLR":
                 self.scheduler_dis = optim.lr_scheduler.StepLR(self.optimizer_dis, step_size=15, gamma=0.1)
             
-            
-           
-            '''if self.GAN_loss =="BCELoss":
+            self.criterion = nn.BCELoss()
+            '''
+            if self.GAN_loss =="BCELoss":
                 self.criterion = nn.BCELoss()
             elif self.GAN_loss =="MSELoss":
                 self.criterion = nn.MSE_LOSS()'''
@@ -133,10 +132,8 @@ class ModelTraining():
         return torch.stack(edge_indices, dim=0)
     
     def training(self,  training_name, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_name=None):
-        
         self.dataLoaded_train = DataBatchGenerator(dataset=self.train_data, batch_size=self.batchsize, shuffle=shuffle_data)
         self.dataLoaded_test = DataBatchGenerator(dataset=self.test_data, batch_size=self.batchsize, shuffle=shuffle_data)
-        
         
         if load_model:
             if optimization is not None:
@@ -213,10 +210,8 @@ class ModelTraining():
         epoch_train = list()
         print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
         for epoch in range(self.epoch['AE']):
-            
             self.time_performance.start_time(f"{training_name}_AE_TRAINING_epoch")
             self.model.train()
-            
             loss_batch = list()
             loss_batch_test = list()
             loss_batch_partial = dict()
@@ -241,17 +236,12 @@ class ModelTraining():
                     if model_flatten_in:
                         x_in = x_in.view(-1,self.univar_count_in)
                         x_in.unsqueeze_(1)
-                    
                     y_hat = self.model.forward(x=x_in)
                     y_hat_list = list()
-                    
-                    
                     for i in range(item_batch):
                         item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
                         y_hat_list.append(item_dict)
-                    #print(y_hat.shape)
-                        
-                    #y_hat_list.append(y_hat)
+                    
                     loss_dict = self.loss_obj.computate_loss(y_hat_list)
                     
                     loss = loss_dict['loss_total']
@@ -318,7 +308,7 @@ class ModelTraining():
             self.time_performance.compute_time(f"{training_name}_AE_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)
 
-    def training_GAN(self, noise_size, training_name, plot_loss=True, train4batch=True, is_WGAN=False, WGAN_coef=10, save_trainingTime=True):
+    def training_GAN(self, noise_size, training_name, plot_loss=True,   save_trainingTime=True):
         
         real_label = 1.
         fake_label = 0.
@@ -326,228 +316,161 @@ class ModelTraining():
         self.loss_dict = dict()
         self.model_gen.train()
         self.model_dis.train()
-        #self.model_gen = self.model_gen.apply(self.weights_init_uniform)
-        #self.model_dis = self.model_dis.apply(self.weights_init_uniform)
-        if self.chechWeightsUpdate:
+        
+        if self.checkWeightsUpdate:
             layer_gen_notrained = dict()
             for lay in range(len(list(self.model_gen.parameters()))):                
                 lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
                 layer_gen_notrained[f"lay_{lay}"] = lay_tens
+            
+            layer_dis_notrained = dict()
+            for lay in range(len(list(self.model_dis.parameters()))):                
+                lay_tens = list(self.model_dis.parameters())[lay].clone().detach().cpu().numpy()
+                layer_dis_notrained[f"lay_{lay}"] = lay_tens
                 
         print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
+        
+        err_D_all = list()
+        err_D_r_all = list()
+        err_D_f_all = list()
+        err_G_all = list()
+        
         for epoch in range(self.epoch['GAN']):
-            first = False
-            
+            err_D_r_epoch = list()
+            err_D_f_epoch = list()
+            err_G_epoch = list()
             dataBatches = self.dataLoaded_train.generate()
-            loss_batch = list()
-
-            err_D_list = list()
-            err_D_r_list = list()
-            err_D_f_list = list()
-            wgan_gp_list = list()
-
-            err_G_list = list()
-            
-            loss_batch_partial = dict()
+             
             self.time_performance.start_time(f"{training_name}_GAN_TRAINING_epoch")
-            print("GAN train4batch:\t", train4batch)
-            for batch_num, dataBatch in enumerate(dataBatches):
-                if not train4batch:
-                    for i, item in enumerate(dataBatch):
-                        samplef = item['sample']
-                        sample = samplef.type(torch.float32)
-                        ########################### 
-                        # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-                        ###########################
-                        ###########################
-                        ##  A Update D with real data
-                        ###########################
-                        self.model_dis.zero_grad()
-                        self.optimizer_dis.zero_grad()     
-                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
-                        output = self.model_dis(sample)['x_output'].view(-1)
-                        item_err = self.criterion(output, label)
-                        
-                        self.optimizer_dis.step()
-                        
-                        ###########################
-                        ##  B Update D with fake data
-                        ###########################
-                        self.optimizer_dis.zero_grad()                
-                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
-                        fake = self.model_gen(noise)['x_output'] 
-                        label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
-                        output = self.model_dis(fake.detach())['x_output'].view(-1)
-                        item_err = self.criterion(output, label)
-                        item_err.backward()
-                        self.optimizer_dis.step() 
-                    
-                        ###########################
-                        # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
-                        ###########################
-                        self.optimizer_gen.zero_grad()
-                        noise = torch.randn(1, 1, noise_size[0], noise_size[1]).to(device=self.device) 
-                        fake = self.model_gen(noise)['x_output']                    
-                        
-                        if first:
-                            print("NOISE: (epoch",epoch,")\t",noise)
-                            print("")
-                            print("FAKE: (epoch",epoch,")\t",fake)
-                            print("================================================================================================================================================\n\n")
-                            first = False
-                            
-                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
-                        output = self.model_dis(fake)['x_output'].view(-1)                    
-                        item_err = self.criterion(output, label)
-                        item_err.backward()
-                        self.optimizer_gen.step() 
-                #------------------
-                elif train4batch:
+            
+            for dataBatch in dataBatches:
+                item_batch = len(dataBatch) 
+                if item_batch == self.batchsize:
                     ###########################
                     # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                     ###########################
-                    
+                    noise = torch.randn(1,  self.batchsize, noise_size[1]).to(device=self.device) 
                     ###########################
                     ##  A Update D with real data
                     ###########################
+                    
                     #self.model_dis.zero_grad()
-                    self.optimizer_dis.zero_grad()
-                    batch_real_err_D = torch.zeros(1).type(torch.float32).to(device=self.device) 
-                    x_real = list()
                     
-                    for i, item in enumerate(dataBatch):
+                    sample_list = list()
+                    for item in dataBatch:
                         sample = item['sample'].type(torch.float32)
-                        x_real.append(sample)
-                        label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device)      
-                        output = self.model_dis(sample)['x_output'].view(-1)   
-                        item_err = output #self.criterion(output, label)
-                        batch_real_err_D += item_err
+                        sample_list.append(sample)
+                    x_in = torch.Tensor(1, self.batchsize, self.univar_count_in).to(device=self.device)
+                    x_in = torch.cat(sample_list, dim=0)
+                    labels = torch.full((self.batchsize,), real_label, dtype=torch.float32).to(device=self.device)
+                    x_in = x_in.view(1, 64, 32)
+                    x_in = x_in.unsqueeze(0)
+                    output = self.model_dis(x_in)['x_output'].view(-1)
+                    batch_real_err_D = -self.criterion(output, labels)
+                    batch_real_err_D.backward()
+                    self.optimizer_dis.step()
+                    self.optimizer_dis.zero_grad()
+                    err_D_r_epoch.append(batch_real_err_D)
                     
-                    #maximize batch_real_err_D using minus sign
-                    batch_real_err_D__mean = -batch_real_err_D/len(dataBatch)
-                    if batch_num%self.append_count == 0:
-                        err_D_r_list.append(batch_real_err_D__mean.detach().cpu().numpy()[0])
-                    #batch_real_err_D.backward()
-                    #self.optimizer_dis.step()
-                    
-                
-                    ###########################
-                    ##  make noiseData
-                    ###########################
-                    noise_batch = list()
-                    for i, item in enumerate(dataBatch):
-                        noise = torch.randn(1,  noise_size[0], noise_size[1]).to(device=self.device) 
-                        noise_batch.append(noise)
-                
                     ###########################
                     ##  B Update D with fake data
                     ###########################
+                    fake = self.model_gen(noise)['x_output']
+                    label = torch.full((self.batchsize,), fake_label, dtype=torch.float32).to(device=self.device)
+                    output = self.model_dis(fake)['x_output'].view(-1)
                     
-                    batch_fake_err_D = torch.zeros(1).to(device=self.device) 
-                    x_fake = list()
-                    for i, item in enumerate(noise_batch):
-                        fake = self.model_gen(item)['x_output'] 
-                        x_fake.append(sample)
-                        label = torch.full((1,), fake_label, dtype=torch.float32).to(device=self.device)                    
-                        output = self.model_dis(fake.detach())['x_output'].view(-1)
-                        item_err = output #self.criterion(output, label)
-                        batch_fake_err_D += item_err
-                    
-                    #maximize batch_real_err_D using minus sign
-                    batch_fake_err_D__mean = batch_fake_err_D/len(dataBatch)
-                    if batch_num%self.append_count == 0:
-                        err_D_f_list.append(batch_fake_err_D__mean.detach().cpu().numpy()[0])
-                    
-                    if is_WGAN:
-                        xarr_real = torch.stack(x_real).to(device=self.device) 
-                        xarr_fake = torch.stack(x_fake).to(device=self.device) 
-                        batch_size = len(noise_batch)
-                        
-                        wgan_grad_penality = self.wasser_gradient_penalty(self.model_dis, xr=xarr_real, xf=xarr_fake, batch_size=batch_size)
-                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean + (WGAN_coef * wgan_grad_penality)
-                        if batch_num%30 == 0:
-                            wgan_gp_list.append(wgan_grad_penality.detach().cpu().numpy())
-                    else: 
-                        batch_err_D = batch_real_err_D__mean + batch_fake_err_D__mean                    
-                    
-                    batch_err_D.backward()
-                    self.optimizer_dis.step() 
-                
-                    ###########################               
-                    if batch_num%self.append_count == 0:
-                        err_D_list.append(batch_err_D.detach().cpu().numpy())
+                    batch_fake_err_D = self.criterion(output, labels)
+                    batch_fake_err_D.backward()
+                    self.optimizer_dis.step()
+                    err_D_f_epoch.append(batch_fake_err_D)
                     
                     ###########################
                     # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
                     ###########################
+                    self.model_gen.zero_grad()
+                    self.optimizer_gen.zero_grad()
                     
-                    if batch_num%self.n_critic == 0:
-                        
-                        batch_fake_err_G = torch.zeros(1).to(device=self.device) 
-                        self.optimizer_gen.zero_grad()
-                        self.model_gen.train()
-
-                        for i, item in enumerate(noise_batch):
-                            fake = self.model_gen(item)['x_output']                    
-                            label = torch.full((1,), real_label, dtype=torch.float32).to(device=self.device) 
-                            output = self.model_dis(fake)['x_output'].view(-1)                    
-                            item_err = output #self.criterion(output, label)
-                            batch_fake_err_G += item_err 
-                        
-                        
-                        #maximize batch_real_err_D using minus sign
-                        batch_fake_err_G__mean = -batch_fake_err_G/len(dataBatch)
-                        
-                        batch_err_G = batch_fake_err_G__mean
-                        if batch_num%self.append_count == 0:
-                            err_G_list.append(batch_fake_err_G__mean.detach().cpu().numpy()[0])
-                        
-                        batch_err_G.backward()
-                        self.optimizer_gen.step() 
-                
+                    fake = self.model_gen(noise)['x_output']    
+                    label = torch.full((self.batchsize,), real_label, dtype=torch.float32).to(device=self.device)                
+                    output = self.model_dis(fake)['x_output'].view(-1)                    
+                    
+                    batch_err_G = self.criterion(output, label)
+                    batch_err_G.backward()
+                    self.optimizer_gen.step()
+                    err_G_epoch.append(batch_err_G)
             
-            if self.chechWeightsUpdate:
-                
-                layer_gen_trained = dict()
-                for lay in range(len(list(self.model_gen.parameters()))):                
-                    lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
-                    layer_gen_trained[f"lay_{lay}"] = lay_tens
-                
-                print("START EQ ---")
-                for key in layer_gen_trained:
-                    n_train = layer_gen_notrained[key]
-                    y_train = layer_gen_trained[key]
-                    ten_eq = np.array_equal(n_train,y_train)
-                    if ten_eq:
-                        print(f"{key} are equals")
-                print("END EQ -----")
-            
+            self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_epoch")    
+            epoch_time = self.time_performance.get_time(f"{training_name}_GAN_TRAINING_epoch", fun="last")
+            epoch_train.append({"epoch":epoch,"time":epoch_time})
             
             self.plot_grad_flow(named_parameters = self.model_gen.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_gen")
             self.plot_grad_flow(named_parameters = self.model_dis.named_parameters(), epoch= f"{epoch+1}", model_section="GAN_dis")
             
-            self.loss_dict[epoch] = {"loss_Dis": np.mean(err_D_list), "loss_Gen": np.mean(err_G_list),"loss_Dis_real": np.mean(err_D_r_list), "loss_Dis_fake": np.mean(err_D_f_list)}
-            self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_epoch")
-            epoch_time = self.time_performance.get_time(f"{training_name}_GAN_TRAINING_epoch", fun="last")
-                
-            epoch_train.append({"epoch":epoch,"time":epoch_time})
-            print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
-            print("\t\t\t-LOSS D\tall",np.mean(err_D_list),"\tD(real)",np.mean(err_D_r_list),"\tD(fake)",np.mean(err_D_f_list),"\tG",np.mean(err_G_list))
-            print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
-            if is_WGAN:
-                 print("\t\t\t-gradient penalty\t",np.mean(wgan_gp_list))
+            err_D_r_epoch = np.mean(self.to_numpy(err_D_r_epoch))
+            err_D_f_epoch = np.mean(self.to_numpy(err_D_f_epoch))
+            err_D_epoch = (err_D_r_epoch + err_D_f_epoch)/2
+            err_G_epoch = np.mean(self.to_numpy(err_G_epoch))
             
+            err_D_r_all.append(err_D_r_epoch)
+            err_D_f_all.append(err_D_f_epoch)
+            err_D_all.append(err_D_epoch)
+            err_G_all.append(err_G_epoch)
+            
+            self.loss_dict[epoch] = {"loss_Dis": err_D_epoch, "loss_Gen": err_G_epoch,"loss_Dis_real": err_D_r_epoch, "loss_Dis_fake": err_D_f_epoch}
+
+            print("\tepoch:\t",epoch,"/",self.epoch['GAN'],"\t")
+            print("\t\t\t-LOSS D\tall",err_D_epoch,"\tD(real)",err_D_r_epoch,"\tD(fake)",err_D_f_epoch,"\tG",err_G_epoch)
+            print("\t\t\t-LeRt D",self.optimizer_dis.param_groups[0]['lr'],"\tG",self.optimizer_gen.param_groups[0]['lr'])
             
             if self.opt_scheduler_gen == "ReduceLROnPlateau":
-                self.scheduler_gen.step(np.mean(err_G_list))
+                self.scheduler_gen.step(np.mean(err_G_epoch))
             elif self.opt_scheduler_gen == "StepLR":
                 self.scheduler_gen.step() 
-            
+                
             if self.opt_scheduler_dis == "ReduceLROnPlateau":
-                self.scheduler_dis.step(np.mean(err_D_list))
+                self.scheduler_dis.step(np.mean(err_D_epoch))
             elif self.opt_scheduler_dis == "StepLR":
-                self.scheduler_dis.step() 
+                self.scheduler_dis.step()
 
+        err_D_r_epoch = self.to_numpy(err_D_r_epoch)
+        err_D_f_epoch = self.to_numpy(err_D_f_epoch)
+        err_G_epoch = self.to_numpy(err_G_epoch)
+        for r_batch, f_batch in zip(err_D_r_epoch, err_D_f_epoch):
+            mean_val = (np.mean(r_batch) + np.mean(f_batch))/2
+            
+            err_D_all.append(mean_val)
+            
+        if self.checkWeightsUpdate:
+            layer_gen_trained = dict()
+            for lay in range(len(list(self.model_gen.parameters()))):                
+                lay_tens = list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy()
+                layer_gen_trained[f"lay_{lay}"] = lay_tens
+            cprint(f"--------------------------------------------------", "blue", end="\n")
+            cprint(f"\tSTART check Weights Update GENERATOR", "blue", end="\n")
+            for key in layer_gen_trained:
+                n_train = layer_gen_notrained[key]
+                y_train = layer_gen_trained[key]
+                ten_eq = np.array_equal(n_train,y_train)
+                if ten_eq:
+                    cprint(f"{key} are equals", "red", end="\n")
+                else:
+                    cprint(f"{key} are not equals", "green", end="\n")
+            
+            layer_dis_trained = dict()
+            for lay in range(len(list(self.model_dis.parameters()))):                
+                lay_tens = list(self.model_dis.parameters())[lay].clone().detach().cpu().numpy()
+                layer_dis_trained[f"lay_{lay}"] = lay_tens
+            cprint(f"\tSTART check Weights Update DISCRIMINATOR", "blue", end="\n")
+            for key in layer_dis_trained:
+                n_train = layer_dis_notrained[key]
+                y_train = layer_dis_trained[key]
+                ten_eq = np.array_equal(n_train,y_train)
+                if ten_eq:
+                    cprint(f"{key} are equals", "red", end="\n")
+                else:
+                    cprint(f"{key} are not equals", "green", end="\n")
+            cprint(f"--------------------------------------------------", "blue", end="\n")
+        
         if plot_loss:
             self.loss_plot(self.loss_dict)
         
@@ -556,14 +479,26 @@ class ModelTraining():
             self.save_training_time(epoch_train)    
         
    
-    def weights_init_uniform(self, m):
+    # Weight initialization
+    def weights_init(m):
         classname = m.__class__.__name__
-        # for every Linear layer in a model..
-        if classname.find('Linear') != -1:
-            # apply a uniform distribution to the weights and a bias=0
-            m.weight.data.uniform_(0.0, 1.0)
-            m.bias.data.fill_(0)
-    
+        if classname.find('Conv') != -1:
+            nn.init.normal_(m.weight.data, 0.0, 0.02)
+        elif classname.find('BatchNorm') != -1:
+            nn.init.normal_(m.weight.data, 1.0, 0.02)
+            nn.init.constant_(m.bias.data, 0)
+
+    def to_numpy(self, tensor_list):
+        # Check if the list is nested
+        if isinstance(tensor_list, list):
+            if isinstance(tensor_list[0], list):
+                return [self.to_numpy(sublist) for sublist in tensor_list]
+            else:
+                return [sublist.cpu().detach().numpy() for sublist in tensor_list]
+        elif isinstance(tensor_list, Tensor):
+            return [tensor_list.cpu().detach().numpy()]
+        else:
+            return [tensor_list]
             
     def get_tensor_info(tensor):
         info = []
@@ -572,12 +507,10 @@ class ModelTraining():
         return ' '.join(info)
 
     def getBack(self, var_grad_fn):
-        print(var_grad_fn)
         for n in var_grad_fn.next_functions:
             if n[0]:
                 try:
                     tensor = getattr(n[0], 'variable')
-                    print(n[0])
                     print('Tensor with grad found:', tensor)
                     print(' - gradient :', tensor.grad)
                     print()
@@ -674,9 +607,7 @@ class ModelTraining():
         '''
         
         return gradient_penalty
-
-    
-    
+ 
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):

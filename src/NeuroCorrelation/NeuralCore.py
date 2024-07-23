@@ -354,7 +354,7 @@ class NeuralCore():
                 self.model["AE"] =  self.case_setting.get_model(key="AE")
                 trained_obj_ae = self.training_model(data_dict=self.data_splitted, model_type="AE", model=self.model["AE"], loss_obj=self.loss_obj["AE"], epoch=self.epoch, graph_topology = self.graph_topology, optimization=self.do_optimization, optimizer_trial=self.optimization)
                 model_ae_trained = trained_obj_ae[0]
-                self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
+                #self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
                 model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
                 self.model["GAN"] = self.case_setting.get_model(key="GAN")(generator=model_ae_decoder)
                 trained_obj_gan = self.training_model(self.data_splitted, model_type="GAN", model=self.model["GAN"], loss_obj=self.loss_obj["GAN"], pre_trained_decoder=True,epoch=self.epoch)

@@ -1,5 +1,6 @@
 data/
 !/data/neuroCorrelation_data
+!/data/neuroCorrelation_data/CHENGDU_SMALLGRAPH/*
 *.pyc
 GEO_README.txt
 a.txt
