@@ -14,11 +14,12 @@ import pandas as pd
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
+    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
         
         self.mode = mode
         self.seed = seed
         self.name_dataset = name_dataset
+        self.version_dataset = version_dataset
         self.vc_mapping = None
         self.path_folder = path_folder
         self.instaces_size = instaces_size
@@ -86,7 +87,7 @@ class DataLoader:
             elif self.mode=="fin_data":
                 print("DATASET PHASE: Load maps data")
                 
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             
@@ -97,11 +98,7 @@ class DataLoader:
             self.pathMap = self.dataGenerator.get_pathMap()
             self.edge_index = self.dataGenerator.get_edgeIndex()
                 
-            
-        if self.mode=="graph_statics":
-            print("to implement")
-            #self.train_data = self.dataGenerator.graphGen(num_of_samples = train_samples, with_cov=True)
-
+        
         self.rangeData = self.dataGenerator.getDataRange()
         self.statsData = self.dataGenerator.getDataStats()
         
