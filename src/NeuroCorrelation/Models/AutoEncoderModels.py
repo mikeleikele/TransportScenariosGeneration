@@ -46,10 +46,10 @@ class AutoEncoderModels(nn.Module):
         
         
     def get_decoder(self):
-        return self.decoder
+        return self.models['decoder']
 
     def get_encoder(self):
-        return self.encoder       
+        return self.models['encoder']       
     
     def summary(self):
         summary = dict()
@@ -96,8 +96,8 @@ class AutoEncoderModels(nn.Module):
             config = json.load(f)
         
         layers_list = dict()
-        layers_list["encoder_layers"] = config["encoder_layers"]
-        layers_list["decoder_layers"] = config["decoder_layers"]
+        layers_list["encoder_layers"] = config["VAE"]["encoder_layers"]
+        layers_list["decoder_layers"] = config["VAE"]["decoder_layers"]
         return layers_list
 
 class nn_Model(nn.Module):

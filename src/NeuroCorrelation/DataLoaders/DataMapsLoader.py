@@ -1,4 +1,5 @@
 
+from src.NeuroCorrelation.Datasets.DatasetTool import DatasetTool
 from src.NeuroCorrelation.Analysis.DataComparison import DataComparison
 
 import numpy as np
@@ -21,11 +22,12 @@ from random import shuffle
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, lat_dim, univar_count, path_folder, seed, timeweather=False, univ_limit=150, time_slot=None):
+    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, timeweather=False, univ_limit=150, time_slot=None):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
         self.univar_count = univar_count
         self.name_dataset = name_dataset
+        self.version_dataset = version_dataset
         self.seed = seed
         self.min_val = None
         self.max_val = None
@@ -36,8 +38,16 @@ class DataMapsLoader():
         self.timeweather = timeweather
         self.time_slot = time_slot
         
+        
+        datatasetTool = DatasetTool(name_dataset=self.name_dataset, version_dataset = self.version_dataset, time_slot= self.time_slot)
+        datatasetdict =datatasetTool.get_dataset_settings()
+        filename = datatasetdict["filename"]
+        pathMap  = datatasetdict["pathMap"]
+        edge_path  = datatasetdict["edge_path"]
+        timeweath_path = datatasetdict["timeweath_path"]
+        
         #PEMS_BAY
-        if self.name_dataset=="PEMS_BAY_S16":
+        '''if self.name_dataset=="PEMS_BAY_S16":
             filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16_START7_END9__data.csv")
             pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16__map.csv")
             pathMap  = None
@@ -52,11 +62,11 @@ class DataMapsLoader():
         elif self.name_dataset=="PEMS_BAY_S64":
             filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64_START7_END9__data.csv")
             pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64__map.csv")
-            pathMap  = None
+            pathMap  = None'''
         
         
         #METR_LA
-        if self.name_dataset=="METR_LA_S16":
+        '''if self.name_dataset=="METR_LA_S16":
             filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16_START7_END9__data.csv")
             pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16__map.csv")
             pathMap  = None
@@ -71,10 +81,10 @@ class DataMapsLoader():
         elif self.name_dataset=="METR_LA_S64":
             filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64_START7_END9__data.csv")
             pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64__map.csv")
-            pathMap  = None
+            pathMap  = None'''
         
         #CHENGDU
-        elif self.name_dataset=="China_Chengdu_A0016":
+        '''elif self.name_dataset=="China_Chengdu_A0016":
             filename  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0016","CHENGDU_SLOT_A_S0016__data.csv")
             pathMap   = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0016","CHENGDU_SLOT_S0016__map.csv")
             edge_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_S0016","CHENGDU_SLOT_S0016__edges.csv")
@@ -109,10 +119,10 @@ class DataMapsLoader():
             filename  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_M1","CHENGDU_SLOT_A_S0742__trunk__data.csv")
             pathMap   = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_M1","CHENGDU_SLOT_S0742__trunk__map.csv")
             edge_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_SLOT_M1","CHENGDU_SLOT_S0742__trunk__edges.csv")
-            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")
+            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")'''
         
         #CHENGDU_URBAN
-        elif self.name_dataset=="China_Chengdu_URB_zone0":
+        '''elif self.name_dataset=="China_Chengdu_URB_zone0":
             if self.time_slot == "A":
                 filename  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_0","CHENGDU_SLOT_A_S0248__zone_0__data.csv")
             elif self.time_slot == "B":
@@ -126,9 +136,9 @@ class DataMapsLoader():
                 
             pathMap   = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_0","CHENGDU_URBAN_S0248__zone_0__map.csv")
             edge_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_0","CHENGDU_SLOT_S0248__zone_0__edges.csv")
-            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")
+            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")'''
         
-        elif self.name_dataset=="China_Chengdu_URB_zone1":
+        '''elif self.name_dataset=="China_Chengdu_URB_zone1":
             filename  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_1","CHENGDU_SLOT_A_S0240__zone_1__data.csv")
             pathMap   = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_1","CHENGDU_URBAN_S0240__zone_1__map.csv")
             edge_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONE_1","CHENGDU_SLOT_S0240__zone_1__edges.csv")
@@ -137,35 +147,16 @@ class DataMapsLoader():
             filename  = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONES_1-2","CHENGDU_SLOT_A_S0437__zone_1-zone_2__data.csv")
             pathMap   = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONES_1-2","CHENGDU_URBAN_S0437__zone_1-zone_2__map.csv")
             edge_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_URBAN","CHENGDU_URBAN_ZONES_1-2","CHENGDU_SLOT_S0437__zone_1-zone_2__edges.csv")
-            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")
+            timeweath_path = Path("data","neuroCorrelation_data","CHINA_CHENGDU","CHENGDU_EXOGENOUS","CHENGDU_SLOT_A_timeweather.csv")'''
         #ESG
-        elif self.name_dataset=="ESG_35":
+        '''elif self.name_dataset=="ESG_35":
             filename = Path("data","neuroCorrelation_data","ESG","ESG_35.csv")
             pathMap  = None
-        
-        
-        elif self.name_dataset=="PEMS_all":
-            filename = Path("data","neuroCorrelation_data","PEMSBAY_S325_START17_END19_MF.csv")
-        elif self.name_dataset=="MetrLA_all":
-            filename = Path("data","neuroCorrelation_data","METRLA_S207_START17_END19_MF.csv")
-        elif self.name_dataset=="China_Chengdu":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A.csv")
-        
-        elif self.name_dataset=="China_Chengdu_A0500":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_200.csv")
-        elif self.name_dataset=="China_Chengdu_A0016":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_16.csv")
-        elif self.name_dataset=="China_Chengdu_A0064":
-            filename = Path("data","neuroCorrelation_data","Chengdu_slot_A_cut_64.csv")   
-        else:
-            print("no data!")
-        
-        
-        
+        '''
         self.data_df = pd.read_csv(filename, sep=',')
         
         self.pathMap = pathMap
-        if self.pathMap is not None:
+        if edge_path is not None:
             edgeindexNP =  np.loadtxt(edge_path, delimiter=',')
             li = list()
             for row in edgeindexNP:

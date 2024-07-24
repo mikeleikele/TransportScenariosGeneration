@@ -48,7 +48,7 @@ class ModelTraining():
         self.n_critic = 1
         self.opt_scheduler_ae = "StepLR"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
-        self.opt_scheduler_dis = "StepLR"
+        self.opt_scheduler_dis = "ReduceLROnPlateau"
         cprint(f"PAY ATTENTION: GEN is update every {self.n_critic} batches", "magenta", end="\n")
         self.GAN_loss = "MSELoss"
         self.univar_count_in = univar_count_in 
@@ -80,8 +80,8 @@ class ModelTraining():
         elif self.model_type=="GAN":
             lr_gen = 0.001
             lr_dis = 0.001
-            b1_gen = 0.5   #decay of first order momentum of gradient gen
-            b1_dis = 0.5   #decay of first order momentum of gradient dis
+            b1_gen = 0.05   #decay of first order momentum of gradient gen
+            b1_dis = 0.05   #decay of first order momentum of gradient dis
             b2_gen = 0.999 #decay of first order momentum of gradient gen
             b2_dis = 0.999 #decay of first order momentum of gradient dis
             self.model = model
@@ -94,9 +94,9 @@ class ModelTraining():
             self.model_gen.to(device=self.device)
             gen_params = self.model_gen.parameters()
             
-            self.optimizer_gen = optim.Adam(gen_params, lr=lr_gen, betas=(b1_gen, b2_gen))
+            self.optimizer_gen = optim.Adam(gen_params, lr=lr_gen)#, betas=(b1_gen, b2_gen))
             if self.opt_scheduler_gen == "ReduceLROnPlateau":
-                self.scheduler_gen = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_gen, factor=0.1, patience=5, verbose=True)
+                self.scheduler_gen = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_gen, factor=0.1, patience=10, verbose=True)
             elif self.opt_scheduler_gen == "StepLR":
                 self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=20, gamma=0.1)
 
@@ -106,7 +106,7 @@ class ModelTraining():
             self.model_dis = model_dis()
             self.model_dis.to(device=self.device)
             dis_params = self.model_dis.parameters()
-            self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis, betas=(b1_gen, b2_gen))  
+            self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis)#, betas=(b1_gen, b2_gen))  
             
             if self.opt_scheduler_dis == "ReduceLROnPlateau":
                 self.scheduler_dis = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_dis, factor=0.1, patience=5, verbose=True)
@@ -355,39 +355,43 @@ class ModelTraining():
                     ###########################
                     
                     #self.model_dis.zero_grad()
+                    self.optimizer_dis.zero_grad()
                     
                     sample_list = list()
                     for item in dataBatch:
                         sample = item['sample'].type(torch.float32)
                         sample_list.append(sample)
+                    
                     x_in = torch.Tensor(1, self.batchsize, self.univar_count_in).to(device=self.device)
                     x_in = torch.cat(sample_list, dim=0)
-                    labels = torch.full((self.batchsize,), real_label, dtype=torch.float32).to(device=self.device)
-                    x_in = x_in.view(1, 64, 32)
-                    x_in = x_in.unsqueeze(0)
+                    real_labels = torch.full((self.batchsize,), real_label, dtype=torch.float32).to(device=self.device)
+                    x_in = x_in.view(1, self.batchsize, self.univar_count_in)                    
                     output = self.model_dis(x_in)['x_output'].view(-1)
-                    batch_real_err_D = -self.criterion(output, labels)
-                    batch_real_err_D.backward()
-                    self.optimizer_dis.step()
-                    self.optimizer_dis.zero_grad()
+                    batch_real_err_D = self.criterion(output, real_labels)
+                    #batch_real_err_D.backward()
+                    #self.optimizer_dis.step()
+                    
                     err_D_r_epoch.append(batch_real_err_D)
                     
                     ###########################
                     ##  B Update D with fake data
                     ###########################
                     fake = self.model_gen(noise)['x_output']
-                    label = torch.full((self.batchsize,), fake_label, dtype=torch.float32).to(device=self.device)
+                    fake_labels = torch.full((self.batchsize,), fake_label, dtype=torch.float32).to(device=self.device)
                     output = self.model_dis(fake)['x_output'].view(-1)
                     
-                    batch_fake_err_D = self.criterion(output, labels)
-                    batch_fake_err_D.backward()
+                    batch_fake_err_D = self.criterion(output, fake_labels)
+                    
+                    batch_all_err_D = batch_real_err_D + batch_fake_err_D
+                    batch_all_err_D.backward()
                     self.optimizer_dis.step()
+                    
                     err_D_f_epoch.append(batch_fake_err_D)
                     
                     ###########################
                     # 2 Update G network: maximize log(D(x)) + log(1 - D(G(z)))
                     ###########################
-                    self.model_gen.zero_grad()
+                    #self.model_gen.zero_grad()
                     self.optimizer_gen.zero_grad()
                     
                     fake = self.model_gen(noise)['x_output']    
