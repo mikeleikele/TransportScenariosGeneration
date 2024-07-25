@@ -45,7 +45,7 @@ class ModelTraining():
         self.device = device
         self.input_shape = input_shape
         self.append_count = 1 #ogni quanti batch aggiungo val della loss
-        self.n_critic = 1
+        self.n_critic = 10
         self.opt_scheduler_ae = "StepLR"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "ReduceLROnPlateau"
@@ -76,14 +76,14 @@ class ModelTraining():
                 self.scheduler_ae = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=5, verbose=True)
             elif self.opt_scheduler_ae == "StepLR":
                 self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=40, gamma=0.1)
-            
-        elif self.model_type=="GAN":
-            lr_gen = 0.001
-            lr_dis = 0.001
+        
+        elif self.model_type in ["GAN","WGAN"]:
+            lr_gen = 0.00001
+            lr_dis = 0.1
             b1_gen = 0.05   #decay of first order momentum of gradient gen
             b1_dis = 0.05   #decay of first order momentum of gradient dis
-            b2_gen = 0.999 #decay of first order momentum of gradient gen
-            b2_dis = 0.999 #decay of first order momentum of gradient dis
+            b2_gen = 0.999  #decay of first order momentum of gradient gen
+            b2_dis = 0.999  #decay of first order momentum of gradient dis
             self.model = model
             
             if pre_trained_decoder:
@@ -159,9 +159,12 @@ class ModelTraining():
                 self.time_performance.compute_time(f"{training_name}_AE_TRAINING_global", fun = "diff")                
                 print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_AE_TRAINING_global", fun="first"))
                 model_opt_prediction = self.getModel('all')
-            elif self.model_type == "GAN":
+            elif self.model_type in ["GAN","WGAN"]:
                 self.time_performance.start_time(f"{training_name}_GAN_TRAINING_global")
-                self.training_GAN(training_name=training_name, noise_size=noise_size)
+                if self.model_type == "GAN":
+                    self.training_GAN(training_name=training_name, noise_size=noise_size)
+                elif self.model_type == "WGAN":
+                    self.training_WGAN_GP(training_name=training_name, noise_size=noise_size)
                 self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_global")
                 self.time_performance.compute_time(f"{training_name}_GAN_TRAINING_global", fun = "diff")  
                 print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_GAN_TRAINING_global", fun="first"))
@@ -308,7 +311,7 @@ class ModelTraining():
             self.time_performance.compute_time(f"{training_name}_AE_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)
 
-    def training_GAN(self, noise_size, training_name, plot_loss=True,   save_trainingTime=True):
+    def training_GAN(self, noise_size, training_name, plot_loss=True, save_trainingTime=True):
         
         real_label = 1.
         fake_label = 0.
@@ -435,7 +438,7 @@ class ModelTraining():
                 self.scheduler_dis.step(np.mean(err_D_epoch))
             elif self.opt_scheduler_dis == "StepLR":
                 self.scheduler_dis.step()
-
+        
         err_D_r_epoch = self.to_numpy(err_D_r_epoch)
         err_D_f_epoch = self.to_numpy(err_D_f_epoch)
         err_G_epoch = self.to_numpy(err_G_epoch)
@@ -482,7 +485,163 @@ class ModelTraining():
             self.time_performance.compute_time(f"{training_name}_GAN_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)    
         
-   
+    def training_WGAN_GP(self, noise_size, training_name, plot_loss=True, save_trainingTime=True):
+        
+        epoch_train = list()
+        self.loss_dict = dict()
+        self.model_gen.train()
+        self.model_dis.train()
+        
+        if self.checkWeightsUpdate:
+            layer_gen_notrained = {f"lay_{lay}": list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy() for lay in range(len(list(self.model_gen.parameters())))}
+            layer_dis_notrained = {f"lay_{lay}": list(self.model_dis.parameters())[lay].clone().detach().cpu().numpy() for lay in range(len(list(self.model_dis.parameters())))}
+                    
+        print("\tepoch:\t", 0, "/", self.epoch['WGAN'], " - ")
+        
+        err_D_all = list()
+        err_D_r_all = list()
+        err_D_f_all = list()
+        err_G_all = list()
+        
+        lambda_gp = 1  # Gradient penalty coefficient
+        
+        for epoch in range(self.epoch['WGAN']):
+            err_D_r_epoch = list()
+            err_D_f_epoch = list()
+            err_G_epoch = list()
+            dataBatches = self.dataLoaded_train.generate()
+            
+            self.time_performance.start_time(f"{training_name}_WGAN_TRAINING_epoch")
+            
+            for dataBatch in dataBatches:
+                item_batch = len(dataBatch) 
+                if item_batch == self.batchsize:
+                    ###########################
+                    # 1  Update D network: maximize E[D(x)] - E[D(G(z))] + lambda_gp * gradient_penalty
+                    ###########################
+                    noise = torch.randn(1, self.batchsize, noise_size[1]).to(self.device) 
+                    
+                    ###########################
+                    ##  A Update D with real data
+                    ###########################
+                    self.optimizer_dis.zero_grad()
+                    
+                    sample_list = [item['sample'].type(torch.float32) for item in dataBatch]
+                    x_real = torch.Tensor(1, self.batchsize, self.univar_count_in).to(self.device)
+                    x_real = torch.cat(sample_list, dim=0)
+                    x_real = x_real.view(1, self.batchsize, self.univar_count_in)                    
+                    output_real = self.model_dis(x_real)['x_output'].view(-1)
+                    err_D_real = -torch.mean(output_real)
+                    err_D_r_epoch.append(err_D_real)
+                    
+                    ###########################
+                    ##  B Update D with fake data
+                    ###########################
+                    x_fake = self.model_gen(noise)['x_output']
+                    output_fake = self.model_dis(x_fake)['x_output'].view(-1)
+                    err_D_fake = torch.mean(output_fake)
+                    err_D_f_epoch.append(err_D_fake)
+                    
+                    ###########################
+                    ## C Compute gradient penalty
+                    ###########################
+                    w_gp = self.wasserstein_gradient_penalty(dis=self.model_dis,real_samples=x_real, fake_samples=x_fake)
+                    
+                    err_D = err_D_real + err_D_fake + lambda_gp * w_gp
+                    err_D.backward()
+                    self.optimizer_dis.step()
+                        
+                    ###########################
+                    # 2 Update G network: maximize E[D(G(z))]
+                    ###########################
+                    if epoch % self.n_critic == 0:
+                        self.optimizer_gen.zero_grad()
+                        
+                        noise = torch.randn(1, self.batchsize, noise_size[1]).to(self.device)
+                        fake = self.model_gen(noise)['x_output']
+                        output = self.model_dis(fake)['x_output'].view(-1)                    
+                        
+                        err_G = -torch.mean(output)
+                        err_G.backward()
+                        self.optimizer_gen.step()
+                        err_G_epoch.append(err_G)
+            
+            self.time_performance.stop_time(f"{training_name}_WGAN_TRAINING_epoch")    
+            epoch_time = self.time_performance.get_time(f"{training_name}_WGAN_TRAINING_epoch", fun="last")
+            epoch_train.append({"epoch": epoch, "time": epoch_time})
+            
+            
+                
+            self.plot_grad_flow(named_parameters=self.model_gen.named_parameters(), epoch=f"{epoch+1}", model_section="WGAN_gen")
+            self.plot_grad_flow(named_parameters=self.model_dis.named_parameters(), epoch=f"{epoch+1}", model_section="WGAN_dis")
+            
+            err_D_r_epoch = np.mean(self.to_numpy(err_D_r_epoch))
+            err_D_f_epoch = np.mean(self.to_numpy(err_D_f_epoch))
+            err_D_epoch = np.mean(err_D_r_epoch + err_D_f_epoch) / 2
+            
+            err_G_epoch = np.mean(self.to_numpy(err_G_epoch)) if err_G_epoch else float('nan')
+            
+            err_D_r_all.append(err_D_r_epoch)
+            err_D_f_all.append(err_D_f_epoch)
+            err_D_all.append(err_D_epoch)
+            err_G_all.append(err_G_epoch)
+            
+            self.loss_dict[epoch] = {"loss_Dis": err_D_epoch, "loss_Gen": err_G_epoch, "loss_Dis_real": np.mean(err_D_r_epoch), "loss_Dis_fake": np.mean(err_D_f_epoch)}
+
+            print("\tepoch:\t", epoch, "/", self.epoch['WGAN'], "\t")
+            print("\t\t\t-LOSS D\tall", err_D_epoch, "\tD(real)", np.mean(err_D_r_epoch), "\tD(fake)", np.mean(err_D_f_epoch), "\tG", err_G_epoch)
+            print("\t\t\t-LeRt D", self.optimizer_dis.param_groups[0]['lr'], "\tG", self.optimizer_gen.param_groups[0]['lr'])
+            
+            if self.opt_scheduler_gen == "ReduceLROnPlateau":
+                self.scheduler_gen.step(np.mean(err_G_epoch))
+            elif self.opt_scheduler_gen == "StepLR":
+                self.scheduler_gen.step() 
+                
+            if self.opt_scheduler_dis == "ReduceLROnPlateau":
+                self.scheduler_dis.step(np.mean(err_D_epoch))
+            elif self.opt_scheduler_dis == "StepLR":
+                self.scheduler_dis.step()
+        
+        err_D_r_epoch = self.to_numpy(err_D_r_epoch)
+        err_D_f_epoch = self.to_numpy(err_D_f_epoch)
+        err_G_epoch = self.to_numpy(err_G_epoch)
+        for r_batch, f_batch in zip(err_D_r_epoch, err_D_f_epoch):
+            mean_val = (np.mean(r_batch) + np.mean(f_batch)) / 2
+            err_D_all.append(mean_val)
+            
+        if self.checkWeightsUpdate:
+            layer_gen_trained = {f"lay_{lay}": list(self.model_gen.parameters())[lay].clone().detach().cpu().numpy() for lay in range(len(list(self.model_gen.parameters())))}
+            cprint(f"--------------------------------------------------", "blue", end="\n")
+            cprint(f"\tSTART check Weights Update GENERATOR", "blue", end="\n")
+            for key in layer_gen_trained:
+                n_train = layer_gen_notrained[key]
+                y_train = layer_gen_trained[key]
+                ten_eq = np.array_equal(n_train, y_train)
+                if ten_eq:
+                    cprint(f"{key} are equals", "red", end="\n")
+                else:
+                    cprint(f"{key} are not equals", "green", end="\n")
+            
+            layer_dis_trained = {f"lay_{lay}": list(self.model_dis.parameters())[lay].clone().detach().cpu().numpy() for lay in range(len(list(self.model_dis.parameters())))}
+            cprint(f"\tSTART check Weights Update DISCRIMINATOR", "blue", end="\n")
+            for key in layer_dis_trained:
+                n_train = layer_dis_notrained[key]
+                y_train = layer_dis_trained[key]
+                ten_eq = np.array_equal(n_train, y_train)
+                if ten_eq:
+                    cprint(f"{key} are equals", "red", end="\n")
+                else:
+                    cprint(f"{key} are not equals", "green", end="\n")
+            cprint(f"--------------------------------------------------", "blue", end="\n")
+        
+        if plot_loss:
+            self.loss_plot(self.loss_dict)
+        
+        if save_trainingTime:
+            self.time_performance.compute_time(f"{training_name}_WGAN_TRAINING_epoch", fun="mean")
+            self.save_training_time(epoch_train)
+    
+    
     # Weight initialization
     def weights_init(m):
         classname = m.__class__.__name__
@@ -493,14 +652,15 @@ class ModelTraining():
             nn.init.constant_(m.bias.data, 0)
 
     def to_numpy(self, tensor_list):
+        
         # Check if the list is nested
         if isinstance(tensor_list, list):
             if isinstance(tensor_list[0], list):
                 return [self.to_numpy(sublist) for sublist in tensor_list]
             else:
-                return [sublist.cpu().detach().numpy() for sublist in tensor_list]
+                return [sublist.detach().cpu().numpy() for sublist in tensor_list]
         elif isinstance(tensor_list, Tensor):
-            return [tensor_list.cpu().detach().numpy()]
+            return [tensor_list.detach().cpu().numpy()]
         else:
             return [tensor_list]
             
@@ -521,7 +681,6 @@ class ModelTraining():
                 except AttributeError as e:
                     self.getBack(n[0])
 
-    
     def getModel(self, selection='all', eval=False, train=False):
         if self.model_type == "AE":
             if selection=='all':
@@ -535,7 +694,7 @@ class ModelTraining():
                 elif eval:
                     model_selected = model_selected.eval()
 
-        elif self.model_type == "GAN":
+        elif self.model_type in ["GAN","WGAN"]:
             if selection=='gen':
                 if train:
                     model_selected = self.model_gen.train()
@@ -548,70 +707,53 @@ class ModelTraining():
     def eval(self):
         if self.model_type == "AE":
             self.model.eval()
-        elif self.model_type == "GAN":
+        elif self.model_type in ["GAN","WGAN"]:
             self.model_gen.eval() 
             self.model_dis.eval() 
             # = self.model_gen
-    
+
     def trainMode(self):
         if self.model_type == "AE":
             self.model.train()
-        elif self.model_type == "GAN":
+        elif self.model_type in ["GAN","WGAN"]:
             self.model_gen.train() 
             self.model_dis.train()
 
     def getModeModel(self):
         if self.model_type == "AE":
             print("AE mode training:\t", self.model.training)
-        elif self.model_type == "GAN":
+        elif self.model_type in ["GAN","WGAN"]:
             print("GAN gen mode training:\t", self.model_gen.training)
             print("GAN dis mode training:\t", self.model_dis.training)
-    
-    
-    def wasser_gradient_penalty(self, dis, xr, xf, batch_size):
+
+    def wasserstein_gradient_penalty(self, dis, real_samples, fake_samples):
         
         #  Random weight term for interpolation between real and fake samples
-        alpha  = torch.rand(batch_size, 1).to(device=self.device) 
-        alpha = alpha.expand_as(xr)
-        
+        ##alpha  = torch.rand(batch_size, 1).to(device=self.device) 
+        ##alpha = alpha.expand_as(xr)
         # interpolation between real and fake samples
-        interpolates = alpha  * xr + (1 - alpha) * xf
+        # #interpolates = alpha  * xr + (1 - alpha) * xf
         # set it to require grad info
         
+        alpha = torch.rand((real_samples.size(0), 1, 1)).to(self.device)
+        interpolates = (alpha * real_samples + (1 - alpha) * fake_samples).requires_grad_(True)
+
         interpolates.requires_grad_(True)
-        d_interpolates = dis(interpolates)['x_output']
+        d_interpolates = dis(interpolates)['x_output'].view(-1)
+        ##real_grad_out = Variable(Tensor(xr.shape[0], 1).fill_(1.0).to(device=self.device), requires_grad=False)
         
-        real_grad_out = Variable(Tensor(xr.shape[0], 1).fill_(1.0).to(device=self.device), requires_grad=False)
-        
-        real_grad = autograd.grad(outputs=d_interpolates,
-                            inputs=interpolates,
-                            grad_outputs=real_grad_out,
-                            create_graph=True,
-                            retain_graph=True,
-                            only_inputs=True)[0]
+        real_grad = autograd.grad(
+            outputs=d_interpolates,
+            inputs=interpolates,
+            grad_outputs=torch.ones(d_interpolates.size()).to(self.device),#real_grad_out,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True
+        )[0]
         real_grad = real_grad.view(real_grad.size(0), -1)    
         gradient_penalty = torch.pow(real_grad.norm(2, dim=1) - 1, 2).mean()
-        
-        '''
-        #Compute W-div gradient penalty
-        # REAL
-        real_grad_out = Variable(Tensor(xr.shape[0], 1).fill_(1.0).to(device=self.device), requires_grad=False)
-        real_grad = autograd.grad(
-            real_validity, xr, real_grad_out, create_graph=True, retain_graph=True, only_inputs=True
-        )[0]
-        real_grad_norm = real_grad.view(real_grad.size(0), -1).pow(2).sum(1) ** (p / 2)
-
-
-
-        fake_grad_out = Variable(Tensor(fake_imgs.size(0), 1).fill_(1.0), requires_grad=False)
-        fake_grad = autograd.grad(
-            fake_validity, fake_imgs, fake_grad_out, create_graph=True, retain_graph=True, only_inputs=True
-        )[0]
-        fake_grad_norm = fake_grad.view(fake_grad.size(0), -1).pow(2).sum(1) ** (p / 2)
-        '''
-        
         return gradient_penalty
- 
+
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
@@ -658,7 +800,7 @@ class ModelTraining():
         filename = Path(path_fold_lossplot,"loss_training_allLosses.png")
         plt.savefig(filename)
         df = pd.DataFrame(loss_plot_dict).T.reset_index()
-        
+
     def save_training_time(self, list_training_time):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
@@ -668,8 +810,7 @@ class ModelTraining():
             dftrainingTime = dftrainingTime.append({'epoch': item["epoch"], 'time': item["time"] }, ignore_index=True)
         time_file = Path(path_fold_lossplot ,"epochs_time.csv")
         dftrainingTime.to_csv(time_file, sep='\t')  
-          
-              
+
     def plot_grad_flow(self, named_parameters, epoch, model_section):
         
         '''Plots the gradients flowing through different layers in the net during training.

@@ -26,13 +26,8 @@ class NetworkDetails():
         print("SETTING PHASE: Summary model file - DONE")
     
     def saveModel_structure(self, key, model_net):
-        if key == "GAN":
-            net_summary = model_net.summary()
-        elif key =="AE":
-            if self.edge_index is None:
-                net_summary = model_net.summary()
-            else:
-                net_summary = model_net.summary()
+        net_summary = model_net.summary()
+        
         return f"{key}::\n {net_summary}"
     
     def saveModel_loss(self):
