@@ -74,31 +74,37 @@ class NeuralCore():
         
         if run_mode=="fast":   
             self.performace_cases = {"AE":['train'],
-                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced']}
+                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                     "WGAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                     }
             self.draw_plot = True
             self.draw_correlationCoeff = False
             self.draw_scenarios = False
         elif run_mode=="train_only":
             self.performace_cases = {"AE":[],
-                                     "GAN":[]}    
+                                     "GAN":[],
+                                     "WGAN":[]}    
             self.draw_plot = True
             self.draw_correlationCoeff = False
             self.draw_scenarios = False
         elif run_mode=="all":
             self.performace_cases = {"AE":['train', 'test', 'noise_gaussian', 'noise_gaussian_reduced', 'noise_copula'],
-                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced']}
+                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                     "WGAN":['noise_gaussian', 'noise_gaussian_reduced']}
             self.draw_plot = True
             self.draw_correlationCoeff = True
             self.draw_scenarios = True
         elif run_mode=="ALL_nocorr":
             self.performace_cases = {"AE":['train', 'test', 'noise_gaussian', 'noise_gaussian_reduced', 'noise_copula'],
-                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced']}
+                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                     "WGAN":['noise_gaussian', 'noise_gaussian_reduced']}
             self.draw_plot = True
             self.draw_correlationCoeff = False
             self.draw_scenarios = True
         elif run_mode=="ALL_nocorr_noscen":
             self.performace_cases = {"AE":['train', 'test', 'noise_gaussian', 'noise_gaussian_reduced', 'noise_copula'],
-                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced']}
+                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                     "WGAN":['noise_gaussian', 'noise_gaussian_reduced']}
             self.draw_plot = True
             self.draw_correlationCoeff = False
             self.draw_scenarios = False
@@ -354,16 +360,20 @@ class NeuralCore():
     def start_experiment(self, load_model=False):
         comparison_corr_list = list()
                 
-        if self.trainingMode =="AE>GAN":
+        if self.trainingMode in ["AE>GAN","AE>WGAN"]:
             self.model["AE"] =  self.case_setting.get_model(key="AE")
             trained_obj_ae = self.training_model(data_dict=self.data_splitted, model_type="AE", model=self.model["AE"], loss_obj=self.loss_obj["AE"], epoch=self.epoch, graph_topology = self.graph_topology, optimization=self.do_optimization, optimizer_trial=self.optimization)
             model_ae_trained = trained_obj_ae[0]
-            #self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model["GAN"] = self.case_setting.get_model(key="GAN")(generator=model_ae_decoder)
-            trained_obj_gan = self.training_model(self.data_splitted, model_type="GAN", model=self.model["GAN"], loss_obj=self.loss_obj["GAN"], pre_trained_decoder=True,epoch=self.epoch)
+            self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
+            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)
+            if self.trainingMode == "AE>GAN":
+                model_key = "GAN"
+            if self.trainingMode == "AE>WGAN":
+                model_key = "WGAN"
+            self.model[model_key] = self.case_setting.get_model(key=model_key)(generator=model_ae_decoder)
+            trained_obj_gan = self.training_model(self.data_splitted, model_type=model_key, model=self.model[model_key], loss_obj=self.loss_obj[model_key], pre_trained_decoder=True,epoch=self.epoch)
             model_gan_trained = trained_obj_gan[0]
-            self.predict_model(model=model_gan_trained, model_type="GAN", data=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
+            self.predict_model(model=model_gan_trained, model_type=model_key, data=self.data_splitted, path_folder_pred=self.path_folder_nets[model_key], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
         
         ''' 
         elif self.model_case=="autoencoder_3_copula_optimization":
@@ -505,7 +515,6 @@ class NeuralCore():
             self.predict_model(model=model_gan_trained, model_type="GAN", data=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
         ''' 
         
-        print("----------------------")
         if self.graph_topology:
             net_details = NetworkDetails(model=self.model, loss=self.loss_obj, path=self.summary_path, edge_index = self.data_splitted['edge_index'])
         else:
@@ -539,7 +548,7 @@ class NeuralCore():
         training_obj = ModelTraining(model=model, device=self.device, loss_obj=loss_obj, epoch=epoch, train_data=train_data, test_data=test_data, dataGenerator=self.dataGenerator, path_folder=self.path_folder, univar_count_in = self.univar_count, univar_count_out = self.univar_count, latent_dim=self.lat_dim, model_type=model_type, pre_trained_decoder=pre_trained_decoder, vc_mapping = self.vc_mapping,input_shape=self.input_shape, rangeData=self.rangeData,batch_size=self.batch_size, optimization=False, graph_topology=graph_topology, edge_index=edge_index, time_performance=self.time_performance)
         if model_type =="AE":
             optim_score = training_obj.training(training_name=f"MAIN_",model_flatten_in=model_flatten_in,load_model=load_model)
-        elif model_type =="GAN":
+        elif model_type in ["GAN","WGAN"]:
             optim_score = training_obj.training(training_name=f"MAIN_",noise_size=self.instaces_size_noise, load_model=load_model)
         training_obj.eval()
         

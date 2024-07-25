@@ -91,6 +91,20 @@ class PEMS_METR_settings():
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
             self.model['GAN'] = PEMS_METR_GAN_16
+
+        if   self.model_case == "AE>WGAN_linear_pretrained_PEMS_16":
+            self.mode = "graph_roads"
+            self.name_dataset = "PEMS_BAY"
+            self.version_dataset = "S16"
+            self.nets = ['AE', 'WGAN']
+            self.graph_topology = False
+            self.loss_dict = {
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'WGAN': dict()
+                }
+            self.trainingMode = "AE>WGAN"
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
+            self.model['WGAN'] = PEMS_METR_GAN_16
             
         elif self.model_case == "AE>GAN_linear_pretrained_PEMS_32":
             self.mode = "graph_roads"

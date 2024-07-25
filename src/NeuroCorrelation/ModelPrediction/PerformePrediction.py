@@ -146,7 +146,7 @@ class PerformePrediction():
                         self.predict_model(cases_list=["train"])
                     distribution_compare = {"train_input":{'data':self.predict['train']['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "copulaLatent_generated":{'data':self.predict['noise_copula']['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
 
-            elif self.model_type == "GAN":
+            elif self.model_type in ["GAN","WGAN"]:
                 cprint(Style.BRIGHT + "PHASE: Generative Adversarial Network" + Style.RESET_ALL, 'green')
                 modelGEN = self.model.getModel(selection="gen", eval=True)
                 modelDIS = self.model.getModel(selection="dis", eval=True)
