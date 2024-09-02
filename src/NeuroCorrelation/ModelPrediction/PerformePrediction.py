@@ -193,7 +193,7 @@ class PerformePrediction():
                 print("\tSTATS PHASE:  Plots")
                 datastats.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent, draw_correlationCoeff=self.draw_correlationCoeff)
                 self.res_CompareAdvance.loadPrediction_OUTPUT(output_folder=analysis_folder, suffix_output=predict_file_suffix)
-                self.res_CompareAdvance.comparison_measures(measures=["mahalanobis_dist", 'wasserstein_dist', 'tsne_plots'])
+                self.res_CompareAdvance.comparison_measures(measures=['mahalanobis_dist', 'frechet_inception_dist', 'wasserstein_dist', 'tsne_plots'])
                 if cases_list in ['noise_gaussian_reduced']:
                     datastats.draw_point_overDistribution(plotname="noise_reduced_sampled_noise", n_var=self.latent_dim, points=self.reduced_noise_data,  distr=None)
                     reduced_noise_dict = list()
