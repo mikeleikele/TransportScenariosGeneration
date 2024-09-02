@@ -25,6 +25,7 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from numpy.linalg import inv, pinv
+from scipy.linalg import sqrtm
 
 
 
@@ -519,6 +520,8 @@ class DataComparison_Advanced():
             self.comparison_wasserstein()
         if 'mahalanobis_dist' in measures:
             self.comparison_mahalanobis()
+        if 'frechet_inception_dist' in measures:
+            self.comparison_frechet_inception()
         if 'tsne_plots' in measures:
             self.comparison_tsne()
           
@@ -601,10 +604,10 @@ class DataComparison_Advanced():
         np_dist_gen = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
         np_dist_cop = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
         
-        mahala_real_gen = self.mahalanobis(np_dist_real,np_dist_gen)
+        mahala_real_gen = self.mahalanobis(np_dist_real, np_dist_gen)
         print("mahala_real_gen:\t",mahala_real_gen)
         
-        mahala_real_cop = self.mahalanobis(np_dist_cop, np_dist_real)
+        mahala_real_cop = self.mahalanobis(np_dist_real, np_dist_cop)
         print("mahala_real_cop:\t",mahala_real_cop)
         
         mahalanobis_dict = {'mahalanobis_real_gen':[mahala_real_gen], 'mahalanobis_real_cop':[mahala_real_cop]}
@@ -634,7 +637,45 @@ class DataComparison_Advanced():
         dist_mahalanobis = np.sqrt(diff.T @ inv_cov @ diff)
         
         return dist_mahalanobis    
+    
+    def comparison_frechet_inception(self):
+        np_dist_real = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
+        np_dist_gen = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
+        np_dist_cop = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
         
+        frechet_real_gen = self.frechet_inception_distance(np_dist_real,np_dist_gen)
+        print("frechet_inception_real_gen:\t", frechet_real_gen)
+        
+        frechet_real_cop = self.frechet_inception_distance(np_dist_real, np_dist_cop)
+        print("frechet_inception_real_cop:\t",frechet_real_cop)
+        
+        frechet_dict = {'frechet_inception_real_gen':[frechet_real_gen], 'frechet_inception_real_cop':[frechet_real_cop]}
+        pd_stats = pd.DataFrame(frechet_dict)
+        
+        filename = Path(self.path_folder, f"frechet_inception_compare_{self.suffix}.csv")
+        pd_stats.to_csv(filename)
+        return pd_stats
+    
+    def frechet_inception_distance(self, real_samples, generated_samples):
+        mu_real = np.mean(real_samples, axis=0)
+        mu_generated = np.mean(generated_samples, axis=0)
+
+        sigma_real = np.cov(real_samples, rowvar=False)
+        sigma_generated = np.cov(generated_samples, rowvar=False)
+
+        diff = mu_real - mu_generated
+        diff_squared = np.sum(diff**2)
+        
+        covmean, _ = sqrtm(sigma_real @ sigma_generated, disp=False)
+    
+        # numerical adjust
+        if np.iscomplexobj(covmean):
+            covmean = covmean.real
+        
+        fid = diff_squared + np.trace(sigma_real + sigma_generated - 2 * covmean)
+        return fid
+    
+    
     def comparison_tsne(self, n_points=None):
         color_list = {"real": (0.122, 0.467, 0.706),"ae":(1.0, 0.498, 0.055)}
         label_list = {"real": "real data","ae":"GAN+AE gen"}

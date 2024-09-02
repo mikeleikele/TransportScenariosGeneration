@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from src.NeuroCorrelation.Models.AutoEncoderModels import *
+from src.NeuroCorrelation.Models.GenerativeAdversarialModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
 from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_models import *
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
@@ -34,7 +35,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_16
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None) 
             
         elif self.model_case == "AE>GAN_linear_pretrained_METR_32":
             self.mode = "graph_roads"
@@ -48,7 +49,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_32
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None) 
             
         elif self.model_case == "AE>GAN_linear_pretrained_METR_48":
             self.mode = "graph_roads"
@@ -62,7 +63,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_48
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None) 
             
         elif self.model_case == "AE>GAN_linear_pretrained_METR_64":
             self.mode = "graph_roads"
@@ -76,7 +77,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_64
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None) 
             
         if   self.model_case == "AE>GAN_linear_pretrained_PEMS_16":
             self.mode = "graph_roads"
@@ -90,7 +91,8 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_16
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None) 
+            
 
         if   self.model_case == "AE>WGAN_linear_pretrained_PEMS_16":
             self.mode = "graph_roads"
@@ -104,7 +106,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>WGAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None)
-            self.model['WGAN'] = PEMS_METR_GAN_16
+            self.model['WGAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_16.json'), edge_index=None) 
             
         elif self.model_case == "AE>GAN_linear_pretrained_PEMS_32":
             self.mode = "graph_roads"
@@ -118,7 +120,22 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_32
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None) 
+            
+        elif self.model_case == "AE>WGAN_linear_pretrained_PEMS_32":
+            self.mode = "graph_roads"
+            self.name_dataset = "PEMS_BAY"
+            self.version_dataset = "S32"
+            self.nets = ['AE', 'WGAN']
+            self.graph_topology = False
+            self.loss_dict = {
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'WGAN': dict()
+                }
+            self.trainingMode = "AE>WGAN"
+            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)
+            self.model['WGAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_32.json'), edge_index=None)     
+            
             
         elif self.model_case == "AE>GAN_linear_pretrained_PEMS_48":
             self.mode = "graph_roads"
@@ -132,7 +149,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_48
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_48.json'), edge_index=None) 
             
         elif self.model_case == "AE>GAN_linear_pretrained_PEMS_64":
             self.mode = "graph_roads"
@@ -146,7 +163,7 @@ class PEMS_METR_settings():
                 }
             self.trainingMode = "AE>GAN"
             self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_64
+            self.model['GAN'] = GenerativeAdversarialModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','PEMS_METR_models','PEMS_METR_64.json'), edge_index=None) 
             
         self.path_folder_nets = dict()
         for key in self.nets:

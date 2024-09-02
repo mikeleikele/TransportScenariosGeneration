@@ -45,7 +45,7 @@ class ModelTraining():
         self.device = device
         self.input_shape = input_shape
         self.append_count = 1 #ogni quanti batch aggiungo val della loss
-        self.n_critic = 10
+        self.n_critic = 1
         self.opt_scheduler_ae = "StepLR"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "ReduceLROnPlateau"
@@ -78,12 +78,13 @@ class ModelTraining():
                 self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=40, gamma=0.1)
         
         elif self.model_type in ["GAN","WGAN"]:
-            lr_gen = 0.00001
-            lr_dis = 0.1
+            lr_gen = 0.05
+            lr_dis = 0.05
             b1_gen = 0.05   #decay of first order momentum of gradient gen
             b1_dis = 0.05   #decay of first order momentum of gradient dis
             b2_gen = 0.999  #decay of first order momentum of gradient gen
             b2_dis = 0.999  #decay of first order momentum of gradient dis
+            self.lambda_wgan_gp = 5  # Gradient penalty coefficient
             self.model = model
             
             if pre_trained_decoder:
@@ -101,9 +102,10 @@ class ModelTraining():
                 self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=20, gamma=0.1)
 
 
+            print(self.model)
             model_dis = self.model.get_discriminator()
             
-            self.model_dis = model_dis()
+            self.model_dis = model_dis
             self.model_dis.to(device=self.device)
             dis_params = self.model_dis.parameters()
             self.optimizer_dis = optim.Adam(dis_params, lr=lr_dis)#, betas=(b1_gen, b2_gen))  
@@ -503,7 +505,7 @@ class ModelTraining():
         err_D_f_all = list()
         err_G_all = list()
         
-        lambda_gp = 1  # Gradient penalty coefficient
+        
         
         for epoch in range(self.epoch['WGAN']):
             err_D_r_epoch = list()
@@ -517,7 +519,7 @@ class ModelTraining():
                 item_batch = len(dataBatch) 
                 if item_batch == self.batchsize:
                     ###########################
-                    # 1  Update D network: maximize E[D(x)] - E[D(G(z))] + lambda_gp * gradient_penalty
+                    # 1  Update D network: maximize E[D(x)] - E[D(G(z))] + lambda_wgan_gp * gradient_penalty
                     ###########################
                     noise = torch.randn(1, self.batchsize, noise_size[1]).to(self.device) 
                     
@@ -547,7 +549,7 @@ class ModelTraining():
                     ###########################
                     w_gp = self.wasserstein_gradient_penalty(dis=self.model_dis,real_samples=x_real, fake_samples=x_fake)
                     
-                    err_D = err_D_real + err_D_fake + lambda_gp * w_gp
+                    err_D = err_D_real + err_D_fake + self.lambda_wgan_gp * w_gp
                     err_D.backward()
                     self.optimizer_dis.step()
                         
@@ -561,7 +563,7 @@ class ModelTraining():
                         fake = self.model_gen(noise)['x_output']
                         output = self.model_dis(fake)['x_output'].view(-1)                    
                         
-                        err_G = -torch.mean(output)
+                        err_G = torch.mean(output)#era -
                         err_G.backward()
                         self.optimizer_gen.step()
                         err_G_epoch.append(err_G)
@@ -681,14 +683,14 @@ class ModelTraining():
                 except AttributeError as e:
                     self.getBack(n[0])
 
-    def getModel(self, selection='all', eval=False, train=False):
+    def getModel(self, selection='all', eval=False, train=False, size=False):
         if self.model_type == "AE":
             if selection=='all':
                 model_selected = self.model
             if selection=='encoder':
                 raise Exception("Encoder not implemented")
             if selection=='decoder':
-                model_selected = self.model.get_decoder()
+                model_selected, model_size = self.model.get_decoder(size=size)
                 if train:
                     model_selected = model_selected.train()
                 elif eval:
@@ -702,7 +704,10 @@ class ModelTraining():
                     model_selected = self.model_gen.eval()
             elif selection=='dis':
                 model_selected = self.model_dis
-        return model_selected
+        if size:
+            return model_selected, model_size
+        else:
+            return model_selected
 
     def eval(self):
         if self.model_type == "AE":
@@ -818,6 +823,7 @@ class ModelTraining():
         Usage: Plug this function in Trainer class after loss.backwards() as 
         "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
         
+        gradients_list = []
         ave_grads = []
         max_grads= []
         layers = []
@@ -827,7 +833,8 @@ class ModelTraining():
                     layers.append(n)
                     ave_grads.append(p.grad.abs().mean().cpu())
                     max_grads.append(p.grad.abs().max().cpu())
-            
+                    gradients_list.append(p.grad.norm().item())
+        
         plt.figure(figsize=(12,15))
         plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
         plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
@@ -848,3 +855,7 @@ class ModelTraining():
         epoch_str = f'{epoch}'.zfill(len(str(self.epoch[self.model_type])))
         path_save_gradexpl = Path(self.path_save_model_gradients,f"{model_section}_gradient_epoch_{epoch_str}.png")
         plt.savefig(path_save_gradexpl)
+
+        path_save_gradients_list = Path(self.path_save_model_gradients,f"{model_section}_gradientlist_epoch_{epoch_str}.csv")
+        df = pd.DataFrame(gradients_list)
+        df.to_csv(path_save_gradients_list, index=False)

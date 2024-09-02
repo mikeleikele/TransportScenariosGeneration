@@ -14,6 +14,7 @@ import torch_geometric.nn as gm
 from pathlib import Path
 import os
 
+
 #---------------------------
 # MODEL 16  
 class PEMS_METR_AE_16(nn.Module):
@@ -111,14 +112,12 @@ class PEMS_METR_GAN_LinearDiscriminator_16(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=8)
-        self.hidden_layer_2 = nn.Linear(in_features=8, out_features=4)
-        self.hidden_layer_3 = nn.Linear(in_features=4, out_features=2)        
-        self.hidden_layer_4 = nn.Linear(in_features=2, out_features=1)
+        self.hidden_layer_1 = nn.Linear(in_features=16, out_features=4)
+        self.hidden_layer_2 = nn.Linear(in_features=4, out_features=1)
+        self.hidden_layer_2 = nn.Linear(in_features=4, out_features=1)
         
-        self.act_1 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
-        self.act_2 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
-        self.act_3 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
+        self.act_1 = nn.ReLU()
+        self.act_2 = nn.ReLU()
         
     def forward(self, x):
         #== layer IN  ===================
@@ -295,14 +294,19 @@ class PEMS_METR_GAN_LinearDiscriminator_32(nn.Module):
     def __init__(self):
         super().__init__()
         self.hidden_layer_1 = nn.Linear(in_features=32, out_features=16)
-        self.hidden_layer_2 = nn.Linear(in_features=16, out_features=8)
-        self.hidden_layer_3 = nn.Linear(in_features=8, out_features=4)        
-        self.hidden_layer_4 = nn.Linear(in_features=4, out_features=1)
+        self.hidden_layer_2 = nn.Linear(in_features=16, out_features=4)
+        self.hidden_layer_3 = nn.Linear(in_features=4, out_features=1)
         
-        self.act_1 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
-        self.act_2 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
-        self.act_3 = nn.LeakyReLU(0.2, inplace=True)#nn.Tanh()#
-        
+        self.act_1 = nn.ReLU()#(0.2, inplace=True)#nn.Tanh()#
+        self.act_2 = nn.ReLU()#(0.2, inplace=True)#nn.Tanh()#
+        self.apply(self.weights_init_normal)  
+
+    def weights_init_normal(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.normal_(m.weight, mean=0.0, std=0.02)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+
     def forward(self, x):
         #== layer IN  ===================
         layer_nn = x       
@@ -317,10 +321,6 @@ class PEMS_METR_GAN_LinearDiscriminator_32(nn.Module):
         
         #== layer 03  ===================
         layer_nn = self.hidden_layer_3(layer_nn)
-        layer_nn = self.act_3(layer_nn)
-        
-        #== layer 04  ===================
-        layer_nn = self.hidden_layer_4(layer_nn)    
         
          #== layer OUT ===================
         x_out = layer_nn

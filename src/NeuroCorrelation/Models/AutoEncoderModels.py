@@ -32,6 +32,9 @@ class AutoEncoderModels(nn.Module):
         self.models_layers['decoder'], self.models_size['decoder'] = self.list_to_model(self.layers_list['decoder_layers'])
         self.deploy_nnModel()
         
+    def get_size(self, ):
+        return self.models_size()
+        
     def deploy_nnModel(self):
         
         if self.edge_index is not None:
@@ -45,11 +48,18 @@ class AutoEncoderModels(nn.Module):
         self.add_module('decoder', self.models['decoder'])
         
         
-    def get_decoder(self):
-        return self.models['decoder']
+    def get_decoder(self, size=False):
+        if size:
+            return self.models['decoder'], self.models_size['decoder']
+        else:
+            return self.models['decoder']
+        
 
-    def get_encoder(self):
-        return self.models['encoder']       
+    def get_encoder(self, size=False):
+        if size:
+            return self.models['encoder'], self.models_size['encoder']
+        else:
+            return self.models['encoder']       
     
     def summary(self):
         summary = dict()
@@ -80,7 +90,7 @@ class AutoEncoderModels(nn.Module):
                 layers.append(nn.Tanh())
             elif layer_item['layer'] == "LeakyReLU":
                 layers.append(nn.LeakyReLU(layer_item['negative_slope']))
-            elif layer_item['layer'] == "sigmoid":
+            elif layer_item['layer'] == "Sigmoid":
                 layers.append(nn.Sigmoid())
             #batch norm
             elif layer_item['layer'] == "BatchNorm1d":
@@ -105,8 +115,15 @@ class nn_Model(nn.Module):
         super().__init__()
         self.layers = nn.Sequential(*layers)
         self.edge_index = edge_index
+        self.apply(self.weights_init_normal)  
         print("Layers initialized:", self.layers)
-        
+    
+    def weights_init_normal(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.normal_(m.weight, mean=0.0, std=0.02)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+                
     def forward(self, x):
         for layer in self.layers:
             if isinstance(layer, gm.GCNConv):

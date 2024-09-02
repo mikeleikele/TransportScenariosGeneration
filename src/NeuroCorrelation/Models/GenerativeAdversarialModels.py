@@ -28,8 +28,8 @@ class GenerativeAdversarialModels(nn.Module):
             self.layers_list = layers_list
         self.models_layers = dict()
         self.models_size = dict()
-        self.models_layers['discriminator'], self.models_size['discriminator'] = self.list_to_model(self.layers_list['discriminator_layers'])
         self.models_layers['generator'], self.models_size['generator'] = self.list_to_model(self.layers_list['generator_layers'])
+        self.models_layers['discriminator'], self.models_size['discriminator'] = self.list_to_model(self.layers_list['discriminator_layers'])
         self.deploy_nnModel()
         
     def deploy_nnModel(self):
@@ -43,23 +43,38 @@ class GenerativeAdversarialModels(nn.Module):
         
         self.add_module('discriminator', self.models['discriminator'])
         self.add_module('generator', self.models['generator'])
+    
+    def set_partialModel(self, key, model_net, model_size):
+        self.models[key] = model_net
+        self.models_size[key] = model_size
+        self.add_module(key, self.models[key])
         
+    def get_generator(self, size=False):
+        if size:
+            return self.models['generator'], self.models_size['generator']
+        else:
+            return self.models['generator']
         
-    def get_discriminator(self):
-        return self.models['discriminator']
+    def get_discriminator(self, size=False):
+        if size:
+            return self.models['discriminator'], self.models_size['discriminator']
+        else:
+            return self.models['discriminator']
 
-    def get_generator(self):
-        return self.models['generator']       
+    def get_generator(self, size=False):
+        if size:
+            return self.models['generator'], self.models_size['generator']
+        else:
+            return self.models['generator']
+        
     
     def summary(self):
         summary = dict()
-        summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['encoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
-        summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary['discriminator'] = torchinfo.summary(self.models['discriminator'], input_size=(1, self.models_size['discriminator']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary['generator'] = torchinfo.summary(self.models['generator'], input_size=(1, self.models_size['generator']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
     
     def forward(self, x):
-        x_latent = self.models['encoder'](x)
-        x_hat = self.models['decoder'](x_latent["x_output"])
-        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+        raise Exception("forward not implemented.")
 
     def list_to_model(self, layers_list):
         layers = list()
@@ -80,7 +95,7 @@ class GenerativeAdversarialModels(nn.Module):
                 layers.append(nn.Tanh())
             elif layer_item['layer'] == "LeakyReLU":
                 layers.append(nn.LeakyReLU(layer_item['negative_slope']))
-            elif layer_item['layer'] == "sigmoid":
+            elif layer_item['layer'] == "Sigmoid":
                 layers.append(nn.Sigmoid())
             #batch norm
             elif layer_item['layer'] == "BatchNorm1d":
