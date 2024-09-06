@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 from src.NeuroCorrelation.Models.AutoEncoderModels import *
+from src.NeuroCorrelation.Models.GenerativeAdversarialModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
-from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_models import *
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
 
 class CHENGDU_settings():
@@ -19,10 +19,11 @@ class CHENGDU_settings():
         self.path_folder = path_folder
         self.time_slot = time_slot
         self.model = dict()
+        self.model_settings = dict()
         self.setting_model_case()
     
     def setting_model_case(self):
-        if self.model_case == "AE>GAN_linear_pretrained_CHENGDU_SMALLGRAPH_16_A":
+        if self.model_case == "AE>GAN_CHENGDU_SMALLGRAPH_16_A_linear":
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
@@ -32,10 +33,25 @@ class CHENGDU_settings():
             self.loss_dict = {
                 'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
-                }
+            }
             self.trainingMode = "AE>GAN"
-            self.model['AE'] = AutoEncoderModels(load_from_file =True, json_filepath=Path('src','NeuroCorrelation','Models','CHENGDU_models','CHENGDU_SMALLGRAPH_16.json'), edge_index=None)
-            self.model['GAN'] = PEMS_METR_GAN_16
+            self.model_settings['AE']  = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models','CHENGDU_SMALLGRAPH_16_linear.json')}
+            self.model_settings['GAN'] = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models','CHENGDU_SMALLGRAPH_16_linear.json')}
+            
+        elif self.model_case == "AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph":
+            self.mode = "graph_roads"
+            self.name_dataset = "CHENGDU"
+            self.version_dataset = "SMALLGRAPH_16"
+            self.time_slot = "A"
+            self.nets = ['AE', 'GAN']
+            self.graph_topology = True
+            self.loss_dict = {
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'GAN': dict()
+            }
+            self.trainingMode = "AE>GAN"
+            self.model_settings['AE']  = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models','CHENGDU_SMALLGRAPH_16_graph.json')}
+            self.model_settings['GAN'] = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models','CHENGDU_SMALLGRAPH_16_graph.json')}
             
         
             
@@ -44,6 +60,24 @@ class CHENGDU_settings():
             self.path_folder_nets[key] = Path(self.path_folder, key)
             if not os.path.exists(self.path_folder_nets[key]):
                 os.makedirs(self.path_folder_nets[key])
+    def set_edge_index(self,edge_index):
+        self.edge_index = edge_index
+    
+    def deploy_models(self):
+        for key in self.model_settings:
+            print(key)
+            if key == "AE":
+                self.model["AE"] = AutoEncoderModels(load_from_file =self.model_settings["AE"]['load_from_file'],
+                            json_filepath=self.model_settings["AE"]['json_filepath'],
+                            edge_index=self.edge_index)
+            elif key=="GAN":
+                self.model["GAN"] = GenerativeAdversarialModels(load_from_file =self.model_settings["GAN"]['load_from_file'],
+                            json_filepath=self.model_settings["GAN"]['json_filepath'],
+                            edge_index=self.edge_index)
+            elif key=="WGAN":
+                self.model["WGAN"] = GenerativeAdversarialModels(load_from_file =self.model_settings["WGAN"]['load_from_file'],
+                            json_filepath=self.model_settings["WGAN"]['json_filepath'],
+                            edge_index=self.edge_index)
     
     def get_trainingMode(self):
         return self.trainingMode

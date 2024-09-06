@@ -46,42 +46,6 @@ class DataMapsLoader():
         edge_path  = datatasetdict["edge_path"]
         timeweath_path = datatasetdict["timeweath_path"]
         
-        #PEMS_BAY
-        '''if self.name_dataset=="PEMS_BAY_S16":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S16","PEMS_BAY_S16__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="PEMS_BAY_S32":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S32","PEMS_BAY_S32_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S32","PEMS_BAY_S32__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="PEMS_BAY_S48":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S48","PEMS_BAY_S48_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S48","PEMS_BAY_S48__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="PEMS_BAY_S64":
-            filename = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","PEMS_BAY","PEMS_BAY_S64","PEMS_BAY_S64__map.csv")
-            pathMap  = None'''
-        
-        
-        #METR_LA
-        '''if self.name_dataset=="METR_LA_S16":
-            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S16","METR_LA_S16__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="METR_LA_S32":
-            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S32","METR_LA_S32_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S32","METR_LA_S32__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="METR_LA_S48":
-            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S48","METR_LA_S48_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S48","METR_LA_S48__map.csv")
-            pathMap  = None
-        elif self.name_dataset=="METR_LA_S64":
-            filename = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64_START7_END9__data.csv")
-            pathMap  = Path("data","neuroCorrelation_data","METR_LA","METR_LA_S64","METR_LA_S64__map.csv")
-            pathMap  = None'''
         
         #CHENGDU
         '''elif self.name_dataset=="China_Chengdu_A0016":
@@ -162,7 +126,7 @@ class DataMapsLoader():
             for row in edgeindexNP:
                 l = list()
                 for item in row:
-                    l.append(int(item-1))
+                    l.append(int(item))
                 li.append(l)
             self.edge_index = torch.tensor(li, dtype=torch.int64).to(self.torch_device)
         else:

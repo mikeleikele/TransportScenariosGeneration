@@ -9,7 +9,8 @@ from src.NeuroCorrelation.NeuroExperiment import NeuroExperiment
 from pathlib import Path
 import sys
 import argparse
-
+from termcolor import cprint
+from colorama import init, Style
 
 def str2bool(v):
     if v in ['yes', 'true', 't', 'y', '1']:
@@ -100,10 +101,12 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args(sys.argv[1:])
     
     print(f"\n")
-    print(f"      Welcome - OSG      ")
-    print(f"|------------------------")
-    print(f"| Process: {parsed_args.exp}")
-    print(f"|------------------------")
+    cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan', attrs=["bold"])
+    cprint(Style.BRIGHT + "|        Traffic         |" + Style.RESET_ALL, 'cyan', attrs=["bold"])
+    cprint(Style.BRIGHT + "|  Scenarios Generation  |" + Style.RESET_ALL, 'cyan', attrs=["bold"])
+    cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan', attrs=["bold"])
+    cprint(Style.BRIGHT +f"| Process: {parsed_args.exp}" + Style.RESET_ALL, 'cyan')
+    cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan')
     print(f"\n")
     
     if parsed_args.exp ==  "orienteering" or parsed_args.exp == "o":
@@ -120,7 +123,6 @@ if __name__ == "__main__":
     elif parsed_args.exp == "geopoint" or parsed_args.exp == "gp":        
         geo_test_point()
 
-    
     elif parsed_args.exp == "simulation" or parsed_args.exp == "s":        
         name_simulationFile = parsed_args.simulation_name
         simul_test(name_simulationFile)
@@ -167,12 +169,7 @@ if __name__ == "__main__":
     elif parsed_args.exp ==  "neuroD":        
     
         neuroExp = NeuroExperiment(sys.argv[1:])
-        
-        print("end")
-        print("========================================")
-        print("folder:\t",parsed_args.main_folder)
-    
-    
+        cprint(Style.BRIGHT + f"Folder :\t{parsed_args.main_folder}" + Style.RESET_ALL, 'red', attrs=["bold"])
     else:
         print(0," no opt recognized")
         

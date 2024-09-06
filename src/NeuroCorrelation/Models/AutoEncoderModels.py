@@ -22,14 +22,15 @@ class AutoEncoderModels(nn.Module):
         super().__init__()
         self.models = dict()
         self.edge_index = edge_index
+        self.permutation_forward = dict()
         if load_from_file:
             self.layers_list = self.load_fileJson(json_filepath)
         else:
             self.layers_list = layers_list
         self.models_layers = dict()
         self.models_size = dict()
-        self.models_layers['encoder'], self.models_size['encoder'] = self.list_to_model(self.layers_list['encoder_layers'])
-        self.models_layers['decoder'], self.models_size['decoder'] = self.list_to_model(self.layers_list['decoder_layers'])
+        self.models_layers['encoder'], self.models_size['encoder'], self.permutation_forward['encoder'] = self.list_to_model(self.layers_list['encoder_layers'])
+        self.models_layers['decoder'], self.models_size['decoder'], self.permutation_forward['decoder'] = self.list_to_model(self.layers_list['decoder_layers'])
         self.deploy_nnModel()
         
     def get_size(self, ):
@@ -38,8 +39,8 @@ class AutoEncoderModels(nn.Module):
     def deploy_nnModel(self):
         
         if self.edge_index is not None:
-            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], edge_index= self.edge_index)
-            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], edge_index= self.edge_index)
+            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], permutation_forward = self.permutation_forward['encoder'], edge_index= self.edge_index)
+            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], permutation_forward = self.permutation_forward['decoder'], edge_index= self.edge_index)
         else:
             self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'])
             self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'])
@@ -73,8 +74,9 @@ class AutoEncoderModels(nn.Module):
 
     def list_to_model(self, layers_list):
         layers = list()
+        permutation_forward = dict()
         size = {"input_size":None, "output_size":None}
-        for layer_item in layers_list:
+        for index, layer_item in enumerate(layers_list):
             
             #layer
             if layer_item['layer'] == "Linear":
@@ -84,6 +86,9 @@ class AutoEncoderModels(nn.Module):
                 size["output_size"] = layer_item['out_features']
             elif layer_item['layer'] == "GCNConv":
                 layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+            elif layer_item['layer'] == "GCNConv_Permute":
+                layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+                permutation_forward[index] = {"in_permute":layer_item['in_permute'],"out_permute":layer_item['out_permute']}
             
             #activation function
             elif layer_item['layer'] == "Tanh":
@@ -99,7 +104,7 @@ class AutoEncoderModels(nn.Module):
             #dropout
             elif layer_item['layer'] == "Dropout":
                 layers.append(nn.Dropout(p=layer_item['p']))
-        return layers, size
+        return layers, size, permutation_forward
 
     def load_fileJson(self, filepath):
         with open(filepath, 'r') as f:
@@ -109,13 +114,15 @@ class AutoEncoderModels(nn.Module):
         layers_list["encoder_layers"] = config["VAE"]["encoder_layers"]
         layers_list["decoder_layers"] = config["VAE"]["decoder_layers"]
         return layers_list
-
+   
 class nn_Model(nn.Module):
-    def __init__(self, layers, edge_index=None):
+    def __init__(self, layers, permutation_forward=None, edge_index=None):
         super().__init__()
+        self.permutation_forward = permutation_forward
         self.layers = nn.Sequential(*layers)
         self.edge_index = edge_index
         self.apply(self.weights_init_normal)  
+        
         print("Layers initialized:", self.layers)
     
     def weights_init_normal(self, m):
@@ -125,9 +132,15 @@ class nn_Model(nn.Module):
                 nn.init.zeros_(m.bias)
                 
     def forward(self, x):
-        for layer in self.layers:
+        for  index, layer in enumerate(self.layers):
             if isinstance(layer, gm.GCNConv):
-                x = layer(x, self.edge_index)
+                if index in self.permutation_forward:
+                    in_permute = self.permutation_forward[index]["in_permute"]
+                    x = x.permute(in_permute[0], in_permute[1], in_permute[2])                
+                x = layer(x, self.edge_index) 
+                if index in self.permutation_forward:
+                    out_permute = self.permutation_forward[index]["out_permute"]
+                    x = x.permute(out_permute[0], out_permute[1], out_permute[2])                              
             else:
                 x = layer(x)
         return {"x_input": x, "x_output": x}

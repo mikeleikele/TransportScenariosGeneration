@@ -2,10 +2,8 @@ from src.NeuroCorrelation.Models.CHENGDU_models.CHENGDU_settings import CHENGDU_
 from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_settings import PEMS_METR_settings
 from src.NeuroCorrelation.Models.autoEncoderModels_CHENGDU.CHENGDU_zone import *
 from src.NeuroCorrelation.Models.ESG_models.ESG_models import *
-from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_models import *
-from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSynteticGeneration
+from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSyntheticGeneration
 from src.NeuroCorrelation.Models.AutoEncoderModels import *
-from src.NeuroCorrelation.Models.GAN_neural import *
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
 from src.NeuroCorrelation.ModelTraining.ModelTraining import ModelTraining
 from src.NeuroCorrelation.Analysis.DataComparison import DataComparison, DataComparison_Advanced, CorrelationComparison
@@ -74,9 +72,9 @@ class NeuralCore():
         
         if run_mode=="fast":   
             self.performace_cases = {"AE":['train'],
-                                     "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
-                                     "WGAN":['noise_gaussian', 'noise_gaussian_reduced'],
-                                     }
+                                    "GAN":['noise_gaussian', 'noise_gaussian_reduced'],
+                                    "WGAN":['noise_gaussian', 'noise_gaussian_reduced'],
+            }
             self.draw_plot = True
             self.draw_correlationCoeff = False
             self.draw_scenarios = False
@@ -127,7 +125,24 @@ class NeuralCore():
        
         
         # TO REFACTORY
-        '''if self.model_case=="GAN_linear_pretrained_0016_CHENGDU_bt":
+        
+        '''
+        # ESG - Environmental Social Governance project
+        elif self.model_case=="ESG__GAN_linear_pretrained_35":
+            self.graph_topology = False
+            dataloader = DataLoader(mode="fin_data", seed=self.seed_data, name_dataset="ESG_35", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
+            self.path_folder_nets["AE"] = Path(self.path_folder,'AE')
+            if not os.path.exists(self.path_folder_nets["AE"]):
+                os.makedirs(self.path_folder_nets["AE"])
+            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "VARIANCE_LOSS":0.05, "SPEARMAN_CORRELATION_LOSS":0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            self.path_folder_nets["GAN"] = Path(self.path_folder,'GAN')
+            if not os.path.exists(self.path_folder_nets["GAN"]):
+                os.makedirs(self.path_folder_nets["GAN"])
+            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+        '''
+        
+        '''
+        if self.model_case=="GAN_linear_pretrained_0016_CHENGDU_bt":
             dataloader = DataLoader(mode="graph_roads", seed=self.seed_data, name_dataset="China_Chengdu_A0016", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
             self.path_folder_nets["AE"] = Path(self.path_folder,'AE')
             if not os.path.exists(self.path_folder_nets["AE"]):
@@ -306,19 +321,7 @@ class NeuralCore():
                 os.makedirs(self.path_folder_nets["GAN"])
             self.loss_obj['GAN'] = LossFunction({}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)         
 
-        #ESG
-        elif self.model_case=="ESG__GAN_linear_pretrained_35":
-            self.graph_topology = False
-            dataloader = DataLoader(mode="fin_data", seed=self.seed_data, name_dataset="ESG_35", device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
-            self.path_folder_nets["AE"] = Path(self.path_folder,'AE')
-            if not os.path.exists(self.path_folder_nets["AE"]):
-                os.makedirs(self.path_folder_nets["AE"])
-            self.loss_obj['AE'] = LossFunction({"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "VARIANCE_LOSS":0.05, "SPEARMAN_CORRELATION_LOSS":0.001}, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
-            self.path_folder_nets["GAN"] = Path(self.path_folder,'GAN')
-            if not os.path.exists(self.path_folder_nets["GAN"]):
-                os.makedirs(self.path_folder_nets["GAN"])
-            self.loss_obj['GAN'] = LossFunction(dict(), univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
-            '''
+        '''
             
         self.modelTrainedAE = None
         self.data_splitted = dataloader.dataset_load(draw_plots=True, save_summary=True, loss=self.loss_obj, draw_correlationCoeff=self.draw_correlationCoeff)
@@ -330,14 +333,11 @@ class NeuralCore():
         self.statsData = dataloader.get_statsData()
         self.path_map = dataloader.get_pathMap()
         self.edge_index = dataloader.get_edgeIndex()
+        self.case_setting.set_edge_index(self.edge_index)
+        self.case_setting.deploy_models()
         
         for key in self.loss_obj:
-            self.loss_obj[key].set_stats_data(self.# It looks like the code snippet is a comment in
-            # Python. The text "statsData" is commented out,
-            # which means it is not executed as code but serves
-            # as a note or description for the reader or
-            # programmer.
-            statsData, self.vc_mapping)
+            self.loss_obj[key].set_stats_data(self.statsData, self.vc_mapping)
         
         if do_optimization: 
             self.do_optimization = True
@@ -378,96 +378,6 @@ class NeuralCore():
             self.predict_model(model=model_gan_trained, model_type=model_key, data=self.data_splitted, path_folder_pred=self.path_folder_nets[model_key], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
         
         ''' 
-        elif self.model_case=="autoencoder_3_copula_optimization":
-            self.optimization.set_modeltype(model_type="AE")
-            search_space = [
-                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"MSE_LOSS"},
-                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"COVARIANCE_LOSS"},
-                {"type":"Real","min":0.5,"max":1, "values_list":None, "name":"DECORRELATION_LATENT_LOSS"}]
-            self.optimization.set_searchSpace(search_space)
-            self.optimization.set_optimizer(base_estimator="GP", n_initial_points=10)            
-            self.optimization.optimization(n_calls=20, network_key = "AE")
-
-        
-        # CHENGDU
-        elif self.model_case=="GAN_linear_pretrained_0016_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_16
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_16(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        elif self.model_case=="GAN_linear_pretrained_0032_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_32
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_32(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        elif self.model_case=="GAN_linear_pretrained_0064_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_64
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        elif self.model_case=="GAN_GCN_linear_pretrained_0064_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoderGCN_64
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch, graph_topology = True)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        
-        elif self.model_case=="GAN_linear_pretrained_0128_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_128
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_128(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")   
-        elif self.model_case=="GAN_linear_pretrained_0256_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_256
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_256(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")        
-        
-            
-        elif self.model_case=="GAN_linear_pretrained_5943_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoder_5943
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_5943(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        
-        elif self.model_case=="GAN_GCN_linear_pretrained_RN0128_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoderGCN_128
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch, graph_topology = True)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_128(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        
-        elif self.model_case=="GAN_GCN_linear_pretrained_RN0742_CHENGDU_bt":            
-            self.model['AE'] = GEN_autoEncoderGCN_742
-            model_ae_trained = self.training_model(self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch, graph_topology = True)
-            self.predict_model(model=model_ae_trained, model_type="AE", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], input_shape="vector")   
-            model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
-            self.model['GAN'] = GAN_neural_mixed_64(generator=model_ae_decoder)
-            model_gan_trained = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
-            self.predict_model(model=model_gan_trained, model_type="GAN", data_dict=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], input_shape="vector")
-        
         elif self.model_case=="GAN_GCN_linear_pretrained_URB_ZONE0_CHENGDU_bt":            
             self.model['AE'] = GEN_autoEncoderGCN_zone0
             self.graph_topology = True
@@ -500,7 +410,6 @@ class NeuralCore():
             trained_obj_gan = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             model_gan_trained = trained_obj_gan[0]
             self.predict_model(model=model_gan_trained, model_type="GAN", data=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], path_folder_data=self.path_folder, noise_samples=1000, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
-        
         
              
         #ESG

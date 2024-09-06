@@ -20,7 +20,7 @@ import seaborn as sns
 import pandas as pd
 
 
-class DataSynteticGeneration():
+class DataSyntheticGeneration():
 
     def __init__(self, torch_device, univar_count, lat_dim, path_folder):
         self.torch_device = torch_device
