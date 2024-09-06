@@ -1,4 +1,4 @@
-from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSynteticGeneration
+from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSyntheticGeneration
 from src.NeuroCorrelation.DataLoaders.DataMapsLoader import DataMapsLoader
 
 import math
@@ -52,7 +52,7 @@ class DataLoader:
         self.loss = loss
         if self.mode=="random_var" and self.name_dataset=="3var_defined":
             print("DATASET PHASE: Sample generation")
-            self.dataGenerator = DataSynteticGeneration(torch_device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, path_folder=self.path_folder)
+            self.dataGenerator = DataSyntheticGeneration(torch_device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, path_folder=self.path_folder)
             
             self.dataGenerator.casualVC_init_3VC(num_of_samples = self.starting_sample, draw_plots=draw_plots)
             train_data, self.corrCoeff['data']['train_data'] = self.dataGenerator.casualVC_generation(name_data="train", num_of_samples = self.train_samples, draw_plots=draw_plots)
@@ -65,7 +65,7 @@ class DataLoader:
 
         if self.mode=="random_var" and self.name_dataset=="copula":
             print("DATASET PHASE: Sample copula generation")
-            self.dataGenerator = DataSynteticGeneration(torch_device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, path_folder=self.path_folder)
+            self.dataGenerator = DataSyntheticGeneration(torch_device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, path_folder=self.path_folder)
             
             if self.vc_dict is None:
                 self.vc_dict = {"X":{"dependence":None}, "Y":{"dependence":{"X":1.6}}, "Z":{"dependence":{"X":3}}, "W":{"dependence":None},"K":{"dependence":{"W":0.5}}, "L":{"dependence":{"W":5}}, "M":{"dependence":None}}
