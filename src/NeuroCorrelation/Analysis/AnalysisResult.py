@@ -96,7 +96,6 @@ class AnalysisResult():
             mean_cop.append(wd_cop)
 
         wass_values_ae['mean'] = np.mean(mean_ae)
-        #print("max",max(mean_ae))
         wass_values_cop['mean'] = np.mean(mean_cop)
         ws_pd_ae = pd.DataFrame(wass_values_ae.items())
         ws_pd_cop = pd.DataFrame(wass_values_cop.items())
@@ -286,8 +285,6 @@ class AnalysisResult():
         df_c = df_tsne.loc[df_tsne['label'] == "cop"].iloc[0:200]
         df_swarmplot= pd.concat([df_a, df_b, df_c])
         for i in range(self.univar_count):
-            #print("\t-",df_tsne[[f'c_{i}',"label"]])
-            
             sns.violinplot(data=df_tsne[[f'c_{i}',"label"]], y=f'c_{i}', x="label", palette=color_list, hue="label", ax=axs[i])
             sns.swarmplot(data=df_swarmplot[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=color_list, size=3, ax=axs[i])
             

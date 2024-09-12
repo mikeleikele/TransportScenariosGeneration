@@ -12,7 +12,7 @@ import random
 import torch
 import scipy.stats as stats
 from matplotlib import cm # for a scatter plot
-from src.tool.utils_matplot import SeabornFig2Grid
+#from src.tool.utils_matplot import SeabornFig2Grid
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 from numpy import dot
@@ -27,7 +27,7 @@ from sklearn.preprocessing import StandardScaler
 from numpy.linalg import inv, pinv
 from scipy.linalg import sqrtm
 
-
+import time
 
 class DataComparison():
 
@@ -128,7 +128,7 @@ class DataComparison():
         stats_dict = pd.DataFrame.from_dict(stats_dict)
         stats_dict.to_csv(filename, sep='\t', encoding='utf-8')
 
-    def latent_comparison_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
+    def latent_comparison_distribution_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
         stats_dict = {"univ_id": []}
         
         for id_comp in range(self.latent_dim):
@@ -143,8 +143,11 @@ class DataComparison():
             plt.savefig(filename)
     
     def plot_latent_analysis(self, data_lat, plot_name, color_data="green"):    
+        # The above code snippet is not doing anything. It contains a comment `# Python` followed by
+        # an undefined variable `_keys` and then another comment `
         _keys = list(data_lat.keys())
-        
+        n_keys = len(_keys)
+        n_row = n_keys
         
         if plot_name is not None:
             fold_name = f"{plot_name}_latent_distribution"
@@ -155,30 +158,40 @@ class DataComparison():
         if not os.path.exists(path_fold_dist):
             os.makedirs(path_fold_dist)
         
-        self.latent_comparison_plot(data_lat, path_fold_dist,plot_name)
-        if len(_keys)<=10:
-            if len(_keys)>=7:
-                marginal_plot = False
-            else:
-                marginal_plot = True
-
-            fig = plt.figure(figsize=(18,18))
-            gs = gridspec.GridSpec(self.latent_dim, self.latent_dim)
-            id_sub = 0
-            for i,key_i in enumerate(data_lat):
-                i_val = [x.tolist() for x in data_lat[i]]
-                i_key = f"{i}_comp"
+        self.latent_comparison_distribution_plot(data_lat, path_fold_dist,plot_name)
+        
+        fig_size_factor = 2 + n_keys
+        fig = plt.figure(figsize=(fig_size_factor, fig_size_factor))
+        
+        gs = gridspec.GridSpec(n_row, n_row)
+        _key = _keys[0]
+        
+        if len(_keys)>=7:
+            marginal_plot = False
+        else:
+            marginal_plot = True
+        
+        n_items = len(data_lat[_key])
+        
+        if n_items>1000:
+            item_selected = random.choices([i for i in range(1000)], k=1000)
+        else:
+            item_selected = [i for i in range(n_items)]
+        
+        for i,key_i in enumerate(data_lat):
+            i_val = [x.tolist() for x in data_lat[i]]
+            i_key = f"{i}_comp"
                 
-                for j,key_j in enumerate(data_lat):
-                    j_val = [x.tolist() for x in data_lat[j]]
-                    j_key = f"{j}_comp"
+            for j,key_j in enumerate(data_lat):
+                j_val = [x.tolist() for x in data_lat[j]]
+                j_key = f"{j}_comp"
+                if i<=j:
+                    id_sub = (i*n_keys)+j
+                    ax_sub = fig.add_subplot(gs[id_sub])
                     if  i != j:
-                        plt_cor = self.correlation_plot(i_val, j_val, i_key, j_key, color=color_data, marginal_dist=marginal_plot)
-                        mg0 = SeabornFig2Grid(plt_cor, fig, gs[id_sub])
+                        self.correlation_plot(i_val, j_val, i_key, j_key, ax_sub, color=color_data, marginal_dist=marginal_plot)
                     else:
-                        ax_sub = fig.add_subplot(gs[id_sub])
-                        plt_variance = self.variance_plot(i_val, i_key, ax_sub, color=color_data)
-                    id_sub += 1
+                        self.variance_plot(i_val, i_key, ax_sub, color=color_data)
                     
             gs.tight_layout(fig)
             filename = Path(path_fold_dist, "plot_lat_correlation_grid_+"+plot_name+".png")
@@ -213,155 +226,106 @@ class DataComparison():
             plt.savefig(filename)
         
 
-    def correlationCoeff(self, df_data, select_subset=True):    
-        num_to_select = 200
+    def correlationCoeff(self, df_data, select_subset=True, num_to_select = 200):    
         rho_val_list = list()
         for key_vc in df_data:
-            if isinstance(df_data[key_vc][0], (np.ndarray) ):
-                vc_values =list()
-                for value in df_data[key_vc]:
-                    vc_values.append(value.tolist())
+            if isinstance(df_data[key_vc][0], (np.ndarray)):
+                vc_values = [value.tolist() for value in df_data[key_vc]]
                 rho_val_list.append(vc_values)
             else:
                 rho_val_list.append(df_data[key_vc])
         
+        data_df = pd.DataFrame(rho_val_list).T
+        if select_subset:
+            num_to_selected = min(num_to_select, data_df.shape[0])
+            data_df = data_df.sample(num_to_selected, random_state=0)
+        
         rho = dict()
-        rho['pearson'] = list()
-        rho['spearman'] = list()
-        rho['kendall'] = list()
+        rho['pearson'] = data_df.corr(method='pearson').values
+        rho['spearman'] = data_df.corr(method='spearman').values
+        rho['kendall'] = data_df.corr(method='kendall').values
+        rho['covar'] = np.cov(data_df.T, bias=False)
         
-        #rho_pearson = np.corrcoef(rho_val_list)
-        
-        
-        rho_val_dict_cuted  = dict()
-        
-        for j in range(len(rho_val_list)):
-            
-            if select_subset:
-                if select_subset:
-                    if num_to_select>len(list(rho_val_list[j])):
-                        num_to_selected = len(list(rho_val_list[j]))
-                    else:
-                        num_to_selected = num_to_select   
-                        
-                rho_val_dict_cuted[j] = random.sample(list(rho_val_list[j]), num_to_selected)
-                
-            else:
-                rho_val_dict_cuted[j] = rho_val_list[j]
-        for i in range(len(rho_val_list)):
-            row = dict()
-            for key in rho:          
-                row[key] = [None for i in range(len(rho_val_list))]
-            
-            for j in range(i+1):
-                
-                a_array = rho_val_dict_cuted[i]
-                b_array = rho_val_dict_cuted[j]
-                #row['pearson'][j] = stats.pearsonr(a_array,b_array).statistic
-                #row['spearman'][j] = stats.spearmanr(a_array,b_array).statistic
-                #row['kendall'][j] = stats.kendalltau(a_array,b_array).statistic
-                
-            for key in rho:          
-                rho[key].append(row[key])
-            
-        
-        for key in rho:
-           for i in range(len(rho_val_list)):
-               for j in range(i):
-                  rho[key][j][i]  = rho[key][i][j]
-                   
-        
-        covar_array = list()
-        for j in range(len(rho_val_list)):
-            
-            _array = rho_val_list[j]
-            covar_array.append(_array)
-        cov_matrix = np.cov(covar_array, bias=False)        
-        rho['covar'] = cov_matrix
-        for key in rho:     
-            rho[key] = np.array(rho[key])
-            
         return rho
 
     
     def plot_vc_analysis(self, df_data, plot_name, mode="in", color_data="blue"):
-        _keys = list(df_data.keys())        
         
-        fig = plt.figure(figsize=(18,18))
+        _keys = list(df_data.keys())        
+        n_keys = len(_keys)
+        
         if mode=="in":
             n_row = self.univar_count_in
         else:
             n_row = self.univar_count_out
         
+        fig_size_factor = 2 + n_keys
+        fig = plt.figure(figsize=(fig_size_factor, fig_size_factor))
+        
         gs = gridspec.GridSpec(n_row, n_row)
         _key = _keys[0]
-        if len(_keys)<=9:
-            if len(_keys)>=7:
-                marginal_plot = False
-            else:
-                marginal_plot = True
-            n_items = len(df_data[_key])
-            if n_items>500:
-                item_selected = random.choices([i for i in range(500)], k=500)
-            else:
-                item_selected = [i for i in range(n_items)]
-
-            id_sub = 0
-            for i, key_i in enumerate(df_data):
-                i_val_all = df_data[key_i]
-                i_val = []#
-                for l in item_selected:
-                    item = i_val_all[l]
-                    if isinstance(item, list):
-                        i_val.append(item[0])
-                    else:
-                        i_val.append(item)
-
-                i_key = f"{key_i}"
-                for j, key_j in enumerate(df_data):
-                    j_val_all = df_data[key_j]
-                    j_val = []  
-                    for l in item_selected:
-                        item = j_val_all[l]
-                        if isinstance(item, list):
-                            j_val.append(item[0])
-                        else:
-                            j_val.append(item)
-
-                    
-                    j_key = f"{key_j}"
-                    if  i != j:
-                        plt_cor = self.correlation_plot(i_val, j_val, i_key, j_key, color=color_data, marginal_dist=marginal_plot)
-                        mg0 = SeabornFig2Grid(plt_cor, fig, gs[id_sub])
-                    else:
-                        ax_sub = fig.add_subplot(gs[id_sub])
-                        plt_variance = self.variance_plot(i_val, i_key, ax_sub, color=color_data)
-                    id_sub += 1
+        
+        if len(_keys)>=7:
+            marginal_plot = False
+        else:
+            marginal_plot = True
             
-            gs.tight_layout(fig)
-            filename = Path(self.path_folder, "plot_vc_correlation_grid_"+plot_name+".png")
-            plt.savefig(filename)
+        n_items = len(df_data[_key])
+        
+        if n_items>1000:
+                item_selected = random.choices([i for i in range(1000)], k=1000)
+        else:
+            item_selected = [i for i in range(n_items)]
 
-    def correlation_plot(self, rand1, rand2, name1, name2, color="blue", marginal_dist=True):
+        for i, key_i in enumerate(df_data):
+            i_val = [df_data[key_i][l][0] if isinstance(df_data[key_i][l], list) else df_data[key_i][l] for l in item_selected]
+            
+            for j, key_j in enumerate(df_data):
+                j_val = [df_data[key_j][l][0] if isinstance(df_data[key_j][l], list) else df_data[key_j][l] for l in item_selected]
+                if i<=j:
+                    id_sub = (i*n_keys)+j
+                    ax_sub = fig.add_subplot(gs[id_sub])
+                    if  i != j:
+                        self.correlation_plot(i_val, j_val, f"{key_i}", f"{key_j}", ax_sub, color=color_data, marginal_dist=marginal_plot)
+                    else:
+                        self.variance_plot(i_val, f"{key_i}", ax_sub, color=color_data)
+        
+        gs.tight_layout(fig)
+        filename = Path(self.path_folder, "plot_vc_correlation_grid_"+plot_name+".png")
+        plt.savefig(filename)
+    
+    def sub_reverse(self, i, n_var):
+        col = i % n_var
+        row = i // n_var
+        j = (col * n_var) + row
+        return j
 
-
+    def correlation_plot(self, rand1, rand2, name1, name2, ax_sub, color="blue", marginal_dist=True):
         if isinstance(rand1, list) and isinstance(rand2, list):
             min1, max1, min2, max2 = min(rand1), max(rand1), min(rand2), max(rand2)
-
         else:
             min1, max1, min2, max2 = rand1.min(), rand1.max(), rand2.min(), rand2.max()
 
-        h = sns.jointplot(x=rand1, y=rand2, space=0, xlim=(min1, max1), ylim=(min2, max2),color=color, kind="hist")
+        sns.histplot(x=rand1, y=rand2, bins=30, ax=ax_sub, color=color)
+        ax_sub.set_xticks([])
+        ax_sub.set_yticks([])
+        
+        ax_sub.set_xlim(min1, max1)
+        ax_sub.set_ylim(min2, max2)
+        
         if marginal_dist:
-            h.set_axis_labels(name1, name2, fontsize=16)
-            h.ax_marg_x.set_axis_off()
-            h.ax_marg_y.set_axis_off()
-        return h
+            ax_marg_x = ax_sub.inset_axes([0, 1.05, 1, 0.2], sharex=ax_sub)
+            ax_marg_y = ax_sub.inset_axes([1.05, 0, 0.2, 1], sharey=ax_sub)
+            sns.histplot(rand1, ax=ax_marg_x, color=color, kde=False)
+            sns.histplot(rand2, ax=ax_marg_y, color=color, kde=False)  # NOTA: usa y per il margine verticale
+        return ax_sub
 
     def variance_plot(self, rand1, name1, ax_sub, color="blue"):
         h = sns.histplot(data=rand1, kde = True, ax=ax_sub, color=color)
-        title_txt = f"Histogram of {name1}"
-        h.set_title(title_txt, fontsize=16)        
+        ax_sub.set_xticks([])
+        ax_sub.set_yticks([])
+        ax_sub.set_ylabel('')
+        ax_sub.set_xlabel('')
         return h
     
     def find_nearest_kde(self, array, value):
@@ -754,7 +718,7 @@ class DataComparison_Advanced():
         
         fig = plt.figure(figsize=(16,7))
         params = {1: {'color': 'k', 'label': 'Pass'},
-          0: {'color': 'r', 'label': 'Fail'}}
+            0: {'color': 'r', 'label': 'Fail'}}
 
 
         sns.scatterplot(
@@ -768,17 +732,7 @@ class DataComparison_Advanced():
         filename = Path(self.path_folder, f"TSNE_plot_{self.suffix}.png")
         plt.savefig(filename)
         
-        #print(df_tsne)
-        #raise Exception("--")
-        #pca = PCA(n_components=self.PCA_components)
-        
-        #X_std = StandardScaler().fit_transform(df_tsne)
-        #vecs = pca.fit_transform(X_std)
-
-        
-        #fig, ax = plt.subplots(figsize=(14,8))
         fig, axs = plt.subplots(figsize=(140,20), ncols=self.univar_count)
-        
         df_tsne['label'] = labels
         
         df_a = df_tsne.loc[df_tsne['label'] == "real"].iloc[0:400]
@@ -789,7 +743,6 @@ class DataComparison_Advanced():
         else:
             df_swarmplot= pd.concat([df_a, df_b])
         
-         
         for i in range(self.univar_count):
             sns.violinplot(data=df_tsne[[f'c_{i}',"label"]], y=f'c_{i}', x="label", palette=color_list, hue="label", ax=axs[i])
             sns.swarmplot(data=df_swarmplot[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=color_list, size=3, ax=axs[i])
