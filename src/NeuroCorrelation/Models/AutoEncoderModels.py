@@ -18,8 +18,9 @@ import json
 
 class AutoEncoderModels(nn.Module):
 
-    def __init__(self, layers_list=None, load_from_file =False, json_filepath= None, edge_index=None, **kwargs):
+    def __init__(self, device, layers_list=None, load_from_file =False, json_filepath= None, edge_index=None,  **kwargs):
         super().__init__()
+        self.device = device
         self.models = dict()
         self.edge_index = edge_index
         self.permutation_forward = dict()
@@ -34,7 +35,7 @@ class AutoEncoderModels(nn.Module):
         self.deploy_nnModel()
         
     def get_size(self, ):
-        return self.models_size()
+        return self.models_size
         
     def deploy_nnModel(self):
         
@@ -49,23 +50,25 @@ class AutoEncoderModels(nn.Module):
         self.add_module('decoder', self.models['decoder'])
         
         
-    def get_decoder(self, size=False):
-        if size:
-            return self.models['decoder'], self.models_size['decoder']
+    def get_decoder(self, extra_info=False):
+        if extra_info:
+            return self.models['decoder'], self.models_size['decoder'], self.permutation_forward['decoder']
         else:
             return self.models['decoder']
         
 
-    def get_encoder(self, size=False):
-        if size:
-            return self.models['encoder'], self.models_size['encoder']
+    def get_encoder(self, extra_info=False):
+        if extra_info:
+            return self.models['encoder'], self.models_size['encoder'], self.permutation_forward['encoder']
         else:
             return self.models['encoder']       
     
     def summary(self):
         summary = dict()
-        summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['encoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
-        summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder']["input_size"]), batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        print("models_size[encoder][input_size]\t\t\t",self.models_size['encoder']["input_size"])
+        print("models_size[decoder][input_size]\t\t\t",self.models_size['decoder']["input_size"])
+        summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['encoder']["input_size"]), device=self.device, batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
+        summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder']["input_size"]), device=self.device, batch_dim = 0, col_names = ("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose = 0)
     
     def forward(self, x):
         x_latent = self.models['encoder'](x)
@@ -121,8 +124,7 @@ class nn_Model(nn.Module):
         self.permutation_forward = permutation_forward
         self.layers = nn.Sequential(*layers)
         self.edge_index = edge_index
-        self.apply(self.weights_init_normal)  
-        
+        self.apply(self.weights_init_normal)
         print("Layers initialized:", self.layers)
     
     def weights_init_normal(self, m):
@@ -132,6 +134,7 @@ class nn_Model(nn.Module):
                 nn.init.zeros_(m.bias)
                 
     def forward(self, x):
+        print(x.shape," ---- ", x.device)
         for  index, layer in enumerate(self.layers):
             if isinstance(layer, gm.GCNConv):
                 if index in self.permutation_forward:
@@ -140,7 +143,7 @@ class nn_Model(nn.Module):
                 x = layer(x, self.edge_index) 
                 if index in self.permutation_forward:
                     out_permute = self.permutation_forward[index]["out_permute"]
-                    x = x.permute(out_permute[0], out_permute[1], out_permute[2])                              
+                    x = x.permute(out_permute[0], out_permute[1], out_permute[2])
             else:
                 x = layer(x)
         return {"x_input": x, "x_output": x}

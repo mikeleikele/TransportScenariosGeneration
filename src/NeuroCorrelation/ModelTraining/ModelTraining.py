@@ -100,9 +100,6 @@ class ModelTraining():
                 self.scheduler_gen = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_gen, factor=0.1, patience=10, verbose=True)
             elif self.opt_scheduler_gen == "StepLR":
                 self.scheduler_gen = optim.lr_scheduler.StepLR(self.optimizer_gen, step_size=20, gamma=0.1)
-
-
-            print(self.model)
             model_dis = self.model.get_discriminator()
             
             self.model_dis = model_dis
@@ -354,7 +351,7 @@ class ModelTraining():
                     ###########################
                     # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                     ###########################
-                    noise = torch.randn(1,  self.batchsize, noise_size[1]).to(device=self.device) 
+                    noise = torch.randn(self.batchsize, noise_size[0], noise_size[1]).to(device=self.device) 
                     ###########################
                     ##  A Update D with real data
                     ###########################
@@ -683,14 +680,14 @@ class ModelTraining():
                 except AttributeError as e:
                     self.getBack(n[0])
 
-    def getModel(self, selection='all', eval=False, train=False, size=False):
+    def getModel(self, selection='all', eval=False, train=False, extra_info=False):
         if self.model_type == "AE":
             if selection=='all':
                 model_selected = self.model
             if selection=='encoder':
                 raise Exception("Encoder not implemented")
             if selection=='decoder':
-                model_selected, model_size = self.model.get_decoder(size=size)
+                model_selected, model_size, model_permutation_forward = self.model.get_decoder(extra_info=extra_info)
                 if train:
                     model_selected = model_selected.train()
                 elif eval:
@@ -704,8 +701,8 @@ class ModelTraining():
                     model_selected = self.model_gen.eval()
             elif selection=='dis':
                 model_selected = self.model_dis
-        if size:
-            return model_selected, model_size
+        if extra_info:
+            return model_selected, model_size, model_permutation_forward
         else:
             return model_selected
 

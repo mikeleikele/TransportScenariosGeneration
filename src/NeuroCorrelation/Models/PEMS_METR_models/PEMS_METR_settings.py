@@ -180,17 +180,16 @@ class PEMS_METR_settings():
     
     def deploy_models(self):
         for key in self.model_settings:
-            print(key)
             if key == "AE":
-                self.model["AE"] = AutoEncoderModels(load_from_file =self.model_settings["AE"]['load_from_file'],
+                self.model["AE"] = AutoEncoderModels(device=self.device, load_from_file =self.model_settings["AE"]['load_from_file'],
                             json_filepath=self.model_settings["AE"]['json_filepath'],
                             edge_index=self.edge_index)
             elif key=="GAN":
-                self.model["GAN"] = GenerativeAdversarialModels(load_from_file =self.model_settings["GAN"]['load_from_file'],
+                self.model["GAN"] = GenerativeAdversarialModels(device=self.device, load_from_file =self.model_settings["GAN"]['load_from_file'],
                             json_filepath=self.model_settings["GAN"]['json_filepath'],
                             edge_index=self.edge_index)
             elif key=="WGAN":
-                self.model["WGAN"] = GenerativeAdversarialModels(load_from_file =self.model_settings["WGAN"]['load_from_file'],
+                self.model["WGAN"] = GenerativeAdversarialModels(device=self.device, load_from_file =self.model_settings["WGAN"]['load_from_file'],
                             json_filepath=self.model_settings["WGAN"]['json_filepath'],
                             edge_index=self.edge_index)
     def get_trainingMode(self):

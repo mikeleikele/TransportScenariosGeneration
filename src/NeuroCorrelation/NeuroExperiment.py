@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 from termcolor import cprint
 from colorama import init, Style
-
+import gc
 class NeuroExperiment():
 
     def __init__(self, args):
@@ -39,16 +39,8 @@ class NeuroExperiment():
     
         
     def main(self, num_case, experiment_name_suffix, main_folder, repeation, load_model=None, train_models="yes", optimization=False):
-        path_folder = Path('data','neuroCorrelation',main_folder)
+        path_folder = Path('data','neuroCorrelation_experiments',main_folder)
         experiments_name = f"{experiment_name_suffix}___{num_case}"
-        
-        #2--metr16 ok
-        #3--metr32 ok
-        #4--metr48 doto
-        
-        #5--pems16 ok
-        #6--pems32 ok
-        #7--pems48 ok
         
         for seed in range(0, int(repeation)):
             experiment_name = f"{experiments_name}_{seed}"
@@ -58,9 +50,10 @@ class NeuroExperiment():
             id_experiments = int(num_case)
             experiments_list = self.getExperimentsList(seed=0, optimization= optimization)
             experiments_selected = experiments_list['experiments_list'][id_experiments]
-            univar_count=experiments_selected["univar_count"]
-            
-        
+            experiments_selected["univar_count"]
+        gc.collect()
+
+
     def getExperimentsList(self,seed,optimization):
         experiments_list = [
             {"id":   0, "model_case":"autoencoder_3_copula_optimization", "epoch":{'AE':   3,'GAN':   2}, "univar_count": 7, "lat_dim": 3, "dataset_setting":{"batch_size":  32, "train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":None, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
@@ -79,9 +72,15 @@ class NeuroExperiment():
             {"id":   9, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_PEMS_48",  "epoch":{'AE':  100,'GAN' :  100},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   64,'GAN' :   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
             {"id":   10, "case":"PEMS_METR", "model_case":"AE>GAN_linear_pretrained_PEMS_64",  "epoch":{'AE':  100,'GAN' :  100},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   64,'GAN' :   64}, "train_percentual":0.6,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},                                
 
-            #CHENGDU DATASET
-            {"id":   11, "case":"CHENGDU", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_16_A_linear",  "epoch":{'AE':  2,'GAN':  2},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
-            {"id":   12, "case":"CHENGDU", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph",  "epoch":{'AE':  2,'GAN':  2},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            #CHENGDU_SMALLGRAPH DATASET
+            {"id":   11, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_16_A_linear",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   12, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph",   "epoch":{'AE':  100,'GAN':  100},  "univar_count":16,   "lat_dim":12,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   13, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_32_A_linear",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   14, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_32_A_graph",   "epoch":{'AE':  100,'GAN':  100},  "univar_count":32,   "lat_dim":28,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   15, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_48_A_linear",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   16, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_48_A_graph",   "epoch":{'AE':  100,'GAN':  100},  "univar_count":48,   "lat_dim":36,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   17, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_64_A_linear",  "epoch":{'AE':  100,'GAN':  100},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
+            {"id":   18, "case":"CHENGDU_SMALLGRAPH", "model_case":"AE>GAN_CHENGDU_SMALLGRAPH_64_A_graph",   "epoch":{'AE':  100,'GAN':  100},  "univar_count":64,   "lat_dim":54,   "dataset_setting":{"batch_size": {'AE':   256,'GAN':   256}, "train_percentual":0.9,"starting_sample":None,"train_samples":None,"test_samples":None,"noise_samples":10000, "seed":seed}, "instaces_size" :1,"optimization": optimization, "input_shape":"vector"},
             
              
             '''
@@ -120,7 +119,7 @@ class NeuroExperiment():
                 ]
             }
         
-        run_mode = "ALL_nocorr_noscen"
+        run_mode = "ALL_noscen"
         return {"experiments_list":experiments_list, "run_mode":run_mode,  "optimization_settings":optimization_settings}
         
     def experiment(self, num_case, main_folder, seed, experiment_name, optimization, load_model):

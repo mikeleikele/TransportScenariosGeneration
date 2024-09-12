@@ -95,7 +95,6 @@ class AnalysisResult():
             mean_cop.append(wd_cop)
 
         wass_values_ae['mean'] = np.mean(mean_ae)
-        #print("max",max(mean_ae))
         wass_values_cop['mean'] = np.mean(mean_cop)
         ws_pd_ae = pd.DataFrame(wass_values_ae.items())
         ws_pd_cop = pd.DataFrame(wass_values_cop.items())
