@@ -30,7 +30,7 @@ class DataStatistics():
         if latent:
             if verbose:
                 print("\t\t\tdistribution analysis: latent")
-                self.dataComparison.plot_latent_analysis(self.data['latent_data_bycomp']['latent'], plot_name=f"{plot_name}__latent", color_data=plot_colors["latent"])
+                self.dataComparison.plot_latent_analysis(self.data['latent_data_bycomp']['latent'], plot_name=f"{plot_name}_latent", color_data=plot_colors["latent"])
         if verbose:
             print("\t\t\tdistribution analysis: output")        
         self.dataComparison.plot_vc_analysis(self.data["out_data_vc"], plot_name=f"{plot_name}_output", mode="out", color_data=plot_colors["output"])

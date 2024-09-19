@@ -30,7 +30,7 @@ import os
 
 class NeuralCore():
 
-    def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, do_optimization, opt_settings, seed=0, run_mode="all", ):
+    def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, do_optimization, opt_settings, seed=0, run_mode="all", time_slot="A"):
         device = "cpu"#("cuda:0" if (torch.cuda.is_available()) else "cpu")
         #device = "cpu"
         
@@ -116,7 +116,8 @@ class NeuralCore():
             if self.case == "PEMS_METR":
                 self.case_setting = PEMS_METR_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size)
             elif self.case == "CHENGDU_SMALLGRAPH":
-                self.case_setting = CHENGDU_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size)
+                self.time_slot = time_slot
+                self.case_setting = CHENGDU_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_slot=self.time_slot)
             self.trainingMode = self.case_setting.get_trainingMode()
             self.path_folder_nets = self.case_setting.get_folder_nets()
             dataloader = self.case_setting.get_DataLoader(seed_data=self.seed_data)

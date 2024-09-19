@@ -34,9 +34,7 @@ class DatasetTool:
         
         dataset_settings = dict()
         if config[name_dataset][version_dataset]["filename"] is not None:
-            print("--time_slot--",self.time_slot)
             if self.time_slot is not None:
-                print("-")
                 if config[name_dataset][version_dataset]["filename"][self.time_slot] is not None:
                     dataset_settings["filename"] = Path(config[name_dataset][version_dataset]["filename"][self.time_slot])
             else:

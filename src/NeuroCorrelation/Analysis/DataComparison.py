@@ -26,6 +26,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from numpy.linalg import inv, pinv
 from scipy.linalg import sqrtm
+import matplotlib.pyplot as plt
 
 import time
 
@@ -123,14 +124,17 @@ class DataComparison():
             plt.legend(loc='upper right')
             filename = Path(path_fold_dist,"plot_vc_distribution_"+plot_name+"_"+name_univ+".png")
             plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+
 
         filename = Path(path_fold_dist,fold_name+"_table.csv")
         stats_dict = pd.DataFrame.from_dict(stats_dict)
         stats_dict.to_csv(filename, sep='\t', encoding='utf-8')
 
-    def latent_comparison_distribution_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
+    def  latent_comparison_distribution_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
         stats_dict = {"univ_id": []}
-        
         for id_comp in range(self.latent_dim):
             list_values = [x.tolist() for x in data_lat[id_comp]]
             name_comp = self.get_idName(id_comp, max_val=self.latent_dim)
@@ -141,6 +145,10 @@ class DataComparison():
             plt.title(title_txt)
             filename = Path(path_fold_dist, "plot_latent_distribution_"+plot_name+"_"+name_comp+"_latent.png")
             plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+
     
     def plot_latent_analysis(self, data_lat, plot_name, color_data="green"):    
         # The above code snippet is not doing anything. It contains a comment `# Python` followed by
@@ -150,7 +158,7 @@ class DataComparison():
         n_row = n_keys
         
         if plot_name is not None:
-            fold_name = f"{plot_name}_latent_distribution"
+            fold_name = f"{plot_name}_distribution"
         else:
             fold_name = f"univar_latent_distribution"
 
@@ -196,11 +204,15 @@ class DataComparison():
             gs.tight_layout(fig)
             filename = Path(path_fold_dist, "plot_lat_correlation_grid_+"+plot_name+".png")
             plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+
 
     def plot_vc_correlationCoeff(self, df_data, plot_name, is_latent=False, corrMatrix=None):
         if is_latent:
             if plot_name is not None:
-                fold_name = f"{plot_name}_latent_distribution"
+                fold_name = f"{plot_name}_distribution"
             else:
                 fold_name = f"univar_latent_distribution"
 
@@ -208,22 +220,29 @@ class DataComparison():
             if not os.path.exists(path_fold_dist):
                 os.makedirs(path_fold_dist)
         else:
-            path_fold_dist = self.path_folder
+            fold_name = f"{plot_name}_distribution"
+            path_fold_dist = Path(self.path_folder, fold_name)
+            if not os.path.exists(path_fold_dist):
+                os.makedirs(path_fold_dist)
 
         fig = plt.figure(figsize=(18,18))
         if corrMatrix is None:
             corrMatrix = self.correlationCoeff(df_data)
         rho = corrMatrix
         
-        return
+        fig_size_factor = 2 + int(len(df_data.keys()))
+        
         for key in rho:
             csvFile_Path = Path(path_fold_dist, f"data_{key}_"+plot_name+".csv")
             np.savetxt(csvFile_Path, rho[key], delimiter=",")
-            
+            fig = plt.figure(figsize=(fig_size_factor, fig_size_factor))
             fig = plt.figure(figsize=(18,18))
             sns.heatmap(rho[key], annot = True, square=True, vmin=-1, vmax=1, cmap= 'coolwarm')
             filename = Path(path_fold_dist,f"plot_{key}_"+plot_name+".png")
             plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
         
 
     def correlationCoeff(self, df_data, select_subset=True, num_to_select = 200):    
@@ -276,7 +295,7 @@ class DataComparison():
                 item_selected = random.choices([i for i in range(1000)], k=1000)
         else:
             item_selected = [i for i in range(n_items)]
-
+        a = 1
         for i, key_i in enumerate(df_data):
             i_val = [df_data[key_i][l][0] if isinstance(df_data[key_i][l], list) else df_data[key_i][l] for l in item_selected]
             
@@ -287,12 +306,16 @@ class DataComparison():
                     ax_sub = fig.add_subplot(gs[id_sub])
                     if  i != j:
                         self.correlation_plot(i_val, j_val, f"{key_i}", f"{key_j}", ax_sub, color=color_data, marginal_dist=marginal_plot)
+                        
                     else:
                         self.variance_plot(i_val, f"{key_i}", ax_sub, color=color_data)
         
         gs.tight_layout(fig)
         filename = Path(self.path_folder, "plot_vc_correlation_grid_"+plot_name+".png")
         plt.savefig(filename)
+        plt.close()
+        plt.cla()
+        plt.clf()
     
     def sub_reverse(self, i, n_var):
         col = i % n_var
@@ -386,6 +409,9 @@ class DataComparison():
         gs.tight_layout(fig)
         filename = Path(folder, f"{plotname}.png")
         plt.savefig(filename)
+        plt.close()
+        plt.cla()
+        plt.clf()
 
 
 class DataComparison_Advanced():
@@ -731,6 +757,9 @@ class DataComparison_Advanced():
         )
         filename = Path(self.path_folder, f"TSNE_plot_{self.suffix}.png")
         plt.savefig(filename)
+        plt.close()
+        plt.cla()
+        plt.clf()
         
         fig, axs = plt.subplots(figsize=(140,20), ncols=self.univar_count)
         df_tsne['label'] = labels
@@ -748,7 +777,10 @@ class DataComparison_Advanced():
             sns.swarmplot(data=df_swarmplot[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=color_list, size=3, ax=axs[i])
         
         filename = Path(self.path_folder, f"SWARM_plot_{self.suffix}.png")
-        fig.savefig(filename)        
+        fig.savefig(filename)  
+        plt.close()
+        plt.cla()
+        plt.clf()      
 
 class CorrelationComparison():
 

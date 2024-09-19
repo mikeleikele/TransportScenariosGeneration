@@ -134,7 +134,6 @@ class nn_Model(nn.Module):
                 nn.init.zeros_(m.bias)
                 
     def forward(self, x):
-        print(x.shape," ---- ", x.device)
         for  index, layer in enumerate(self.layers):
             if isinstance(layer, gm.GCNConv):
                 if index in self.permutation_forward:

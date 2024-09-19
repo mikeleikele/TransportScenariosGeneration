@@ -26,12 +26,11 @@ class CHENGDU_SMALLGRAPH_settings():
         if self.model_case == "AE>GAN_CHENGDU_SMALLGRAPH_16_A_linear":
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
-            self.version_dataset = "SMALLGRAPH_16"
-            self.time_slot = "A"
+            self.version_dataset = "SMALLGRAPH_16"            
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
             }
             self.trainingMode = "AE>GAN"
@@ -42,7 +41,6 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -57,11 +55,10 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.05, "SPEARMAN_CORRELATION_LOSS":1, "DECORRELATION_LATENT_LOSS":0.005},
                 'GAN': dict()
             }
             self.trainingMode = "AE>GAN"
@@ -72,11 +69,10 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.0005, "VARIANCE_LOSS":0.005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
             }
             self.trainingMode = "AE>GAN"
@@ -87,11 +83,10 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":05e-05, "SPEARMAN_CORRELATION_LOSS":1, "DECORRELATION_LATENT_LOSS":1},
                 'GAN': dict()
             }
             self.trainingMode = "AE>GAN"
@@ -102,11 +97,10 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "SPEARMAN_CORRELATION_LOSS":1},
+                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.0005, "SPEARMAN_CORRELATION_LOSS":1},
                 'GAN': dict()
             }
             self.trainingMode = "AE>GAN"
@@ -117,7 +111,6 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_64"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -132,7 +125,6 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_64"
-            self.time_slot = "A"
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -149,6 +141,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.path_folder_nets[key] = Path(self.path_folder, key)
             if not os.path.exists(self.path_folder_nets[key]):
                 os.makedirs(self.path_folder_nets[key])
+    
     def set_edge_index(self,edge_index):
         self.edge_index = edge_index
     

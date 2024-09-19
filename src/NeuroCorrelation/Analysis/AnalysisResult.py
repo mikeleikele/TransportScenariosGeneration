@@ -261,6 +261,8 @@ class AnalysisResult():
         dftest = pd.DataFrame(tsne_results)
         dftest['label'] = labels
         
+        print(dftest)
+        raise Exception("dftest")
         
         
         fig = plt.figure(figsize=(16,7))

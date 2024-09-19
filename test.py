@@ -97,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('--optimization', type=str2bool, required=True, help='Enable or disable optimization')
     parser.add_argument('--load_model', type=str2bool, required=True, help='Description for load_model')
     parser.add_argument('--train_models', type=str2bool, required=True, help='Description for train_models')
+    parser.add_argument('--time_slot', type=str, required=False, default=None, help='Description time slot')
         
     parsed_args = parser.parse_args(sys.argv[1:])
     
