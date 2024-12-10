@@ -22,7 +22,7 @@ import pandas as pd
 
 class DataSyntheticGeneration():
 
-    def __init__(self, torch_device, univar_count, lat_dim, path_folder):
+    def __init__(self, torch_device, univar_count, lat_dim, time_performance, path_folder):
         self.torch_device = torch_device
         self.univar_count = univar_count
         self.lat_dim = lat_dim
@@ -33,7 +33,7 @@ class DataSyntheticGeneration():
         self.mean_vc_val = dict()
         self.median_vc_val = dict()
         self.variance_vc_val = dict()
-        
+        self.time_performance = time_performance
 
     def get_muR(self):
         if self.with_cov:
@@ -161,7 +161,7 @@ class DataSyntheticGeneration():
             dataset_couple.append({"sample":self.getSample(i), "noise":self.getRandom(dim=self.univar_count)})
         return dataset_couple
     
-    def casualVC_init_3VC(self, num_of_samples=200, draw_plots=True, gaussian_correlated=True):
+    def casualVC_init_3VC(self, num_of_samples=200, draw_correlationCoeff=True, gaussian_correlated=True):
                 
         if gaussian_correlated:
             X = np.random.randn(num_of_samples)
@@ -211,7 +211,7 @@ class DataSyntheticGeneration():
         self.comparison_plot_syntetic = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=None, path_folder= path_fold_syntAnalysis)
             
         corrMatrix = self.comparison_plot_syntetic.correlationCoeff(self.real_data_vc)
-        if draw_plots:
+        if draw_correlationCoeff:
             self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc, plot_name="syntetic", color_data="olive")
             self.comparison_plot_syntetic.plot_vc_correlationCoeff(self.real_data_vc, "syntetic", corrMatrix=corrMatrix)
         return corrMatrix
@@ -220,7 +220,7 @@ class DataSyntheticGeneration():
         rangeData = {"max_val": 0, "min_val":1}
         return rangeData
 
-    def casualVC_init_multi(self, vc_dict, num_of_samples=200, draw_plots=True):
+    def casualVC_init_multi(self, vc_dict, num_of_samples=200, draw_correlationCoeff=True):
         seed_values_vc = dict()
         self.vc_mapping = list()
         self.min_val = None
@@ -287,7 +287,7 @@ class DataSyntheticGeneration():
             os.makedirs(path_fold_syntAnalysis)         
         self.comparison_plot_syntetic = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, dim_latent=None, path_folder= path_fold_syntAnalysis)
         corrMatrix = self.comparison_plot_syntetic.correlationCoeff(self.real_data_vc)
-        if draw_plots:
+        if draw_correlationCoeff:
                
             
             self.comparison_plot_syntetic.plot_vc_analysis(self.real_data_vc,plot_name="syntetic", color_data="olive")
@@ -306,8 +306,12 @@ class DataSyntheticGeneration():
             df_data.loc[i] = tensor_list        
         return df_data
 
-    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_plots=True, instaces_size=1, draw_correlationCoeff=True):
+    def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 50000, draw_correlationCoeff=True, instaces_size=1):
+        time_key_fit = "_copula_fit"
+        time_key_gen = "_copula_gen"
+        
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
+        
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
         
@@ -325,13 +329,22 @@ class DataSyntheticGeneration():
          
         copula = GaussianMultivariate()
         print("\t"+name_data+"\tcopula.fit : start")
+        self.time_performance.start_time(time_key_fit)
         copula.fit(real_data)
+        self.time_performance.stop_time(time_key_fit)
+        self.time_performance.compute_time(time_key_fit, fun = "sum") 
         print("\t"+name_data+"\tcopula.fit : end")
 
         print("\t"+name_data+"\tcopula.sample : start")
         sample_to_generate = num_of_samples * instaces_size
+        self.time_performance.start_time(time_key_gen)
         synthetic_data = copula.sample(sample_to_generate)
+        self.time_performance.stop_time(time_key_gen)
+        self.time_performance.compute_time(time_key_gen, fun = "sum") 
         print("\t"+name_data+"\tcopula.sample : end")
+        
+        print(f"\tTIME to copula fit:\t",self.time_performance.get_time(time_key_fit, fun = "mean"))
+        print(f"\tTIME to copula gen:\t",self.time_performance.get_time(time_key_gen, fun = "mean"))
 
         
         self.sample_synthetic =  [ [[]]  for i in range(univar_count)]
@@ -362,7 +375,7 @@ class DataSyntheticGeneration():
                 for j in range(instaces_size):
                     noise_data_vc[id_var].append(item['sample'][0][0][id_var][j].detach().cpu().numpy().tolist())
                     
-        if draw_plots:
+        if draw_correlationCoeff:
             self.comparison_plot.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
         df_data = pd.DataFrame(noise_data_vc)
         if draw_correlationCoeff:
@@ -390,7 +403,7 @@ class DataSyntheticGeneration():
         #torch.randn(1, dim).uniform_(0,1).type(torch.float32).to(self.torch_device)
         return randomNoise.type(torch.float32)
     
-    def get_synthetic_noise_data(self, name_data, num_of_samples = 5000,  draw_plots=True, instaces_size=1):
+    def get_synthetic_noise_data(self, name_data, num_of_samples = 5000,  draw_plots=True,draw_correlationCoeff=False, instaces_size=1):
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")
         if not os.path.exists(path_fold_noiseAnalysis):
             os.makedirs(path_fold_noiseAnalysis)
@@ -421,8 +434,8 @@ class DataSyntheticGeneration():
                         noise_data_vc[id_var].append(item['sample'][0][0][id_var].tolist())
                     
             self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, dim_latent=self.lat_dim, path_folder= path_fold_noiseAnalysis)
-
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
+            if draw_correlationCoeff:
+                self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data="green")
 
         return dataset_couple
 

@@ -14,7 +14,7 @@ import pandas as pd
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
+    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
         
         self.mode = mode
         self.seed = seed
@@ -47,6 +47,7 @@ class DataLoader:
         self.edge_index = None
         self.timeweather = timeweather
         self.time_slot = time_slot
+        self.time_performance = time_performance
         
     def dataset_load(self, draw_plots=True, save_summary=True, loss=None, draw_correlationCoeff=True):
         self.loss = loss
@@ -86,11 +87,11 @@ class DataLoader:
                 print("DATASET PHASE: Load maps data")
             elif self.mode=="fin_data":
                 print("DATASET PHASE: Load maps data")
-                
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
+            print("draw_plots ",draw_plots)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
-            
+            print('...')
             train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)

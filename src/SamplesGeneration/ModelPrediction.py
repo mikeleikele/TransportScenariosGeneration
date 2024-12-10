@@ -11,10 +11,11 @@ from matplotlib.ticker import PercentFormatter
 
 class ModelPrediction():
 
-    def __init__(self, model, count_univar, name_model=None):
+    def __init__(self, model, count_univar, model_type, name_model=None):
         self.model = model
         self.name_model = name_model
         self.count_univar = count_univar
+        self.model_type = model_type
         
         self.inpu_data = list()
         self.late_data = list()
@@ -33,7 +34,15 @@ class ModelPrediction():
         for inp in input_sample:            
             out = self.model(inp)            
             self.inpu_data.append(out["x_input"])
-            self.late_data.append(out["x_latent"])
+            if self.model_type in ["VAE"]:
+                print("---m odelpred")
+                x_latent_keys = ["mu","logvar"]
+            else:
+                x_latent_keys = ["latent"]
+            list_latent = list()
+            for latent_key in x_latent_keys:
+                list_latent.append(out["x_latent"][latent_key])
+            self.late_data.append(list_latent)
             self.pred_data.append(out["x_output"])
         self.predict_sortByUnivar()
 
