@@ -41,7 +41,7 @@ class GEN_fl(nn.Module):
         layer_nn = F.tanh(layer_nn)
         layer_nn = self.hidden_layer_4(layer_nn)
         x_hat = F.tanh(layer_nn)
-        return {"x_input":x, "x_latent":None, "x_output":x_hat}
+        return {"x_input":x, "x_latent":{"latent":None}, "x_output":x_hat}
 
 class GEN_autoEncoder(nn.Module):
     def __init__(self, **kwargs):
@@ -52,7 +52,7 @@ class GEN_autoEncoder(nn.Module):
     def forward(self, x):
         x_latent = self.encoder(x)
         x_hat = self.decoder(x_latent)
-        return {"x_input":x, "x_latent":x_latent, "x_output":x_hat}
+        return {"x_input":x, "x_latent":{"latent":x_latent}, "x_output":x_hat}
 
     def get_decoder(self):
         return self.decoder

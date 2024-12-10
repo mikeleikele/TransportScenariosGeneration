@@ -65,11 +65,12 @@ class ModelTraining():
         self.checkWeightsUpdate = True    
         if self.checkWeightsUpdate:
             cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
-        if self.model_type=="AE":
+        if self.model_type in ["AE", "VAE"]:
             self.model = model
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
             lr_ae = 0.01
+            print("lr_ae\t",lr_ae)#lr_ae = 0.01
             self.optimizer = optim.Adam(params=model_params, lr=lr_ae)
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=30, gamma=0.1)
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
@@ -77,7 +78,7 @@ class ModelTraining():
             elif self.opt_scheduler_ae == "StepLR":
                 self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=40, gamma=0.1)
         
-        elif self.model_type in ["GAN","WGAN"]:
+        elif self.model_type in ["GAN", "WGAN"]:
             lr_gen = 0.05
             lr_dis = 0.05
             b1_gen = 0.05   #decay of first order momentum of gradient gen
@@ -151,28 +152,31 @@ class ModelTraining():
             print("\tTRAIN TRAINED MODEL:\t")
             self.getModeModel()
             print("--------------------------------------------------------------------------------------------------------------------------",self.model_type)
-            if self.model_type == "AE":
-                self.time_performance.start_time(f"{training_name}_AE_TRAINING_global")
-                self.training_AE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
-                self.time_performance.stop_time(f"{training_name}_AE_TRAINING_global")
-                self.time_performance.compute_time(f"{training_name}_AE_TRAINING_global", fun = "diff")                
-                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_AE_TRAINING_global", fun="first"))
+            if self.model_type in ["AE", "VAE"]:
+                self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
+                if self.model_type == "AE":
+                    self.training_AE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                elif self.model_type == "VAE":
+                    self.training_VAE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                self.time_performance.stop_time(f"{training_name}_{self.model_type}_TRAINING_global")
+                self.time_performance.compute_time(f"{training_name}_{self.model_type}_TRAINING_global", fun = "diff")                
+                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first"))
                 model_opt_prediction = self.getModel('all')
-            elif self.model_type in ["GAN","WGAN"]:
-                self.time_performance.start_time(f"{training_name}_GAN_TRAINING_global")
+            elif self.model_type in ["GAN", "WGAN"]:
+                self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 if self.model_type == "GAN":
                     self.training_GAN(training_name=training_name, noise_size=noise_size)
                 elif self.model_type == "WGAN":
                     self.training_WGAN_GP(training_name=training_name, noise_size=noise_size)
-                self.time_performance.stop_time(f"{training_name}_GAN_TRAINING_global")
-                self.time_performance.compute_time(f"{training_name}_GAN_TRAINING_global", fun = "diff")  
-                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_GAN_TRAINING_global", fun="first"))
+                self.time_performance.stop_time(f"{training_name}_{self.model_type}_TRAINING_global")
+                self.time_performance.compute_time(f"{training_name}_{self.model_type}_TRAINING_global", fun = "diff")  
+                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first"))
                 #model_opt_prediction = self.getModel('all')
            
             if save_model:
                 self.save_model()
             if optimization:
-                if self.model_type == "AE":
+                if self.model_type in ["AE", "VAE"]:
                     path_opt_result = Path(self.path_opt_results, f"{optimization_name}")
                     if not os.path.exists(path_opt_result):
                         os.makedirs(path_opt_result)
@@ -241,14 +245,16 @@ class ModelTraining():
                     y_hat = self.model.forward(x=x_in)
                     y_hat_list = list()
                     for i in range(item_batch):
-                        item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
+                        item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output":y_hat['x_output'][i][0]}
                         y_hat_list.append(item_dict)
                     
                     loss_dict = self.loss_obj.computate_loss(y_hat_list)
                     
+                    
                     loss = loss_dict['loss_total']
                     if batch_num%self.append_count == 0:
                         loss_batch.append(loss.detach().cpu().numpy())
+                    
                     for loss_part in loss_dict:
                         if loss_part not in loss_batch_partial:
                             loss_batch_partial[loss_part] = list()
@@ -282,7 +288,7 @@ class ModelTraining():
                 y_hat_list = list()
                 
                 for i in range(item_batch):
-                    item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":y_hat['x_latent'][i][0], "x_output":y_hat['x_output'][i][0]}
+                    item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output":y_hat['x_output'][i][0]}
                     y_hat_list.append(item_dict)
                 loss_dict = self.loss_obj.computate_loss(y_hat_list)
 

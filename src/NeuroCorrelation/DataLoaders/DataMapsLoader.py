@@ -19,10 +19,11 @@ import seaborn as sns
 import pandas as pd
 import random
 from random import shuffle
+import csv
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, timeweather=False, univ_limit=150, time_slot=None):
+    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, time_performance, timeweather=False, univ_limit=150, time_slot=None):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
         self.univar_count = univar_count
@@ -37,6 +38,7 @@ class DataMapsLoader():
         self.univ_limit = univ_limit
         self.timeweather = timeweather
         self.time_slot = time_slot
+        self.time_performance = time_performance
         
         
         datatasetTool = DatasetTool(name_dataset=self.name_dataset, version_dataset = self.version_dataset, time_slot= self.time_slot)
@@ -89,7 +91,7 @@ class DataMapsLoader():
     def get_edgeIndex(self):
         return self.edge_index
     
-    def mapsVC_load(self, train_percentual=0.70, draw_plots=True, verbose=False):
+    def mapsVC_load(self, train_percentual=0.70, draw_plots=True, draw_correlationCoeff=False,  verbose=False):
         all_values_vc = dict()
         vc_mapping = list()
         
@@ -136,6 +138,7 @@ class DataMapsLoader():
         
         random.Random(self.seed).shuffle(shuffle_indexes)
         
+        
         if verbose:
             print("\tglobal min :\t",self.min_val)
             print("\tglobal max :\t",self.max_val)        
@@ -170,6 +173,9 @@ class DataMapsLoader():
             #print("\t#istances train\tkey:",key_vc," :",len(train_values_vc[key_vc]['values']))
             #print("\t#istances test\tkey:",key_vc," :",len(test_values_vc[key_vc]['values']))
         
+        
+
+        
         if self.timeweather:
             self.timeweather_df_train = self.timeweather_df.iloc[shuffle_indexes[:train_istance]]
             self.timeweather_df_train.reset_index(drop=True, inplace=True)
@@ -181,6 +187,9 @@ class DataMapsLoader():
         filename_test = Path(self.path_folder,"samples_test.csv")
         tw_filename_train = Path(self.path_folder,"timeweather_train.csv")
         tw_filename_test = Path(self.path_folder,"timeweather_test.csv")
+        idx_filename_train = Path(self.path_folder,"indexes_train.csv")
+        idx_filename_test = Path(self.path_folder,"indexes_test.csv")
+        
         
         filename_vc_mapping = Path(self.path_folder,"vc_mapping.csv")
         list_vcmapping_str = list()
@@ -199,16 +208,29 @@ class DataMapsLoader():
             np.savetxt(tw_filename_test, self.timeweather_df_test.to_numpy(), delimiter=' ', fmt='%d')
             print("\ttrain samples timeweather: done")
             print("\ttest samples timeweather: done")
+        print("Save shuffled indexes")
         
+        train_idx = shuffle_indexes[:train_istance]
+        
+        test_idx = shuffle_indexes[train_istance:]
+
+        with open(idx_filename_train, mode='w', encoding='utf-8') as file:
+            file.write(','.join(map(str, train_idx)) + '\n')
+
+        with open(idx_filename_test, mode='w', encoding='utf-8') as file:
+            file.write(','.join(map(str, test_idx)) + '\n')
+            
+            
         ticks_list = np.concatenate([[''], self.data_df['ref'].values])
         rho_train = np.corrcoef(rho_train_list)
         
-        self.plot_correlation(rho_corr=rho_train, ticks_list=ticks_list, name_plot="train", path_fold=self.path_folder, draw_plots=draw_plots)
-        print("\ttrain correlation: done")
+        if draw_correlationCoeff:  
+            self.plot_correlation(rho_corr=rho_train, ticks_list=ticks_list, name_plot="train", path_fold=self.path_folder, draw_plots=draw_plots)
+            print("\ttrain correlation: done")
         
-        rho_test = np.corrcoef(rho_test_list)
-        self.plot_correlation(rho_corr=rho_test, ticks_list=ticks_list, name_plot="test", path_fold=self.path_folder, draw_plots=draw_plots)
-        print("\ttest correlation: done")
+            rho_test = np.corrcoef(rho_test_list)
+            self.plot_correlation(rho_corr=rho_test, ticks_list=ticks_list, name_plot="test", path_fold=self.path_folder, draw_plots=draw_plots)
+            print("\ttest correlation: done")
         
         self.train_data_vc = pd.DataFrame()
         for key_vc in train_values_vc:
@@ -221,10 +243,11 @@ class DataMapsLoader():
         
         if draw_plots:         
             self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=None, path_folder= self.path_folder)
-            self.comparison_plot.plot_vc_analysis(self.train_data_vc,plot_name="mapsTrain")
-            print("\ttrain correlation plot: done")
-            self.comparison_plot.plot_vc_analysis(self.test_data_vc,plot_name="mapsTest")
-            print("\ttest correlation plot: done")
+            if draw_correlationCoeff:
+                self.comparison_plot.plot_vc_analysis(self.train_data_vc,plot_name="mapsTrain")
+                print("\ttrain correlation plot: done")
+                self.comparison_plot.plot_vc_analysis(self.test_data_vc,plot_name="mapsTest")
+                print("\ttest correlation plot: done")
             data_plot = {"train_data":self.train_data_vc,"test_data":self.test_data_vc}
             #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
 
@@ -283,7 +306,7 @@ class DataMapsLoader():
             sample.append(ed[0][key_sample])  
         return torch.from_numpy(np.array(sample)).type(torch.float32).to(self.torch_device)
     
-    def get_synthetic_noise_data(self, name_data=None, num_of_samples = 5000,  draw_plots=True):
+    def get_synthetic_noise_data(self, name_data=None, num_of_samples = 5000,  draw_plots=True, draw_correlationCoeff= False):
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")
         if not os.path.exists(path_fold_noiseAnalysis):
             os.makedirs(path_fold_noiseAnalysis)
@@ -311,7 +334,8 @@ class DataMapsLoader():
             noise_data_vc['noise']['alpha'] = 1
             #print(noise_data_vc['noise']['data'][1])
             self.comparison_plot_noise.data_comparison_plot(noise_data_vc, plot_name="normal_noise", mode="in", is_npArray=False)
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc['noise']['data'],plot_name=name_data, color_data="green")
+            if draw_correlationCoeff:
+                self.comparison_plot_noise.plot_vc_analysis(noise_data_vc['noise']['data'],plot_name=name_data, color_data="green")
 
         return dataset_couple
 
@@ -320,6 +344,7 @@ class DataMapsLoader():
         for i, istance in enumerate(data_in):
             tensor_list = list()
             for var in istance['sample']:
+                
                 if df_data is None:
                     col = [i for i in range(len(istance['sample']))]
                     df_data = pd.DataFrame(columns=col)
@@ -329,9 +354,13 @@ class DataMapsLoader():
     
 
     def casualVC_generation(self, real_data=None, toPandas=True, univar_count=None, name_data="train", num_of_samples = 5000, draw_plots=True, color_data='blue', draw_correlationCoeff=True):
+        time_key_fit = name_data+"_copula_fit"
+        time_key_gen = name_data+"_copula_gen"
+        
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
+        print(path_fold_copulagenAnalysis,"---------------------------------hhhhhhh")
         
         if real_data is None:
             real_data = self.real_data_vc
@@ -345,13 +374,32 @@ class DataMapsLoader():
         if univar_count == None:
             univar_count = self.univar_count
 
-        
+        instaces_size=1
         copula = GaussianMultivariate()
         copula.fit(real_data)
 
         print("\t"+name_data+"\tcopula.sample : start")
         synthetic_data = copula.sample(num_of_samples)
         print("\t"+name_data+"\tcopula.sample : end")
+        
+        copula = GaussianMultivariate()
+        print("\t"+name_data+"\tcopula.fit : start")
+        self.time_performance.start_time(time_key_fit)
+        copula.fit(real_data)
+        self.time_performance.stop_time(time_key_fit)
+        self.time_performance.compute_time(time_key_fit, fun = "sum") 
+        print("\t"+name_data+"\tcopula.fit : end")
+
+        print("\t"+name_data+"\tcopula.sample : start")
+        sample_to_generate = num_of_samples * instaces_size
+        self.time_performance.start_time(time_key_gen)
+        synthetic_data = copula.sample(sample_to_generate)
+        self.time_performance.stop_time(time_key_gen)
+        self.time_performance.compute_time(time_key_gen, fun = "sum") 
+        print("\t"+name_data+"\tcopula.sample : end")
+        
+        print(f"\tTIME to copula fit:\t",self.time_performance.get_time(time_key_fit, fun = "mean"))
+        print(f"\tTIME to copula gen:\t",self.time_performance.get_time(time_key_gen, fun = "mean"))
 
         
         self.sample_synthetic =  [ [[]]  for i in range(univar_count)]
@@ -380,8 +428,9 @@ class DataMapsLoader():
                     noise_data_vc[id_var].append(item['sample'][id_var].tolist())
             self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, latent_dim=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
 
-            self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data=color_data)
+            
             if draw_correlationCoeff:
+                self.comparison_plot_noise.plot_vc_analysis(noise_data_vc,plot_name=name_data, color_data=color_data)
                 rho = self.comparison_plot_noise.correlationCoeff(noise_data_vc)
             else:
                 rho = None

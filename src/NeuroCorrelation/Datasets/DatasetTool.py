@@ -29,8 +29,10 @@ class DatasetTool:
         return self.load_fileJson(filepath=self.filepath, name_dataset=self.name_dataset, version_dataset=self.version_dataset)
         
     def load_fileJson(self, filepath, name_dataset, version_dataset):
+        print("filepath",filepath)
         with open(filepath, 'r') as f:
             config = json.load(f)
+            
         
         dataset_settings = dict()
         if config[name_dataset][version_dataset]["filename"] is not None:

@@ -27,8 +27,13 @@ from sklearn.preprocessing import StandardScaler
 from numpy.linalg import inv, pinv
 from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.mplot3d import Axes3D
+import pacmap
 import time
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import jaccard_score
+from sklearn.metrics import davies_bouldin_score
+from sklearn.metrics import adjusted_rand_score
 
 class DataComparison():
 
@@ -43,7 +48,7 @@ class DataComparison():
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
         self.path_folder = path_folder
-
+        self.np_dist = dict()
     
     def get_idName(self, id_univar, max_val):
         num_digit = len(str(max_val))
@@ -136,6 +141,7 @@ class DataComparison():
     def  latent_comparison_distribution_plot(self, data_lat, path_fold_dist, plot_name=None, color_data="green"):
         stats_dict = {"univ_id": []}
         for id_comp in range(self.latent_dim):
+            
             list_values = [x.tolist() for x in data_lat[id_comp]]
             name_comp = self.get_idName(id_comp, max_val=self.latent_dim)
             plt.figure(figsize=(12,8))
@@ -166,8 +172,25 @@ class DataComparison():
         if not os.path.exists(path_fold_dist):
             os.makedirs(path_fold_dist)
         
+       
         self.latent_comparison_distribution_plot(data_lat, path_fold_dist,plot_name)
+
+    def plot_latent_corr__analysis(self, data_lat, plot_name, color_data="green"):            
+        _keys = list(data_lat.keys())
+        print(_keys)
+        print("-----_keys-----")
+        n_keys = len(_keys)
+        n_row = n_keys
         
+        if plot_name is not None:
+            fold_name = f"{plot_name}_distribution"
+        else:
+            fold_name = f"univar_latent_distribution"
+
+        path_fold_dist = Path(self.path_folder, fold_name)
+        if not os.path.exists(path_fold_dist):
+            os.makedirs(path_fold_dist)
+            
         fig_size_factor = 2 + n_keys
         fig = plt.figure(figsize=(fig_size_factor, fig_size_factor))
         
@@ -201,12 +224,12 @@ class DataComparison():
                     else:
                         self.variance_plot(i_val, i_key, ax_sub, color=color_data)
                     
-            gs.tight_layout(fig)
-            filename = Path(path_fold_dist, "plot_lat_correlation_grid_+"+plot_name+".png")
-            plt.savefig(filename)
-            plt.close()
-            plt.cla()
-            plt.clf()
+        gs.tight_layout(fig)
+        filename = Path(path_fold_dist, "plot_lat_correlation_grid_"+plot_name+".png")
+        plt.savefig(filename)
+        plt.close()
+        plt.cla()
+        plt.clf()
 
 
     def plot_vc_correlationCoeff(self, df_data, plot_name, is_latent=False, corrMatrix=None):
@@ -423,15 +446,14 @@ class DataComparison_Advanced():
         np.seterr(divide='ignore')
         warnings.simplefilter(action='ignore', category=FutureWarning)
         
-        
-        self.TSNE_components = 2
-        self.PCA_components = 50
         self.univar_count = univar_count
         self.n_sample_considered = 1000
         self.gen_copula = gen_copula
         self.copula_test = False
         self.time_performance = time_performance
-        
+        self.alredy_select_data = False
+        self.metrics_pd = None
+        self.np_dist = dict()
         self.loadPrediction_INPUT(input_folder, suffix_input)
         
         
@@ -458,13 +480,16 @@ class DataComparison_Advanced():
             for i in range(self.univar_count):
                 self.rand_var_in[i].append(float(res[i]))
         print("\tload truth data: done")
+        
+        self.np_dist['real'] = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
         if self.gen_copula:
             self.genCopula()
-        
-        #output used to compare
-    
+            self.np_dist['cop'] = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
+
     def genCopula(self):
         real_data = pd.DataFrame.from_dict(self.rand_var_in)
+        print(f"\tfit gaussian copula data: 20 punti")
+        real_data = real_data
         print(f"\tfit gaussian copula data: start")
         self.time_performance.start_time("COPULA_TRAINING")
         copula = GaussianMultivariate()        
@@ -475,7 +500,8 @@ class DataComparison_Advanced():
         self.time_performance.compute_time("COPULA_TRAINING", fun = "first") 
         
         print(f"\tTIME fit gaussian copula data:\t",cop_train_time)
-        self.n_sample_considered = self.n_sample_considered
+        self.n_sample_considered = 1000
+        #self.n_sample_considered
         self.time_performance.start_time("COPULA_GENERATION")
         synthetic_data = copula.sample(self.n_sample_considered)
         
@@ -491,6 +517,7 @@ class DataComparison_Advanced():
         for i in range(self.univar_count):
             self.rand_var_cop[i] = synthetic_data[i].tolist()
 
+
     def loadPrediction_OUTPUT(self, output_folder, suffix_output):
         self.path_folder = output_folder
         self.suffix = suffix_output
@@ -503,17 +530,26 @@ class DataComparison_Advanced():
             res = output_data['x_output'][j].strip('][').split(', ')
             for i in range(self.univar_count):
                 self.rand_var_out[i].append(float(res[i]))
-        
+        self.np_dist['vae'] = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
+        self.select_data()
         
     def comparison_measures(self, measures):
+        if not self.alredy_select_data:
+            self.select_data()
+        if 'metrics' in measures:
+            self.comparison_metrics(save=False)
+        
+        if 'tsne_plots' in measures:
+            self.comparison_tsne(measure=True)
+        if 'pacmap_plots' in measures:
+            self.comparison_pacmap(measure=True)
         if 'wasserstein_dist' in measures:
             self.comparison_wasserstein()
-        if 'mahalanobis_dist' in measures:
-            self.comparison_mahalanobis()
-        if 'frechet_inception_dist' in measures:
-            self.comparison_frechet_inception()
-        if 'tsne_plots' in measures:
-            self.comparison_tsne()
+        if 'metrics' in measures:
+            self.comparison_metrics()
+        if 'swarm_distributions' in measures:
+            self.comparison_swarm_distributions()
+        
           
     def comparison_wasserstein(self): 
         print("\t\twasserstein measure")
@@ -587,25 +623,50 @@ class DataComparison_Advanced():
         except np.linalg.LinAlgError as e:
             print(f"Error: {e}")
             return None
-
-
-    def comparison_mahalanobis(self):
-        np_dist_real = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
-        np_dist_gen = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
-        np_dist_cop = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
+       
         
-        mahala_real_gen = self.mahalanobis(np_dist_real, np_dist_gen)
-        print("mahala_real_gen:\t",mahala_real_gen)
+    def comparison_metrics(self, metrics=['mahalanobis','frechet','jaccard_score'],comparisons={"real_cop":{"a":"real","b":"cop"},"real_gen":{"a":"real","b":"vae"}}, save=False):
+        if self.metrics_pd is None:
+            metrics_pd_columns = ['metric']
+            for x in comparisons:
+                metrics_pd_columns.append(x) 
+            self.metrics_pd = pd.DataFrame(columns=metrics_pd_columns)
         
-        mahala_real_cop = self.mahalanobis(np_dist_real, np_dist_cop)
-        print("mahala_real_cop:\t",mahala_real_cop)
+        if 'mahalanobis' in metrics:
+            measures = {'metric':'mahalanobis'}
+            for comparison in comparisons:
+                data_A = comparisons[comparison]['a']
+                data_B = comparisons[comparison]['b']
+                measure = self.mahalanobis(data_A, data_B)
+                measures[comparison] = measure
+            print(measures)
+            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+        if 'frechet' in metrics:
+            measures = {'metric':'frechet'}
+            for comparison in comparisons:
+                data_A = comparisons[comparison]['a']
+                data_B = comparisons[comparison]['b']
+                measure = self.frechet_inception_distance(data_A, data_B)
+                measures[comparison] = measure
+            print(measures)
+            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+        if 'jaccard_score' in metrics:
+            measures = {'metric':'jaccard_score'}
+            for comparison in comparisons:
+                data_A = comparisons[comparison]['a']
+                data_B = comparisons[comparison]['b']
+                measure = jaccard_score(data_A, data_B)
+                measures[comparison] = measure
+            print(measures)
+            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
         
-        mahalanobis_dict = {'mahalanobis_real_gen':[mahala_real_gen], 'mahalanobis_real_cop':[mahala_real_cop]}
-        pd_stats = pd.DataFrame(mahalanobis_dict)
         
-        filename = Path(self.path_folder, f"mahalanobis_compare_{self.suffix}.csv")
-        pd_stats.to_csv(filename)
-        return pd_stats
+        if save:
+            filename = Path(self.path_folder, f"metrics_compare_{self.suffix}.csv")
+            self.metrics_pd.to_csv(filename)
+            return metrics_pd
+    
+    
         
     def mahalanobis(self, X, Y):
         mu_X = np.mean(X, axis=0)
@@ -628,24 +689,7 @@ class DataComparison_Advanced():
         
         return dist_mahalanobis    
     
-    def comparison_frechet_inception(self):
-        np_dist_real = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
-        np_dist_gen = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
-        np_dist_cop = pd.DataFrame.from_dict(self.rand_var_cop).to_numpy()
         
-        frechet_real_gen = self.frechet_inception_distance(np_dist_real,np_dist_gen)
-        print("frechet_inception_real_gen:\t", frechet_real_gen)
-        
-        frechet_real_cop = self.frechet_inception_distance(np_dist_real, np_dist_cop)
-        print("frechet_inception_real_cop:\t",frechet_real_cop)
-        
-        frechet_dict = {'frechet_inception_real_gen':[frechet_real_gen], 'frechet_inception_real_cop':[frechet_real_cop]}
-        pd_stats = pd.DataFrame(frechet_dict)
-        
-        filename = Path(self.path_folder, f"frechet_inception_compare_{self.suffix}.csv")
-        pd_stats.to_csv(filename)
-        return pd_stats
-    
     def frechet_inception_distance(self, real_samples, generated_samples):
         mu_real = np.mean(real_samples, axis=0)
         mu_generated = np.mean(generated_samples, axis=0)
@@ -666,12 +710,12 @@ class DataComparison_Advanced():
         return fid
     
     
-    def comparison_tsne(self, n_points=None):
-        color_list = {"real": (0.122, 0.467, 0.706),"ae":(1.0, 0.498, 0.055)}
-        label_list = {"real": "real data","ae":"GAN+AE gen"}
+    def select_data(self, TSNE_components = [2,3], n_points=None):
+        self.color_list = {"real": (0.122, 0.467, 0.706),"ae":(1.0, 0.498, 0.055)}
+        self.label_list = {"real": "real data","ae":"GAN+AE gen"}
         
             
-        df_tsne = pd.DataFrame()
+        self.df_data_selected = pd.DataFrame()
         if n_points == None:
             n_points = self.n_sample_considered
         
@@ -679,14 +723,14 @@ class DataComparison_Advanced():
         len_sample_array = [len(self.rand_var_in[0]), len(self.rand_var_out[0])]
         
         if self.gen_copula:
-            color_list["cop"] = (0.173, 0.627, 0.173)
-            label_list["cop"] = "copula gen"
+            self.color_list["cop"] = (0.173, 0.627, 0.173)
+            self.label_list["cop"] = "copula gen"
             len_sample_array.append(len(self.rand_var_cop[0]))
         
         if n_points > min(len_sample_array):
             n_points = min(len_sample_array)
         
-        print("\t\ttsne plot #points:\t",n_points)
+        print("\t\t SELECTED plot #points:\t",n_points)
         real_indeces =  [i for i in range(len(self.rand_var_in[0]))]
         selected = random.sample(real_indeces, n_points)
         real_selected = [1 if i in selected else 0 for i in range(len(self.rand_var_in[0]))]
@@ -708,8 +752,6 @@ class DataComparison_Advanced():
                 if real_selected[j]==1:
                     real_val.append(self.rand_var_in[i][j])
                     n_real += 1
-                    
-            
             n_neur = 0
             neur_val = list()        
             for j in range(len(self.rand_var_out[i])):
@@ -728,53 +770,136 @@ class DataComparison_Advanced():
                         n_copu += 1
                         
                 comp_values += copu_val
-            
-            df_tsne[f'c_{i}'] = comp_values
+            self.df_data_selected[f'c_{i}'] = comp_values
                     
         labels =  ["real" for k in range(n_real)] + ["ae" for k in range(n_neur)] 
         if self.gen_copula:
             labels += ["cop" for k in range(n_copu)]
+        self.df_data_selected['labels'] = labels
+        self.alredy_select_data =True
+    
+    def comparison_tsne(self, TSNE_components = ["2D","3D"], n_points=None, measure=True):    
+        if "2D" in TSNE_components:
+            tsne = TSNE(n_components=2)
+            data4fit = self.df_data_selected.drop(columns=['labels'])
+            tsne_results = tsne.fit_transform(data4fit)
+            dftest = pd.DataFrame(tsne_results)
+            
+            dftest['labels'] = self.df_data_selected['labels']
+            
+            fig = plt.figure(figsize=(16,7))
+            print(dftest['labels'].unique())
+            
+            print(self.color_list)
+            sns.scatterplot(
+                x=0, y=1,
+                hue="labels",
+                palette=self.color_list,
+                data=dftest,
+                alpha=0.2,
+                legend="full",
+            )
+            print("-------------------------", dftest.columns)
+            filename = Path(self.path_folder, f"TSNE_2D_plot_{self.suffix}.png")
+            plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+            
+            if measure:
+                #tsne_results dftest['labels']
+                a=0
+                        
         
-        tsne = TSNE(n_components=self.TSNE_components)
-        tsne_results = tsne.fit_transform(df_tsne)
-        dftest = pd.DataFrame(tsne_results)
-        dftest['label'] = labels
-        
-        
-        
-        fig = plt.figure(figsize=(16,7))
-        params = {1: {'color': 'k', 'label': 'Pass'},
-            0: {'color': 'r', 'label': 'Fail'}}
+        if "3D" in TSNE_components:
+            tsne = TSNE(n_components=3)
+            data4fit = self.df_data_selected.drop(columns=['labels'])
+            tsne_results = tsne.fit_transform(data4fit)
+            dftest = pd.DataFrame(tsne_results)
+            dftest['labels'] = self.df_data_selected['labels']
+            
+            fig = plt.figure(figsize=(16, 7))
+            ax = fig.add_subplot(111, projection='3d')
+            
+            scatter = ax.scatter(
+                dftest[0], dftest[1], dftest[2],
+                c=dftest["labels"].map(self.color_list),
+                alpha=0.2
+            )
 
+            filename = Path(self.path_folder, f"TSNE_3D_plot_{self.suffix}.png")
+            plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+        
+        
+        
+    def comparison_pacmap(self, PACMAP_components = ["2D","3D"], n_points=None, measure=True):    
+        if "2D" in PACMAP_components:
+            embedding  = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2.0) 
+            data4fit = self.df_data_selected.drop(columns=['labels'])
+            pacmap_results = embedding .fit_transform(data4fit, init="pca")
+            dftest = pd.DataFrame(pacmap_results)
+            dftest['labels'] = self.df_data_selected['labels']
+            fig = plt.figure(figsize=(16,7))
+            sns.scatterplot(
+                x=0, y=1,
+                hue="labels",
+                palette=self.color_list,
+                data=dftest,
+                alpha=0.2,
+                legend="full",
+            )
+            filename = Path(self.path_folder, f"MAPCAP_2D_plot_{self.suffix}.png")
+            plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
 
-        sns.scatterplot(
-            x=0, y=1,
-            hue="label",
-            palette=color_list,
-            data=dftest,
-            alpha=0.2,
-            legend="full",
-        )
-        filename = Path(self.path_folder, f"TSNE_plot_{self.suffix}.png")
-        plt.savefig(filename)
-        plt.close()
-        plt.cla()
-        plt.clf()
+        if "3D" in PACMAP_components:
+            embedding = pacmap.PaCMAP(n_components=3, n_neighbors=10, MN_ratio=0.5, FP_ratio=2.0) 
+            data4fit = self.df_data_selected.drop(columns=['labels'])
+            pacmap_results = embedding.fit_transform(data4fit, init="pca")
+            dftest = pd.DataFrame(pacmap_results)
+            dftest['labels'] = self.df_data_selected['labels']
+
+            fig = plt.figure(figsize=(16, 7))
+            ax = fig.add_subplot(111, projection='3d')
+
+            scatter = ax.scatter(
+                dftest[0], dftest[1], dftest[2],
+                c=dftest["label"].map(self.color_list),
+                alpha=0.2
+            )
+            filename = Path(self.path_folder, f"MAPCAP_3D_plot_{self.suffix}.png")
+            plt.savefig(filename)
+            plt.close()
+            plt.cla()
+            plt.clf()
+            
+    def comparison_swarm_distributions(self, subset_size=400):
+        labels = self.df_data_selected['labels'].unique()
+        subsets = [self.df_data_selected.loc[self.df_data_selected['labels'] == label].iloc[:subset_size] for label in labels]
+        
+        #if include_labels:
+        #    subsets += [df.loc[df[label_column] == label].iloc[:subset_size] for label in include_labels]
+        df_swarm = pd.concat(subsets, ignore_index=True)
+        
+        #df_a = self.df_data_selected.loc[self.df_data_selected['label'] == "real"].iloc[0:400]
+        #df_b = self.df_data_selected.loc[self.df_data_selected['label'] == "ae"].iloc[0:400]
+        
+        #if self.gen_copula:
+        #    df_c = self.df_data_selected.loc[self.df_data_selected['label'] == "cop"].iloc[0:400]
+        #    df_swarmplot= pd.concat([df_a, df_b, df_c])
+        #else:
+        #    df_swarmplot= pd.concat([df_a, df_b])
+        
         
         fig, axs = plt.subplots(figsize=(140,20), ncols=self.univar_count)
-        df_tsne['label'] = labels
-        
-        df_a = df_tsne.loc[df_tsne['label'] == "real"].iloc[0:400]
-        df_b = df_tsne.loc[df_tsne['label'] == "ae"].iloc[0:400]
-        if self.gen_copula:
-            df_c = df_tsne.loc[df_tsne['label'] == "cop"].iloc[0:400]
-            df_swarmplot= pd.concat([df_a, df_b, df_c])
-        else:
-            df_swarmplot= pd.concat([df_a, df_b])
-        
         for i in range(self.univar_count):
-            sns.violinplot(data=df_tsne[[f'c_{i}',"label"]], y=f'c_{i}', x="label", palette=color_list, hue="label", ax=axs[i])
-            sns.swarmplot(data=df_swarmplot[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=color_list, size=3, ax=axs[i])
+            sns.violinplot(data=self.df_data_selected[[f'c_{i}',"label"]], y=f'c_{i}', x="label", palette=self.color_list, hue="label", ax=axs[i])
+            sns.swarmplot(data=df_swarm[[f'c_{i}',"label"]], y=f'c_{i}', x="label",palette=self.color_list, size=3, ax=axs[i])
         
         filename = Path(self.path_folder, f"SWARM_plot_{self.suffix}.png")
         fig.savefig(filename)  

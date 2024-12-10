@@ -26,7 +26,7 @@ class ESG__GEN_autoEncoder_35(nn.Module):
     def forward(self, x):
         x_latent = self.encoder(x)
         x_hat = self.decoder(x_latent["x_output"])
-        return {"x_input":x, "x_latent":x_latent["x_output"], "x_output":x_hat["x_output"]}
+        return {"x_input":x, "x_latent":{"latent":x_latent["x_output"]}, "x_output":x_hat["x_output"]}
 
     def get_decoder(self):
         return self.decoder

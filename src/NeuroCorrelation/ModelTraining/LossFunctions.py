@@ -142,7 +142,23 @@ class LossFunction(nn.Module):
             loss_dict["SPEARMAN_CORRELATION_LOSS"] = loss_coeff
             if verbose:
                 print("SPEARMAN_CORRELATION_LOSS - ", loss_coeff)
-
+        if  "ORTHOGONAL_REGULARIZATION_LATENT_LOSS" in self.loss_case:
+            orthogonal_regularization_latent_loss = self.orthogonal_regularization_latent(values)
+            coeff = self.loss_case["ORTHOGONAL_REGULARIZATION_LATENT_LOSS"]
+            loss_coeff = orthogonal_regularization_latent_loss.mul(coeff)
+            loss_total += loss_coeff
+            loss_dict["ORTHOGONAL_REGULARIZATION_LATENT_LOSS"] = loss_coeff
+            if verbose:
+                print("ORTHOGONAL_REGULARIZATION_LATENT_LOSS - ", loss_coeff)
+        if  "COVARIANCE_DIVERGENCE_LATENT_LOSS" in self.loss_case:
+            kl_divergence_latent_loss = self.covariance_divergence_laten(values)
+            coeff = self.loss_case["COVARIANCE_DIVERGENCE_LATENT_LOSS"]
+            loss_coeff = kl_divergence_latent_loss.mul(coeff)
+            loss_total += loss_coeff
+            loss_dict["COVARIANCE_DIVERGENCE_LATENT_LOSS"] = loss_coeff
+            if verbose:
+                print("COVARIANCE_DIVERGENCE_LATENT_LOSS - ", loss_coeff)
+            
         if verbose:
             print("loss_total - ", loss_total)
         loss_dict["loss_total"] = loss_total
@@ -313,8 +329,53 @@ class LossFunction(nn.Module):
         loss_ret_sqrt = torch.sqrt(loss_ret)
         return loss_ret_sqrt
 
+ 
+    def orthogonal_regularization_latent(self, values, latent_key="latent"):
+        M = len(values)  # Number of latent samples
+        loss_ret = torch.zeros(1).to(device=self.device)  # Initialize the total loss
+    
+        # Collect all latent vectors   
+        latent_vectors = torch.stack([value['x_latent'][latent_key] for value in values])
+    
+        # Iterate through all pairs of latent variables
+        for k in range(self.latent_dim):
+            for i in range(k):  # Avoid redundant symmetric calculations
+                # Extract the k-th and i-th latent dimensions
+                z_k_all = latent_vectors[:, k]  # All samples for dimension k
+                z_i_all = latent_vectors[:, i]  # All samples for dimension i
+                
+                # Calculate the average dot product
+                dot_product = torch.dot(z_k_all, z_i_all) / M
+                
+                # Penalize the deviation from orthogonality
+                loss_orthogonal = torch.abs(dot_product)
+                
+                # Add the loss for this pair to the total loss
+                loss_ret += loss_orthogonal
+        
+        return loss_ret
+    
+    def covariance_divergence_laten(self, values, latent_key="latent"):
+        M = len(values)  # Number of samples
+        latent_dim = values[0]["x_latent"][latent_key].shape[0]  # Dimensionality of the latent space
+        
+        # Stack all latent vectors into a matrix of shape (latent_dim, M)
+        Z = torch.stack([values[j]["x_latent"][latent_key] for j in range(M)], dim=1)
+        
+        # Compute the covariance matrix: (latent_dim x latent_dim)
+        covariance_matrix = torch.mm(Z, Z.t()) / M
+        
+        # Compute the off-diagonal elements of the covariance matrix
+        # We want to minimize these to encourage independence
+        diag_elements = torch.diag(covariance_matrix)  # Diagonal elements
+        covariance_matrix -= torch.diag(diag_elements)  # Set diagonal elements to 0
 
-    def decorrelation_latent(self, values):
+        # Compute the decorrelation loss as the sum of squares of the off-diagonal elements
+        loss = torch.sum(covariance_matrix ** 2)
+        
+        return loss
+        
+    def decorrelation_latent(self, values, latent_key="latent"):
         M = len(values)
         
         loss_ret = torch.zeros(1).to(device=self.device)
@@ -324,7 +385,7 @@ class LossFunction(nn.Module):
                 loss_b = torch.zeros(1).to(device=self.device)
                 
                 for j in range(M):
-                    z_j = values[j]['x_latent']
+                    z_j = values[j]['x_latent'][latent_key]
                     z_j_i = z_j[k]
                     z_j_k = z_j[i]
                     loss_a += z_j_i * z_j_k
@@ -333,7 +394,7 @@ class LossFunction(nn.Module):
                 loss_b_0 = torch.zeros(1).to(device=self.device)
                 loss_b_1 = torch.zeros(1).to(device=self.device)
                 for j in range(M):
-                    z_j = values[j]['x_latent']
+                    z_j = values[j]['x_latent'][latent_key]
                     loss_b_0 += z_j[k]
                     loss_b_1 += z_j[i]
                 loss_b = loss_b_0 * loss_b_1

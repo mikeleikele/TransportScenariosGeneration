@@ -27,6 +27,7 @@ import numpy as np
 import scipy.stats as st
 from sklearn.manifold import TSNE
 from matplotlib.colors import ListedColormap
+import pacmap
 
 class AnalysisResult():
     
@@ -124,9 +125,11 @@ class AnalysisResult():
 
         return pd_stats
     
-    def comparison_tsne(self, folder, n_points=None):
+    def comparison_tsne(self, folder, labels_list, n_points=None):
         color_list = {"real": "red","ae":"green","cop":"blue"}
         label_list = {"real": "real data","ae":"GAN+AE gen","cop":"copula gen"}
+        
+        labels_list
         
         df_tsne = pd.DataFrame()
         if n_points ==None:
@@ -175,7 +178,7 @@ class AnalysisResult():
         
         labels =  ["real" for k in range(n_real)] + ["ae" for k in range(n_neur)] + ["cop" for k in range(n_copu)]
         
-        tsne = TSNE(n_components=TSNE_components)
+        tsne = TSNE(n_components=self.TSNE_components)
         tsne_results = tsne.fit_transform(df_tsne)
         dftest = pd.DataFrame(tsne_results)
         dftest['label'] = labels
@@ -197,9 +200,28 @@ class AnalysisResult():
         fig, axs = plt.subplots(ncols=self.univar_count)
         a = 0
         for i in range(self.univar_count):
-            sns.catplot(data=dftest, x=f'c_{i}', y="label", palette=palette, hue="label", ax=axs[a])
+            sns.catplot(data=dftest, x=f'c_{i}', y="label", palette=color_list, hue="label", ax=axs[a])
             sns.swarmplot(data=dftest, x=f'c_{i}', y="label", size=3, ax=axs[a])
             a += 1
+            
+            
+        tsne = TSNE(n_components=self.TSNE_components)
+        tsne_results = tsne.fit_transform(df_tsne)
+        dftest = pd.DataFrame(tsne_results)
+        dftest['label'] = labels
+        
+        
+        embedding = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2.0) 
+
+        # fit the data (The index of transformed data corresponds to the index of the original data)
+        X_transformed = embedding.fit_transform(X, init="pca")
+
+        # visualize the embedding
+        fig, ax = plt.subplots(1, 1, figsize==(16,7))
+        ax.scatter(X_transformed[:, 0], X_transformed[:, 1], cmap="Spectral", c=y, s=0.6)
+
+        filename = Path(self.path_folder, "plot_PaCMAP.png")
+        plt.savefig(filename)
          
     def compute_statscomparison(self, folder, exp_name, n_run):
         tab_stats = pd.DataFrame(columns=["variable","mean_real","std_real","mean_AE","std_AE","mean_COP","std_COP"])
