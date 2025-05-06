@@ -2,13 +2,14 @@ from src.NeuroCorrelation.Analysis.DataComparison import DataComparison
 
 class DataStatistics():
 
-    def __init__(self,  univar_count_in, univar_count_out, latent_dim, data, path_folder, model_type):
+    def __init__(self,  univar_count_in, univar_count_out, latent_dim, data, path_folder, model_type, name_key="ae"):
         self.univar_count_in = univar_count_in
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
         self.data = data
+        self.name_key=name_key
         self.path_folder = path_folder
-        self.dataComparison = DataComparison(univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out, latent_dim=self.latent_dim, path_folder=path_folder)
+        self.dataComparison = DataComparison(univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out, latent_dim=self.latent_dim, path_folder=path_folder, name_key=self.name_key)
         self.corrCoeff = None
         if model_type in ["VAE"]:
             self.latent_keys = ["mu","logvar"]

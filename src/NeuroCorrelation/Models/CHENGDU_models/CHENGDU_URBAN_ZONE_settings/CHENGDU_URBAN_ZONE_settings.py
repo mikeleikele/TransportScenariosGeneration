@@ -94,7 +94,10 @@ class CHENGDU_URBAN_ZONE_settings():
             self.model_settings['AE']  = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models', 'CHENGDU_URBAN_ZONE_settings', 'CHENGDU_SMALLGRAPH_64_graph.json')}
             self.model_settings['GAN'] = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models', 'CHENGDU_URBAN_ZONE_settings', 'CHENGDU_SMALLGRAPH_64_graph.json')}   
         
-            
+        if self.learning_rate is None:
+            self.learning_rate['AE'] = 1e-2   
+            self.learning_rate['GAN']['DIS'] = 1e-2   
+            self.learning_rate['GAN']['GEN'] = 1e-2   
         self.path_folder_nets = dict()
         for key in self.nets:
             self.path_folder_nets[key] = Path(self.path_folder, key)
@@ -133,6 +136,9 @@ class CHENGDU_URBAN_ZONE_settings():
     
     def get_graph_topology(self):
         return self.graph_topology
+    
+    def get_learning_rate(self):
+        return self.learning_rate
     
     def get_DataLoader(self, seed_data):      
         dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)

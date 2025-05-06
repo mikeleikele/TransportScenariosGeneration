@@ -56,7 +56,6 @@ class ModelPrediction():
         
         
         time_key = f"{time_key}_pred"
-        
         for inp in input_sample:            
             with torch.no_grad():
                 
@@ -74,13 +73,15 @@ class ModelPrediction():
 
                     out = self.model(x_in)  
                     self.time_performance.stop_time(time_key)
-                    
-                    
-                self.inpu_data.append(out["x_input"][0][0])
+                self.inpu_data.append(out["x_input"]['data'][0][0])
+                
                 if "x_latent" in out:
                     for late_key in self.latent_keys:
                         self.late_data[late_key].append(out["x_latent"][late_key][0][0])
-                self.pred_data.append(out["x_output"][0][0])
+                
+                self.pred_data.append(out["x_output"]['data'][0][0])
+                
+                
         self.time_performance.compute_time(time_key, fun = "mean") 
         print(f"\tTIME to make {time_key} prediction:\t",self.time_performance.get_time(time_key, fun = "mean"))
         self.predict_sortByUnivar(pred2numpy=pred2numpy)
@@ -89,7 +90,7 @@ class ModelPrediction():
         if save:
             self.saveData(experiment_name, latent, remapping)
 
-    def saveData(self, experiment_name, latent, remapping=None):
+    def saveData(self, experiment_name, latent, remapping=True):
         if latent:
             columns = ['x_input']
             for late_key in self.latent_keys:
@@ -99,7 +100,7 @@ class ModelPrediction():
             columns = ['x_input', 'x_output']
         df_export = pd.DataFrame(columns=columns) 
 
-        if remapping :
+        if remapping:
             diff_minmax = self.max_val - self.min_val
         
         if latent:
@@ -135,45 +136,48 @@ class ModelPrediction():
         path_file = Path(self.path_folder,"prediced_instances_"+experiment_name+'.csv')
         df_export.to_csv(path_file)
         
-    def predict_sortByUnivar(self, pred2numpy=True):
-        self.inpu_byVar = dict()        
-        self.pred_byVar = dict()
-
-        for univ_id in range(self.univar_count_in):
-            self.inpu_byVar[univ_id] = list()      
-        for univ_id in range(self.univar_count_out):      
-            self.pred_byVar[univ_id] = list()
-
-        for inp,out in zip(self.inpu_data, self.pred_data):
-
-            if self.input_shape == "vector":
-                #input
-                for univ_id in range(self.univar_count_in):
-                    if pred2numpy:
-                        self.inpu_byVar[univ_id].append(inp[univ_id].detach().cpu().numpy())
-                    else:
-                        self.inpu_byVar[univ_id].append(inp[univ_id])
-                #output
-                for univ_id in range(self.univar_count_out):
-                    if pred2numpy:
-                        self.pred_byVar[univ_id].append(out[univ_id].detach().cpu().numpy())    
-                    else:
-                        self.pred_byVar[univ_id].append(out[univ_id])
-            elif self.input_shape == "matrix":
-                for univ_id in range(self.univar_count_in):
-
-                    for in_var_instance in inp[0][univ_id]:
+    def predict_sortByUnivar(self, pred2numpy=True, mode=["input", "output"]):
+        
+        if "input" in mode:
+            self.inpu_byVar = dict() 
+            for univ_id in range(self.univar_count_in):
+                self.inpu_byVar[univ_id] = list()  
+            
+            for inp in zip(self.inpu_data):
+                if self.input_shape == "vector":
+                    for univ_id in range(self.univar_count_in):
                         if pred2numpy:
-                            self.inpu_byVar[univ_id].append(in_var_instance.detach().cpu().numpy())
+                            self.inpu_byVar[univ_id].append(inp[0][univ_id].detach().cpu().numpy())
                         else:
-                            self.inpu_byVar[univ_id].append(in_var_instance)
-                
-                for univ_id in range(self.univar_count_out):
-                    for out_var_instance in out[0][univ_id]:
+                            self.inpu_byVar[univ_id].append(inp[0][univ_id])
+                elif self.input_shape == "matrix":
+                    for univ_id in range(self.univar_count_in):
+                        for in_var_instance in inp[0][univ_id]:
+                            if pred2numpy:
+                                self.inpu_byVar[univ_id].append(in_var_instance.detach().cpu().numpy())
+                            else:
+                                self.inpu_byVar[univ_id].append(in_var_instance)
+        
+        if "output" in mode:     
+            self.pred_byVar = dict()
+            for univ_id in range(self.univar_count_out):      
+                self.pred_byVar[univ_id] = list()
+            for out in zip(self.pred_data):
+                if self.input_shape == "vector":                    
+                    #output
+                    for univ_id in range(self.univar_count_out):
                         if pred2numpy:
-                            self.pred_byVar[univ_id].append(out_var_instance.detach().numpy())    
+                            self.pred_byVar[univ_id].append(out[0][univ_id].detach().cpu().numpy())    
                         else:
-                            self.pred_byVar[univ_id].append(out_var_instance)
+                            self.pred_byVar[univ_id].append(out[0][univ_id])
+                elif self.input_shape == "matrix":
+                    for univ_id in range(self.univar_count_out):
+                        for out_var_instance in out[0][univ_id]:
+                            if pred2numpy:
+                                self.pred_byVar[univ_id].append(out_var_instance.detach().numpy())    
+                            else:
+                                self.pred_byVar[univ_id].append(out_var_instance)
+                                
         
     def latent_sortByComponent(self, pred2numpy=True):
         self.late_byComp = dict()
@@ -226,8 +230,15 @@ class ModelPrediction():
         comp_dict = {"latent":data_latent}
         return comp_dict
     
+    
+    def input_byvar(self):
+        self.predict_sortByUnivar(mode="input",pred2numpy=True)
+        resultDict = dict()
+        resultDict["prediction_data_byvar"] = {"input":self.inpu_byVar}
+        return resultDict
+    
     # latent_dim, path_folder, data_range=None, input_shape
-    def compute_prediction(self, experiment_name, time_key, remapping_data=False):
+    def compute_prediction(self, experiment_name, time_key, remapping_data=False, force_noLatent=False):
         resultDict = dict()
         #modelPrediction = ModelPrediction(model, device=device, univar_count_in=univar_count_in, univar_count_out=univar_count_out, latent_dim=latent_dim, data_range=data_range, input_shape=input_shape, path_folder=folder)
         if self.latent_dim is not None:
@@ -236,8 +247,7 @@ class ModelPrediction():
             self.predict(self.dataset, latent=False, experiment_name=experiment_name, time_key=time_key, remapping=remapping_data)
 
         prediction_data = self.getPred()
-        prediction_data_byvar = self.getPred_byUnivar()     
-        resultDict["prediction_data"] = prediction_data
+        prediction_data_byvar = self.getPred_byUnivar() 
         resultDict["prediction_data_byvar"] = prediction_data_byvar
         
         inp_data_vc = pd.DataFrame()
@@ -258,7 +268,7 @@ class ModelPrediction():
             out_data_vc[var_name] = [a.tolist() for a in prediction_data_byvar['output'][id_univar]]
         resultDict["out_data_vc"] = out_data_vc
 
-        if self.latent_dim is not None:
+        if self.latent_dim is not None and not force_noLatent:
             lat_data = self.getLat()
             resultDict["latent_data"] = lat_data
             lat_data_bycomp = self.getLat_byComponent()
