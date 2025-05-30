@@ -18,7 +18,7 @@ from pathlib import Path
 import os
 import json
 
-class VariationalAutoEncoderModels(nn.Module):
+class ConditionalVariationalAutoEncoderModels(nn.Module):
 
     def __init__(self, device, layers_list=None, load_from_file=False, json_filepath=None, edge_index=None, **kwargs):
         super().__init__()
@@ -29,7 +29,6 @@ class VariationalAutoEncoderModels(nn.Module):
         self.models_layers_parallel = dict()
         self.layers_name = dict()
         if load_from_file:
-            print("json_filepathjson_filepath",json_filepath)
             self.layers_list = self.load_fileJson(json_filepath)
         else:
             self.layers_list = layers_list
@@ -43,14 +42,14 @@ class VariationalAutoEncoderModels(nn.Module):
         # Decoder
         self.models_layers['decoder'], self.models_size['decoder'], self.permutation_forward['decoder'], self.models_layers_parallel['decoder'], self.layers_name['decoder'], = self.list_to_model(self.layers_list['decoder_layers'])
 
-        # Deploy the VAE model
-        self.deploy_vae_model()
+        
+        self.deploy_cvae_model()
         
     def get_size(self):
         return self.models_size
     
-    def deploy_vae_model(self):
-        # Latent space layers for mean and logvar (specific to VAE)
+    def deploy_cvae_model(self):
+        # Latent space layers for mean and logvar (specific to CVAE)
         self.fc_mu = nn.Linear(self.models_size['encoder']["output_size"], self.models_size['encoder']["output_size"])
         self.fc_logvar = nn.Linear(self.models_size['encoder']["output_size"], self.models_size['encoder']["output_size"])
         
@@ -83,13 +82,16 @@ class VariationalAutoEncoderModels(nn.Module):
         summary['encoder'] = torchinfo.summary(self.models['encoder'], input_size=(1, self.models_size['encoder']["input_size"]), device=self.device, batch_dim=0, col_names=("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose=0)
         summary['decoder'] = torchinfo.summary(self.models['decoder'], input_size=(1, self.models_size['decoder']["input_size"]), device=self.device, batch_dim=0, col_names=("input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"), verbose=0)
 
-    def forward(self, x):
-        x_latent = self.models['encoder'](x)        
+    def forward(self, x, condition):
+        print("87 beg")
+        x_latent = self.models['encoder'](x, condition)        
+        print("87 enc")
         mu = x_latent["mu"]
         logvar = x_latent["logvar"]                
         z = self.reparameterize(mu, logvar)
-        
+        print("91 dec")
         x_hat = self.models['decoder'](z)        
+        print("93 end")
         return {"x_input": {"data":x}, "x_latent":{"mu": mu, "logvar": logvar, "z":z}, "x_output": {"data": x_hat["x_output"]['data']}}
 
     def reparameterize(self, mu, logvar):
@@ -105,9 +107,66 @@ class VariationalAutoEncoderModels(nn.Module):
         permutation_forward = dict()
         layers_name = dict()
         size = {"input_size": None, "output_size": None}
-        
+        print("list_to_model")
         for index, layer_item in enumerate(layers_list):
-            parallel_layers_name = None
+            parallel_layers_flag = False
+            # Layers
+            if layer_item['layer'] == "Linear":
+                layers.append(nn.Linear(in_features=layer_item['in_features'], out_features=layer_item['out_features']))
+                if size["input_size"] is None:
+                    size["input_size"] = layer_item['in_features']
+                size["output_size"] = layer_item['out_features']
+            elif layer_item['layer'] == "GCNConv":
+                layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+            elif layer_item['layer'] == "GCNConv_Permute":
+                layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+                permutation_forward[index] = {"in_permute": layer_item['in_permute'], "out_permute": layer_item['out_permute']}
+
+            # Activation functions
+            elif layer_item['layer'] == "Tanh":
+                layers.append(nn.Tanh())
+            elif layer_item['layer'] == "LeakyReLU":
+                layers.append(nn.LeakyReLU(layer_item['negative_slope']))
+            elif layer_item['layer'] == "Sigmoid":
+                layers.append(nn.Sigmoid())
+            
+            # Batch normalization
+            elif layer_item['layer'] == "BatchNorm1d":
+                layers.append(nn.BatchNorm1d(num_features=layer_item['num_features'], affine=layer_item['affine']))
+
+            # Dropout
+            elif layer_item['layer'] == "Dropout":
+                layers.append(nn.Dropout(p=layer_item['p']))
+            
+            # Parallel layers
+            elif layer_item['layer'] == "Parallel":
+                parallel_layers_flag = True
+                parallel_dict = nn.ModuleDict()
+                for sub_layer in layer_item['layers']:
+                    sub_layers, sub_size, _, _, sub_name = self.list_to_model(sub_layer['layers'])
+                    parallel_dict[sub_layer['name']] = nn.Sequential(*sub_layers)
+                layers_name[index] = {"parallel": list(parallel_dict.keys())}
+                layers.append(parallel_dict)
+            
+            # Naming
+            if 'name' in layer_item:
+                layers_name[index] = layer_item['name']
+            elif parallel_layers_flag:
+                layers_name[index] = {"parallel": [sub_layer['name'] for sub_layer in layer_item['layers']]}
+            else:
+                layers_name[index] = f"{layer_item['layer']}_{index}"
+        
+        return layers, size, permutation_forward, parallel_layers_flag, layers_name
+
+        layers = list()
+        parallel_layers_flag = False
+        parallel_layers = []
+        permutation_forward = dict()
+        layers_name = dict()
+        size = {"input_size": None, "output_size": None}
+        print("list_to_model")
+        for index, layer_item in enumerate(layers_list):
+            parallel_layers_flag = False
             # Layers
             
             if layer_item['layer'] == "Linear":
@@ -137,7 +196,16 @@ class VariationalAutoEncoderModels(nn.Module):
             elif layer_item['layer'] == "Dropout":
                 layers.append(nn.Dropout(p=layer_item['p']))
             
-            
+            elif layer_item['layer'] == "Parallel":
+                parallel_layers_flag = True
+                sub_layers = nn.ModuleDict()
+                for sub_layer in layer_item['layers']:
+                    sub_layer_modules, _, _, _, sub_layer_names = self.list_to_model(sub_layer['layers'])
+                    sub_layers.update(sub_layer_modules)
+                    layers_name.update(sub_layer_names)
+                parallel_layers[layer_item['name']] = sub_layers
+                layers.append(parallel_layers[layer_item['name']])
+
                 
             elif layer_item['layer'] == "Parallel":
                 parallel_layers_flag = True       
@@ -155,6 +223,7 @@ class VariationalAutoEncoderModels(nn.Module):
                 layers_name[index] = {"parallel": [sub_layer['name'] for sub_layer in layer_item['layers']]}
             else:
                 layers_name[index] = f"{layer_item['layer']}_{index}"
+
         
         return layers, size, permutation_forward, parallel_layers_flag, layers_name
 
@@ -163,8 +232,8 @@ class VariationalAutoEncoderModels(nn.Module):
             config = json.load(f)
 
         layers_list = dict()
-        layers_list["encoder_layers"] = config["VAE"]["encoder_layers"]
-        layers_list["decoder_layers"] = config["VAE"]["decoder_layers"]
+        layers_list["encoder_layers"] = config["CVAE"]["encoder_layers"]
+        layers_list["decoder_layers"] = config["CVAE"]["decoder_layers"]
         return layers_list
 
 
@@ -212,8 +281,8 @@ class nn_Model(nn.Module):
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x):
-        forward_dict = {"x_input": {'data':x}}
+    def forward(self, x, condition=None):
+        forward_dict = {"x_input": {'data':x, 'condition':condition}}
         for index, layer in enumerate(self.sequential_layers):            
             if isinstance(layer, gm.GCNConv):
                 if index in self.permutation_forward:
@@ -224,11 +293,11 @@ class nn_Model(nn.Module):
                     out_permute = self.permutation_forward[index]["out_permute"]
                     x = x.permute(*out_permute)
             else:
-                x = layer(x)
+                x = layer(x, condition)
         forward_dict["x_output"] = {'data':x}
 
         if self.parallel_layers_flag:
             for block_name, block in self.parallel_blocks.items():
-                forward_dict[block_name] = block(x)
+                forward_dict[block_name] = block(x, condition)
         return forward_dict
     

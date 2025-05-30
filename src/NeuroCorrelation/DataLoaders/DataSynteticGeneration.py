@@ -398,6 +398,7 @@ class DataSyntheticGeneration():
         return statsData
     
     def getRandom(self, dim):
+        
         randomNoise =  torch.randn(1, dim).type(torch.float32).to(self.torch_device)
         #torch.randn(1, dim).type(torch.float32).to(self.torch_device)
         #torch.randn(1, dim).uniform_(0,1).type(torch.float32).to(self.torch_device)

@@ -14,7 +14,7 @@ import pandas as pd
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, vc_dict=None, univ_limit=150, timeweather=False, time_slot=None):
+    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, timeweather, timeweather_settings, noise_distribution="gaussian", vc_dict=None, univ_limit=150,  time_slot=None):
         
         self.mode = mode
         self.seed = seed
@@ -36,6 +36,7 @@ class DataLoader:
         self.test_samples = self.checkInDict(self.dataset_setting,"test_samples", 500)
         self.noise_samples = self.checkInDict(self.dataset_setting,"noise_samples", 1000)
         self.corrCoeff = corrCoeff
+        self.noise_distribution = noise_distribution
         self.corrCoeff['data'] = dict()
         self.summary_path = Path(self.path_folder,'summary')
         if not os.path.exists(self.summary_path):
@@ -46,6 +47,8 @@ class DataLoader:
         self.pathMap = None
         self.edge_index = None
         self.timeweather = timeweather
+        self.timeweather_settings = timeweather_settings
+        
         self.time_slot = time_slot
         self.time_performance = time_performance
         
@@ -80,7 +83,9 @@ class DataLoader:
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots, instaces_size=self.instaces_size)
             self.pathMap = None
             self.edge_index = None
-            timeweather_data = None
+            self.timeweather_count = 0
+        
+        
         
         if self.mode =="graph_roads" or self.mode=="fin_data":
             if self.mode =="graph_roads":
@@ -88,18 +93,23 @@ class DataLoader:
             elif self.mode=="fin_data":
                 print("DATASET PHASE: Load maps data")
             print("draw_plots ",draw_plots)
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather)
+            
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
             self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
             
-            print('...')
             train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
             self.pathMap = self.dataGenerator.get_pathMap()
             self.edge_index = self.dataGenerator.get_edgeIndex()
-                
-        
+            self.timeweather_count = self.dataGenerator.getTimeweatherCount()
+            self.copulaData_filename = self.dataGenerator.get_copulaData_filename()
+            
+            
+            
+                 
+        print("----------------------timeweather_count-----------------------:  ",self.timeweather_count)
         self.rangeData = self.dataGenerator.getDataRange()
         self.statsData = self.dataGenerator.getDataStats()
         
@@ -129,6 +139,9 @@ class DataLoader:
         if self.dataGenerator is None:
             raise Exception("rangeData not defined.")
         return self.dataGenerator
+    
+    def get_copulaData_filename(self):
+        return self.copulaData_filename
     
     def getRangeData(self):
         if self.rangeData is None:

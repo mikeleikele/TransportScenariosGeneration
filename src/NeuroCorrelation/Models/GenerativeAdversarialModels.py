@@ -152,4 +152,4 @@ class nn_Model(nn.Module):
                     x = x.permute(out_permute[0], out_permute[1], out_permute[2])                              
             else:
                 x = layer(x)
-        return {"x_input": x, "x_output": x}
+        return {"x_input": {"data":x}, "x_output": {"data":x}}

@@ -4,7 +4,7 @@ from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 
-from src.NeuroCorrelation.NeuroExperiment import NeuroExperiment
+from NeuroCorrelation.InstancesGeneration import NeuroExperiment
 
 from pathlib import Path
 import sys
@@ -143,9 +143,9 @@ if __name__ == "__main__":
         print(10)
     
     
-    elif args[0] ==  "--neuroD":        
+    elif args[0] ==  "--Gen"  or args[0] == "--GenerativeIstances":        
     
-        neuroExp = NeuroExperiment(args)
+        neuroExp = InstancesGeneration(args)
         
         print("end")
         print("========================================")

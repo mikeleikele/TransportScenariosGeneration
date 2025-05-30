@@ -17,11 +17,14 @@ import pandas as pd
 
 class Optimization():
     
-    def __init__(self, model, device, data_dict, loss, path_folder, univar_count, batch_size, dataGenerator, latent_dim, vc_mapping, input_shape, rangeData, time_performance, model_type=None,  instaces_size_noise=None, direction="maximize", timeout=600, graph_topology=False, edge_index=None):
+    def __init__(self, model, device, data_dict, loss, path_folder, univar_count, batch_size, dataGenerator, latent_dim, vc_mapping, learning_rate, input_shape, rangeData, time_performance, timeweather_count, model_type=None,  instaces_size_noise=None, direction="maximize", timeout=600, graph_topology=False, edge_index=None):
         self.model = model
         self.device = device
         self.train_data = data_dict['train_data']
         self.test_data = data_dict['test_data']
+        self.noise_data = data_dict['noise_data']
+        
+        print("-------------------------Optimization",model_type,"|")
         self.model_type = model_type
         self.loss_obj = loss
         self.path_folder = path_folder
@@ -43,6 +46,9 @@ class Optimization():
         self.search_space = {"keys":list(), "keys_param":list(), "space":list(), "network_part":list()}
         self.objectFun = Optimization_functions()
         self.results = dict()
+        self.timeweather_count = timeweather_count
+        self.learning_rate =learning_rate
+        
     def set_epochs(self, epochs):
         self.epochs = epochs
         
@@ -83,12 +89,15 @@ class Optimization():
         self.n_calls = n_calls
 
     def set_fromDict(self, opt_dict):
+        print("-----------------------------------------------set_fromDict")
         self.set_epochs(opt_dict['epochs'])
         self.set_modeltype(opt_dict['modeltype'])
         self.set_optimization_fun(opt_dict['optimization_function'])
         self.set_searchSpace(opt_dict['search_space'])
         self.set_n_calls(opt_dict['n_calls'])
         self.set_optimizer(opt_dict['base_estimator'],opt_dict['n_initial_points'])
+        self.scorses_dict_opt = dict()
+    
 
     def optimization(self):
         print("**************")
@@ -120,9 +129,9 @@ class Optimization():
             
             self.training_obj = ModelTraining(model=self.model[self.model_type], device=self.device, loss_obj=self.loss_obj[self.model_type], 
                 epoch=self.epochs, train_data=self.train_data, test_data=self.test_data, dataGenerator=self.dataGenerator, time_performance=self.time_performance,
-                path_folder=self.path_folder, univar_count_in = self.univar_count, univar_count_out = self.univar_count, 
-                latent_dim=self.lat_dim, vc_mapping=self.vc_mapping, input_shape=self.input_shape, rangeData=self.rangeData, optimization=True,
-                model_type=self.model_type, pre_trained_decoder=False, batch_size=self.batch_size, graph_topology=self.graph_topology,edge_index=self.edge_index )
+                path_folder=self.path_folder, univar_count_in = self.univar_count, univar_count_out = self.univar_count, timeweather_count=self.timeweather_count,
+                latent_dim=self.lat_dim, vc_mapping=self.vc_mapping, input_shape=self.input_shape, rangeData=self.rangeData, optimization=True, learning_rate=self.learning_rate,
+                model_type=self.model_type, pre_trained_decoder=False, batch_size=self.batch_size, graph_topology=self.graph_topology,edge_index=self.edge_index, noise_data=self.noise_data)
             
             
             cprint(f"OPTIMIZATION TRIAL values tested", cprint_cls, end="\n")
@@ -131,10 +140,17 @@ class Optimization():
             
             if self.model_type =="AE":
                 values_res = self.training_obj.training(training_name=f"OPT_{trial}",model_flatten_in=True,load_model=False, optimization=True, optimization_name=trial)
-                optim_score = self.objectFun.get_score(values = values_res)
+                optim_score_dict = self.objectFun.get_score(values = values_res)
+                optim_score = optim_score_dict['all']
             elif self.model_type =="GAN":
                 values_res = self.training_obj.training(training_name=f"OPT_{trial}",noise_size=1, optimization=False, load_model=False)
-                optim_score = self.objectFun.get_score(values = values_res)
+                optim_score_dict = self.objectFun.get_score(values = values_res)
+                optim_score = optim_score_dict['all']
+            elif self.model_type =="VAE":
+                values_res = self.training_obj.training(training_name=f"OPT_{trial}",model_flatten_in=True,load_model=False, optimization=True, optimization_name=trial)
+                optim_score_dict = self.objectFun.get_score(values = values_res)
+                optim_score = optim_score_dict['all']
+            self.scorses_dict_opt[trial] = optim_score_dict
             self.training_obj.eval()
             self.results[trial] = {"params":self.loss_obj[self.model_type].get_lossTerms(), "fun_val":optim_score}
             cprint(f"\t\tpoint score:\t{optim_score}",  cprint_cls, end="\n")
@@ -168,6 +184,12 @@ class Optimization():
         path_opt_best = Path(path_opt, "results.csv")
         best_df = pd.DataFrame(self.results)
         best_df.to_csv(path_opt_best, index=False)
+        
+        
+        path_opt_scores = Path(path_opt, "scores.csv")
+        scores_df = pd.DataFrame(self.scorses_dict_opt)
+        scores_df.to_csv(path_opt_scores, index=True)
+        
         
         
     def visualization_plots(self):

@@ -20,12 +20,15 @@ import pandas as pd
 import random
 from random import shuffle
 import csv
+from termcolor import cprint
+from colorama import init, Style
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, time_performance, timeweather=False, univ_limit=150, time_slot=None):
+    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, time_performance, timeweather, timeweather_settings, name_key="ae", noise_distribution = "gaussian", univ_limit=150, time_slot=None):
         self.torch_device = torch_device
         self.lat_dim = lat_dim
+        self.name_key = name_key
         self.univar_count = univar_count
         self.name_dataset = name_dataset
         self.version_dataset = version_dataset
@@ -39,6 +42,8 @@ class DataMapsLoader():
         self.timeweather = timeweather
         self.time_slot = time_slot
         self.time_performance = time_performance
+        self.timeweather_settings = timeweather_settings
+        self.noise_distribution = noise_distribution
         
         
         datatasetTool = DatasetTool(name_dataset=self.name_dataset, version_dataset = self.version_dataset, time_slot= self.time_slot)
@@ -46,8 +51,11 @@ class DataMapsLoader():
         filename = datatasetdict["filename"]
         pathMap  = datatasetdict["pathMap"]
         edge_path  = datatasetdict["edge_path"]
-        timeweath_path = datatasetdict["timeweath_path"]
+        timeweather_path = datatasetdict["timeweather_path"]
+        self.copula_filename = datatasetdict["copula_filename"]
+        
         self.data_df = pd.read_csv(filename, sep=',')
+        print("dataset filename",filename)
         
         self.pathMap = pathMap
         if edge_path is not None:
@@ -66,10 +74,22 @@ class DataMapsLoader():
             os.makedirs(self.path_folder)
         self.univar_count = len(self.data_df['ref'].values)
 
+        print("self.timeweather",self.timeweather)
         if self.timeweather:
-            self.timeweather_df = pd.read_csv(timeweath_path, sep=',')
+            self.timeweather_df = pd.read_csv(timeweather_path, sep=',')
+            if self.timeweather_settings is not None:
+                self.timeweather_df = self.timeweather_df[self.timeweather_settings["column_selected"]]
+
+
         
+            self.timeweather_count = len(self.timeweather_df.columns)
+        else:
+            self.timeweather_count = 0
+            
         
+    def getTimeweatherCount(self):
+        return self.timeweather_count
+    
     def getDataRange(self):
         rangeData = {"max_val": self.max_val, "min_val":self.min_val}
         return rangeData
@@ -87,6 +107,9 @@ class DataMapsLoader():
     
     def get_pathMap(self):
         return self.pathMap
+    
+    def get_copulaData_filename(self):
+        return self.copula_filename
     
     def get_edgeIndex(self):
         return self.edge_index
@@ -242,7 +265,7 @@ class DataMapsLoader():
             self.test_data_vc[key_vc] = test_values_vc[key_vc]['values']
         
         if draw_plots:         
-            self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=None, path_folder= self.path_folder)
+            self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=None, path_folder= self.path_folder, name_key=self.name_key)
             if draw_correlationCoeff:
                 self.comparison_plot.plot_vc_analysis(self.train_data_vc,plot_name="mapsTrain")
                 print("\ttrain correlation plot: done")
@@ -284,7 +307,7 @@ class DataMapsLoader():
                 for j in range(instaces_size):
                     maps_data_vc[id_var].append(item['sample'][id_var].detach().cpu().numpy().tolist())
         
-        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.lat_dim, path_folder= path_fold_Analysis)
+        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.lat_dim, path_folder= path_fold_Analysis, name_key=self.name_key)
         if draw_correlationCoeff:
             df_data = pd.DataFrame(maps_data_vc)
             rho = self.comparison_datamaps.correlationCoeff(df_data)
@@ -310,8 +333,8 @@ class DataMapsLoader():
         path_fold_noiseAnalysis = Path(self.path_folder,name_data+"_data_analysis")
         if not os.path.exists(path_fold_noiseAnalysis):
             os.makedirs(path_fold_noiseAnalysis)
-
-        random_values = [self.getRandom(dim=num_of_samples) for i in range(self.lat_dim)] 
+        cprint(Style.BRIGHT +f"| Synthetic Noise data sampling by {self.noise_distribution} distribution" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        random_values = [self.getRandom(dim=num_of_samples, distribution = self.noise_distribution) for i in range(self.lat_dim)] 
         
         dataset_couple = []
         for s_id in range(num_of_samples):
@@ -329,7 +352,7 @@ class DataMapsLoader():
             for item in dataset_couple:
                 for id_var in range(self.lat_dim):
                     noise_data_vc['noise']['data'][id_var].append(item['sample'][id_var].tolist())
-            self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, latent_dim=self.lat_dim, path_folder= path_fold_noiseAnalysis)
+            self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, latent_dim=self.lat_dim, path_folder= path_fold_noiseAnalysis, name_key=self.name_key)
             noise_data_vc['noise']['color'] = 'green'
             noise_data_vc['noise']['alpha'] = 1
             #print(noise_data_vc['noise']['data'][1])
@@ -360,7 +383,7 @@ class DataMapsLoader():
         path_fold_copulagenAnalysis = Path(self.path_folder,name_data+"_copulagen_data_analysis")
         if not os.path.exists(path_fold_copulagenAnalysis):
             os.makedirs(path_fold_copulagenAnalysis)
-        print(path_fold_copulagenAnalysis,"---------------------------------hhhhhhh")
+        
         
         if real_data is None:
             real_data = self.real_data_vc
@@ -414,8 +437,9 @@ class DataMapsLoader():
             json.dump(self.sample_synthetic, fp, sort_keys=True, indent=4)
 
         dataset_couple = []
+        
         for i in range(num_of_samples):
-            dataset_couple.append({"sample":self.getSample_synthetic(self.sample_synthetic, i), "noise":self.getRandom(dim=univar_count)})
+            dataset_couple.append({"sample":self.getSample_synthetic(self.sample_synthetic, i), "noise":self.getRandom(dim=univar_count, distribution = self.noise_distribution)})
         
         
 
@@ -426,7 +450,7 @@ class DataMapsLoader():
             for item in dataset_couple:
                 for id_var in range(univar_count):
                     noise_data_vc[id_var].append(item['sample'][id_var].tolist())
-            self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, latent_dim=self.lat_dim, path_folder= path_fold_copulagenAnalysis)
+            self.comparison_plot_noise = DataComparison(univar_count_in=self.lat_dim, univar_count_out=self.lat_dim, latent_dim=self.lat_dim, path_folder= path_fold_copulagenAnalysis, name_key=self.name_key)
 
             
             if draw_correlationCoeff:
@@ -439,8 +463,11 @@ class DataMapsLoader():
     def get_vc_mapping(self):
         return self.vc_mapping_list
 
-    def getRandom(self, dim):
-        randomNoise = torch.randn(1, dim).to(self.torch_device)
+    def getRandom(self, dim, distribution):
+        if distribution == "gaussian":
+            randomNoise = torch.randn(1, dim).to(self.torch_device)
+        elif distribution == "uniform":
+            randomNoise = torch.rand(1, dim).to(self.torch_device)
         #randomNoise = torch.randn(1, dim).uniform_(0,1).to(self.torch_device)
         return randomNoise.type(torch.float32)
 

@@ -28,14 +28,16 @@ from matplotlib.pyplot import cm
 from torch.nn.utils import parameters_to_vector
 from termcolor import colored, cprint 
 from torch_geometric.nn import GCNConv
+import csv
 
 class ModelTraining():
 
-    def __init__(self, model, device, loss_obj, epoch, train_data, test_data, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim, vc_mapping, input_shape, rangeData, batch_size, time_performance, model_type="AE", pre_trained_decoder=False, optimization=False, graph_topology=False, edge_index=None, is_optimization=False):
+    def __init__(self, model, device, loss_obj, epoch, train_data, test_data, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim,   vc_mapping, input_shape, rangeData, batch_size, time_performance, timeweather_count, learning_rate, optimizer_name="Adam", model_type="AE", pre_trained_decoder=False, optimization=False, graph_topology=False, edge_index=None, is_optimization=False, noise_data = None):
         self.loss_obj = loss_obj
         self.epoch = epoch
         self.train_data = train_data
         self.test_data = test_data
+        self.noise_data = noise_data
         self.dataGenerator = dataGenerator
         self.path_folder = path_folder
         self.loss_dict = dict()
@@ -46,7 +48,7 @@ class ModelTraining():
         self.input_shape = input_shape
         self.append_count = 1 #ogni quanti batch aggiungo val della loss
         self.n_critic = 1
-        self.opt_scheduler_ae = "StepLR"
+        self.opt_scheduler_ae = "ReduceLROnPlateau"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "ReduceLROnPlateau"
         cprint(f"PAY ATTENTION: GEN is update every {self.n_critic} batches", "magenta", end="\n")
@@ -60,23 +62,35 @@ class ModelTraining():
         self.path_save_model_gradients = Path(self.path_folder, self.model_type,"model_gradients", )
         self.time_performance = time_performance
         self.is_optimization = is_optimization
+        self.timeweather_count = timeweather_count
+        
+        
         if not os.path.exists(self.path_save_model_gradients):
             os.makedirs(self.path_save_model_gradients)
         self.checkWeightsUpdate = True    
         if self.checkWeightsUpdate:
             cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
-        if self.model_type in ["AE", "VAE"]:
+        if self.model_type in ["AE", "VAE", "CVAE"]:
             self.model = model
             self.model.to(device=self.device)
             model_params = self.model.parameters()            
-            lr_ae = 0.01
-            print("lr_ae\t",lr_ae)#lr_ae = 0.01
-            self.optimizer = optim.Adam(params=model_params, lr=lr_ae)
-            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=30, gamma=0.1)
+            self.learning_rate = dict()
+            self.learning_rate[self.model_type] = learning_rate[self.model_type]
+            
+            if optimizer_name == "AdamW":
+                self.optimizer = optim.AdamW(params=model_params, lr=0.001, weight_decay=0.01)
+            elif optimizer_name == "Adam":
+                self.optimizer = optim.Adam(params=model_params, lr=self.learning_rate[self.model_type])
+            elif optimizer_name == "SGD":
+                self.optimizer = optim.SGD(params=model_params, lr=0.01, momentum=0.9, weight_decay=0.0001)
+            cprint(f"\tOptimizer\t{optimizer_name}", "green", end="\n")
+            cprint(f"\tLearning_rate\t{self.learning_rate}", "green", end="\n")
+            
+            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.1)
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
                 self.scheduler_ae = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=5, verbose=True)
             elif self.opt_scheduler_ae == "StepLR":
-                self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=40, gamma=0.1)
+                self.scheduler_ae = optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.1)
         
         elif self.model_type in ["GAN", "WGAN"]:
             lr_gen = 0.05
@@ -134,6 +148,8 @@ class ModelTraining():
     def training(self,  training_name, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_name=None):
         self.dataLoaded_train = DataBatchGenerator(dataset=self.train_data, batch_size=self.batchsize, shuffle=shuffle_data)
         self.dataLoaded_test = DataBatchGenerator(dataset=self.test_data, batch_size=self.batchsize, shuffle=shuffle_data)
+        if self.noise_data is not None:
+            self.dataLoaded_noise = DataBatchGenerator(dataset=self.noise_data, batch_size=self.batchsize, shuffle=shuffle_data)
         
         if load_model:
             if optimization is not None:
@@ -152,16 +168,24 @@ class ModelTraining():
             print("\tTRAIN TRAINED MODEL:\t")
             self.getModeModel()
             print("--------------------------------------------------------------------------------------------------------------------------",self.model_type)
-            if self.model_type in ["AE", "VAE"]:
+            
+            
+            print(f"\ttraining {self.model_type} loss:\t", self.loss_obj.get_lossTerms())
+            
+            if self.model_type in ["AE", "VAE", "CVAE"]:
                 self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 if self.model_type == "AE":
                     self.training_AE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                    model_opt_prediction = self.getModel('all')
                 elif self.model_type == "VAE":
                     self.training_VAE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
+                    model_opt_prediction = self.getModel('decoder')
+                elif self.model_type == "CVAE":
+                    self.training_CVAE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
                 self.time_performance.stop_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 self.time_performance.compute_time(f"{training_name}_{self.model_type}_TRAINING_global", fun = "diff")                
                 print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first"))
-                model_opt_prediction = self.getModel('all')
+                
             elif self.model_type in ["GAN", "WGAN"]:
                 self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 if self.model_type == "GAN":
@@ -180,9 +204,16 @@ class ModelTraining():
                     path_opt_result = Path(self.path_opt_results, f"{optimization_name}")
                     if not os.path.exists(path_opt_result):
                         os.makedirs(path_opt_result)
-                
-                    modelPrediction = ModelPrediction(model=model_opt_prediction, device=self.device,dataset=self.test_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count_in, univar_count_out=self.univar_count_out,latent_dim=self.latent_dim, data_range=self.rangeData,input_shape=self.input_shape,path_folder=path_opt_result)         
-                    prediction_opt = modelPrediction.compute_prediction(time_key=f"{training_name}_", experiment_name=f"{optimization_name}", remapping_data=True)
+                    if self.model_type in ["AE"]:
+                        force_noLatent = False
+                    elif self.model_type in ["VAE"]:
+                        force_noLatent = True
+                    else :
+                        force_noLatent = True
+                    modelPrediction = ModelPrediction(model=model_opt_prediction, device=self.device, dataset=self.noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count_out,latent_dim=None, data_range=self.rangeData,input_shape=self.input_shape,path_folder=path_opt_result, model_type= self.model_type)         
+                    prediction_opt = modelPrediction.compute_prediction(time_key=f"{training_name}_", experiment_name=f"{optimization_name}", remapping_data=True, force_noLatent=force_noLatent)
+                    modelPrediction.saveData(experiment_name=f"{optimization_name}", latent=False)
+                    
                     opt_function_result = prediction_opt
                     
                 else:
@@ -211,6 +242,8 @@ class ModelTraining():
             
                
     def training_AE(self, model_flatten_in, training_name, plot_loss=True, save_trainingTime=True):
+        
+        
         self.loss_dict = dict()
         self.model.train()
         epoch_train = list()
@@ -245,10 +278,12 @@ class ModelTraining():
                     y_hat = self.model.forward(x=x_in)
                     y_hat_list = list()
                     for i in range(item_batch):
-                        item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output":y_hat['x_output'][i][0]}
+                        item_dict = {"x_input": {"data": y_hat['x_input']["data"][i][0]}, "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output": {"data": y_hat['x_output']["data"][i][0]}}
                         y_hat_list.append(item_dict)
                     
-                    loss_dict = self.loss_obj.computate_loss(y_hat_list)
+                    loss_dict = self.loss_obj.computate_loss(values_in=y_hat_list, epoch=epoch)
+                    
+                    
                     
                     
                     loss = loss_dict['loss_total']
@@ -288,9 +323,9 @@ class ModelTraining():
                 y_hat_list = list()
                 
                 for i in range(item_batch):
-                    item_dict = {"x_input": y_hat['x_input'][i][0], "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output":y_hat['x_output'][i][0]}
+                    item_dict = {"x_input": {"data": y_hat['x_input']["data"][i][0]}, "x_latent":{"latent":y_hat['x_latent']["latent"][i][0]}, "x_output": {"data": y_hat['x_output']["data"][i][0]}}
                     y_hat_list.append(item_dict)
-                loss_dict = self.loss_obj.computate_loss(y_hat_list)
+                loss_dict = self.loss_obj.computate_loss(values_in=y_hat_list, epoch=epoch)
 
                 loss = loss_dict['loss_total']
                 if batch_num%self.append_count == 0:
@@ -647,6 +682,255 @@ class ModelTraining():
             self.save_training_time(epoch_train)
     
     
+    def training_VAE(self, model_flatten_in, training_name, plot_loss=True, save_trainingTime=True):
+        self.loss_dict = dict()
+        self.model.train()
+        epoch_train = list()
+        print("\tepoch:\t",0,"/",self.epoch['VAE'],"\t -")
+        for epoch in range(self.epoch['VAE']):
+            self.time_performance.start_time(f"{training_name}_VAE_TRAINING_epoch")
+            self.model.train()
+            loss_batch = list()
+            loss_batch_test = list()
+            loss_batch_partial = dict()
+            
+            dataBatches_train = self.dataLoaded_train.generate()
+            
+            for batch_num, dataBatch in enumerate(dataBatches_train):
+                item_batch = len(dataBatch)
+                if item_batch == self.batchsize:
+                    loss = torch.zeros([1])                    
+                    self.optimizer.zero_grad()
+                    y_hat_list_train = list()
+                    sample_list = list()
+                    for i, item in enumerate(dataBatch):
+                        sample = item['sample'].type(torch.float32)
+                        
+
+                        sample_list.append(sample)
+                        #noise = noisef.type(torch.float32)
+                    x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
+                    torch.cat(sample_list, out=x_in) 
+                    if model_flatten_in:
+                        x_in = x_in.view(-1,self.univar_count_in)
+                        x_in.unsqueeze_(1)
+                    y_hat = self.model.forward(x=x_in)
+                    y_hat_list_train = list()
+                    for i in range(item_batch):                        
+                        item_dict = {"x_input": {"data": y_hat['x_input']['data'][i][0]}, "x_latent":{"mu":y_hat['x_latent']["mu"][i][0], "logvar":y_hat['x_latent']["logvar"][i][0], "z":y_hat['x_latent']["z"][i][0]},"x_output": {"data": y_hat['x_output']['data'][i][0]}}
+                        y_hat_list_train.append(item_dict)
+                    
+                    loss_dict = self.loss_obj.computate_loss(y_hat_list_train,epoch )
+                    
+                    
+                    loss = loss_dict['loss_total']
+                    if batch_num%self.append_count == 0:
+                        loss_batch.append(loss.detach().cpu().numpy())
+                    
+                    for loss_part in loss_dict:
+                        if loss_part not in loss_batch_partial:
+                            loss_batch_partial[loss_part] = list()
+                        if batch_num%self.append_count == 0:
+                            loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
+                            loss_batch_partial[loss_part].append(loss_part_value)
+                    
+                    loss.backward()
+                    self.optimizer.step()
+            
+            dataBatches_noise = self.dataLoaded_noise.generate()
+            self.model.eval() 
+            generator = self.model.get_decoder()
+            for batch_num, dataBatch in enumerate(dataBatches_noise):
+                item_batch = len(dataBatch)
+                loss = torch.zeros([1])                    
+                y_hat_list_test = list()
+                sample_list = list()
+                for i, item in enumerate(dataBatch):                    
+                    
+                    samplef = item['noise']
+                    sample = samplef.type(torch.float32)
+                    sample_list.append(sample)
+                
+                x_in = torch.Tensor(1, item_batch, self.latent_dim).to(device=self.device)
+                torch.cat(sample_list, out=x_in) 
+                
+                if model_flatten_in:
+                    x_in = x_in.view(-1,self.latent_dim)
+                    x_in.unsqueeze_(1)
+                    
+                y_hat = generator(x=x_in)
+                y_hat_list_test = list()
+                
+                for i in range(item_batch):
+                    item_dict = {"x_input": {"data": y_hat['x_input']['data'][i][0]}, "x_latent":{"mu":y_hat['x_input']['data'][i][0], "logvar":y_hat['x_input']['data'][i][0]}, "x_output": {"data": y_hat['x_output']['data'][i][0]}}
+                    y_hat_list_test.append(item_dict)
+                #loss_dict = self.loss_obj.computate_loss(y_hat_list_test, epoch)
+
+                #loss = loss_dict['loss_total']
+                
+                #if batch_num%self.append_count == 0:
+                #    loss_batch_test.append(loss.detach().cpu().numpy())
+            
+            self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch, "TEST_loss": np.mean(loss_batch_test)}
+            for loss_part in loss_dict:
+                self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
+            
+            self.time_performance.stop_time(f"{training_name}_VAE_TRAINING_epoch")
+            epoch_time = self.time_performance.get_time(f"{training_name}_VAE_TRAINING_epoch", fun="last")
+            epoch_train.append({"epoch":epoch,"time":epoch_time})
+            if self.opt_scheduler_ae == "ReduceLROnPlateau":
+                self.scheduler_ae.step(np.mean(loss_batch))
+            elif self.opt_scheduler_ae == "StepLR":
+                self.scheduler_ae.step() 
+            
+            self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}", model_section="AE")
+            #cprint("\tepoch:\t",epoch+1,"/",self.epoch['VAE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tloss_test: ",np.mean(loss_batch_test),"\tlr: ",self.optimizer.param_groups[0]['lr'], "cyan"))
+            cprint(f"\tepoch:\t{epoch+1}/{self.epoch['VAE']}\t - time tr epoch: {epoch_time} \tloss: {np.mean(loss_batch)} \tloss_test: {np.mean(loss_batch_test)} \tlr: {self.optimizer.param_groups[0]['lr']}", "black")
+            #cprint(f"\t\t\t{self.loss_dict[epoch]}","cyan")
+
+            if epoch+1 == self.epoch['VAE']:
+                self.save_intermediate_results(y_hat_list_train,epoch)
+            
+        if plot_loss:
+            self.loss_plot(self.loss_dict)
+        if save_trainingTime:
+            self.time_performance.compute_time(f"{training_name}_VAE_TRAINING_epoch", fun = "mean")
+            self.save_training_time(epoch_train)
+
+    def training_CVAE(self, model_flatten_in, training_name, plot_loss=True, save_trainingTime=True):
+        self.loss_dict = dict()
+        self.model.train()
+        epoch_train = list()
+        print("\tepoch:\t",0,"/",self.epoch['CVAE'],"\t -")
+        for epoch in range(self.epoch['CVAE']):
+            self.time_performance.start_time(f"{training_name}_CVAE_TRAINING_epoch")
+            self.model.train()
+            loss_batch = list()
+            loss_batch_test = list()
+            loss_batch_partial = dict()
+            
+            dataBatches_train = self.dataLoaded_train.generate()
+            
+            for batch_num, dataBatch in enumerate(dataBatches_train):
+                item_batch = len(dataBatch)
+                if item_batch == self.batchsize:
+                    loss = torch.zeros([1])                    
+                    self.optimizer.zero_grad()
+                    y_hat_list_train = list()
+                    sample_list = list()
+                    sample_timeweather_list = list()
+                    for i, item in enumerate(dataBatch):
+                        sample = item['sample'].type(torch.float32)
+                        sample_timeweather = item['sample_timeweather'].type(torch.float32)
+                        sample_list.append(sample)
+                        sample_timeweather_list.append(sample_timeweather)
+                        
+                        
+                    x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
+                    x_in_timeweather = torch.Tensor(1, item_batch, self.timeweather_count).to(device=self.device)
+                    torch.cat(sample_list, out=x_in) 
+                    torch.cat(sample_timeweather_list, out=x_in_timeweather) 
+                    if model_flatten_in:
+                        x_in = x_in.view(-1,self.univar_count_in)
+                        x_in.unsqueeze_(1)
+                        x_in_timeweather = x_in_timeweather.view(-1, self.timeweather_count)
+                        x_in_timeweather.unsqueeze_(1)
+                        
+                    y_hat = self.model.forward(x=x_in, condition= x_in_timeweather)
+                    print("y_hat", y_hat)
+                    raise Exception("-")
+                    y_hat_list_train = list()
+                    for i in range(item_batch):
+                        item_dict = {"x_input": {"data": y_hat['x_input']['data'][i][0], "timeweather":y_hat['x_input']['timeweather'][i][0]}, "x_latent":{"mu":y_hat['x_latent']["mu"][i][0], "logvar":y_hat['x_latent']["logvar"][i][0]}, "x_output":{"data":y_hat['x_output'][i][0]}}
+                        y_hat_list_train.append(item_dict)
+                    
+                    loss_dict = self.loss_obj.computate_loss(y_hat_list_train,epoch )
+                    
+                    
+                    loss = loss_dict['loss_total']
+                    if batch_num%self.append_count == 0:
+                        loss_batch.append(loss.detach().cpu().numpy())
+                    
+                    for loss_part in loss_dict:
+                        if loss_part not in loss_batch_partial:
+                            loss_batch_partial[loss_part] = list()
+                        if batch_num%self.append_count == 0:
+                            loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
+                            loss_batch_partial[loss_part].append(loss_part_value)
+                    
+                    loss.backward()
+                    self.optimizer.step()
+            
+            dataBatches_test = self.dataLoaded_test.generate()
+            self.model.eval() 
+            
+            for batch_num, dataBatch in enumerate(dataBatches_test):
+                item_batch = len(dataBatch)
+                loss = torch.zeros([1])                    
+                y_hat_list_test = list()
+                sample_list = list()
+                sample_timeweather_list = list()
+                
+                for i, item in enumerate(dataBatch):                    
+                    sample = item['sample'].type(torch.float32)
+                    sample_timeweather = item['sample_timeweather'].type(torch.float32)
+                    sample_list.append(sample)
+                    sample_timeweather_list.append(sample_timeweather)
+                x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
+                x_in_timeweather = torch.Tensor(1, item_batch, self.timeweather_count).to(device=self.device)
+                torch.cat(sample_list, out=x_in) 
+                torch.cat(sample_timeweather_list, out=x_in_timeweather)
+                
+                if model_flatten_in:
+                    x_in = x_in.view(-1,self.univar_count_in)
+                    x_in.unsqueeze_(1)
+                    x_in_timeweather = x_in_timeweather.view(-1, self.timeweather_count)
+                    x_in_timeweather.unsqueeze_(1)
+                    
+                y_hat = self.model.forward(x=x_in, x_in_timeweather=x_in_timeweather)
+                y_hat_list_test = list()
+                
+                for i in range(item_batch):
+                    item_dict = {"x_input": {"data": y_hat['x_input']['data'][i][0], "timeweather":y_hat['x_input']['timeweather'][i][0]}, "x_latent":{"mu":y_hat['x_latent']["mu"][i][0], "logvar":y_hat['x_latent']["logvar"][i][0]}, "x_output":{"data":y_hat['x_output'][i][0]}}
+                    
+                    y_hat_list_test.append(item_dict)
+                loss_dict = self.loss_obj.computate_loss(y_hat_list_test, epoch)
+
+                loss = loss_dict['loss_total']
+                if batch_num%self.append_count == 0:
+                    loss_batch_test.append(loss.detach().cpu().numpy())
+            
+            self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch, "TEST_loss": np.mean(loss_batch_test)}
+            for loss_part in loss_dict:
+                self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
+            
+            self.time_performance.stop_time(f"{training_name}_CVAE_TRAINING_epoch")
+            epoch_time = self.time_performance.get_time(f"{training_name}_CVAE_TRAINING_epoch", fun="last")
+            epoch_train.append({"epoch":epoch,"time":epoch_time})
+            if self.opt_scheduler_ae == "ReduceLROnPlateau":
+                self.scheduler_ae.step(np.mean(loss_batch))
+            elif self.opt_scheduler_ae == "StepLR":
+                self.scheduler_ae.step() 
+            
+            
+            
+            self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}", model_section="AE")
+            print("\tepoch:\t",epoch+1,"/",self.epoch['CVAE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tloss_test: ",np.mean(loss_batch_test),"\tlr: ",self.optimizer.param_groups[0]['lr'])
+
+            if epoch+1 == self.epoch['CVAE']:
+                self.save_intermediate_results(y_hat_list_train,epoch)
+            
+        if plot_loss:
+            self.loss_plot(self.loss_dict)
+        if save_trainingTime:
+            self.time_performance.compute_time(f"{training_name}_CVAE_TRAINING_epoch", fun = "mean")
+            self.save_training_time(epoch_train)
+
+
+
+
+
+
     # Weight initialization
     def weights_init(m):
         classname = m.__class__.__name__
@@ -687,13 +971,16 @@ class ModelTraining():
                     self.getBack(n[0])
 
     def getModel(self, selection='all', eval=False, train=False, extra_info=False):
-        if self.model_type == "AE":
+        if self.model_type in ["AE","VAE"]:
             if selection=='all':
                 model_selected = self.model
             if selection=='encoder':
                 raise Exception("Encoder not implemented")
             if selection=='decoder':
-                model_selected, model_size, model_permutation_forward = self.model.get_decoder(extra_info=extra_info)
+                if extra_info:
+                    model_selected, model_size, model_permutation_forward = self.model.get_decoder(extra_info=extra_info)
+                else:
+                    model_selected = self.model.get_decoder(extra_info=extra_info)
                 if train:
                     model_selected = model_selected.train()
                 elif eval:
@@ -762,6 +1049,31 @@ class ModelTraining():
         gradient_penalty = torch.pow(real_grad.norm(2, dim=1) - 1, 2).mean()
         return gradient_penalty
 
+    def save_intermediate_results(self, data, epoch):
+        path_fold_intermediate_results = Path(self.path_folder, self.model_type, "intermediate_results")
+        if not os.path.exists(path_fold_intermediate_results):
+            os.makedirs(path_fold_intermediate_results)
+        filepath = Path(path_fold_intermediate_results, f'intermediate_epoch_{epoch}.csv')
+        rows = []
+        for item in data:
+            if self.model_type == "VAE":
+                rows.append({
+                    'x_input': item['x_input'],
+                    'x_latent_mu': item['x_latent']['mu'],
+                    'x_latent_logvar': item['x_latent']['logvar'],
+                    'x_output': item['x_output']
+                })
+            else:
+                rows.append({
+                    'x_input': item['x_input'],
+                    'mx_latentu': item['x_latent']['latent'],
+                    'x_output': item['x_output']
+                })
+
+        df = pd.DataFrame(data)
+        df.to_csv(filepath, index=False)
+    
+    
     def loss_plot(self, loss_dict):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
@@ -862,3 +1174,5 @@ class ModelTraining():
         path_save_gradients_list = Path(self.path_save_model_gradients,f"{model_section}_gradientlist_epoch_{epoch_str}.csv")
         df = pd.DataFrame(gradients_list)
         df.to_csv(path_save_gradients_list, index=False)
+
+

@@ -24,14 +24,15 @@ class AutoEncoderModels(nn.Module):
         self.models = dict()
         self.edge_index = edge_index
         self.permutation_forward = dict()
+        self.graph_forward = dict()
         if load_from_file:
             self.layers_list = self.load_fileJson(json_filepath)
         else:
             self.layers_list = layers_list
         self.models_layers = dict()
         self.models_size = dict()
-        self.models_layers['encoder'], self.models_size['encoder'], self.permutation_forward['encoder'] = self.list_to_model(self.layers_list['encoder_layers'])
-        self.models_layers['decoder'], self.models_size['decoder'], self.permutation_forward['decoder'] = self.list_to_model(self.layers_list['decoder_layers'])
+        self.models_layers['encoder'], self.models_size['encoder'], self.permutation_forward['encoder'], self.graph_forward['encoder'] = self.list_to_model(self.layers_list['encoder_layers'])
+        self.models_layers['decoder'], self.models_size['decoder'], self.permutation_forward['decoder'], self.graph_forward['decoder'] = self.list_to_model(self.layers_list['decoder_layers'])
         self.deploy_nnModel()
         
     def get_size(self, ):
@@ -40,8 +41,8 @@ class AutoEncoderModels(nn.Module):
     def deploy_nnModel(self):
         
         if self.edge_index is not None:
-            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], permutation_forward = self.permutation_forward['encoder'], edge_index= self.edge_index)
-            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], permutation_forward = self.permutation_forward['decoder'], edge_index= self.edge_index)
+            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], permutation_forward = self.permutation_forward['encoder'], edge_index= self.edge_index ,graph_forward=self.graph_forward['encoder'])
+            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], permutation_forward = self.permutation_forward['decoder'], edge_index= self.edge_index ,graph_forward=self.graph_forward['decoder'])
         else:
             self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'])
             self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'])
@@ -72,12 +73,13 @@ class AutoEncoderModels(nn.Module):
     
     def forward(self, x):
         x_latent = self.models['encoder'](x)
-        x_hat = self.models['decoder'](x_latent["x_output"])
-        return {"x_input":x, "x_latent":{"latent":x_latent["x_output"]}, "x_output":x_hat["x_output"]}
+        x_hat = self.models['decoder'](x_latent["x_output"]['data'])
+        return {"x_input":{"data":x}, "x_latent":{"latent":x_latent["x_output"]['data']}, "x_output":{"data":x_hat["x_output"]['data']}}
 
     def list_to_model(self, layers_list):
         layers = list()
         permutation_forward = dict()
+        graph_forward = dict()
         size = {"input_size":None, "output_size":None}
         for index, layer_item in enumerate(layers_list):
             
@@ -89,9 +91,19 @@ class AutoEncoderModels(nn.Module):
                 size["output_size"] = layer_item['out_features']
             elif layer_item['layer'] == "GCNConv":
                 layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+                graph_forward[index] = "GCNConv_node"
             elif layer_item['layer'] == "GCNConv_Permute":
                 layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
                 permutation_forward[index] = {"in_permute":layer_item['in_permute'],"out_permute":layer_item['out_permute']}
+                graph_forward[index] = "GCNConv_node"
+            
+            elif layer_item['layer'] == "GCNConv_edges":
+                layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+                graph_forward[index] = "GCNConv_edge"
+            elif layer_item['layer'] == "GCNConv_edges_Permute":
+                layers.append(gm.GCNConv(in_channels=layer_item['in_channels'], out_channels=layer_item['out_channels']))
+                permutation_forward[index] = {"in_permute":layer_item['in_permute'],"out_permute":layer_item['out_permute']}
+                graph_forward[index] = "GCNConv_edge"
             
             #activation function
             elif layer_item['layer'] == "Tanh":
@@ -107,7 +119,7 @@ class AutoEncoderModels(nn.Module):
             #dropout
             elif layer_item['layer'] == "Dropout":
                 layers.append(nn.Dropout(p=layer_item['p']))
-        return layers, size, permutation_forward
+        return layers, size, permutation_forward, graph_forward
 
     def load_fileJson(self, filepath):
         with open(filepath, 'r') as f:
@@ -126,6 +138,11 @@ class nn_Model(nn.Module):
         self.edge_index = edge_index
         self.apply(self.weights_init_normal)
         print("Layers initialized:", self.layers)
+        
+        unique_nodes = torch.unique(edge_index)
+        num_nodes = unique_nodes.size(0)
+        print(num_nodes)
+        self.x_zeros = torch.zeros((num_nodes, 1), dtype=torch.float)
     
     def weights_init_normal(self, m):
         if isinstance(m, nn.Linear):
@@ -134,15 +151,24 @@ class nn_Model(nn.Module):
                 nn.init.zeros_(m.bias)
                 
     def forward(self, x):
+        x_in = x
         for  index, layer in enumerate(self.layers):
             if isinstance(layer, gm.GCNConv):
                 if index in self.permutation_forward:
                     in_permute = self.permutation_forward[index]["in_permute"]
                     x = x.permute(in_permute[0], in_permute[1], in_permute[2])                
-                x = layer(x, self.edge_index) 
+                if index in self.graph_forward:
+                    if self.graph_forward[index] =="GCNConv_node":
+                        x = layer(x, self.edge_index) 
+                    elif  self.graph_forward[index] =="GCNConv_node":
+                    
+                        x = layer(self.x_zeros, self.edge_index,x) 
+                else:
+                    x = layer(x, self.edge_index) 
+                
                 if index in self.permutation_forward:
                     out_permute = self.permutation_forward[index]["out_permute"]
                     x = x.permute(out_permute[0], out_permute[1], out_permute[2])
             else:
                 x = layer(x)
-        return {"x_input": x, "x_output": x}
+        return {"x_input": {'data':x_in}, "x_output": {'data':x}}
