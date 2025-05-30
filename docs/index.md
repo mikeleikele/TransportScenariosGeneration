@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="images/most-colore-412x291.webp" alt="Traffic Scenarios Logo" width="200"/>
-</p>
-
 # Traffic Scenarios Generation
 
 Welcome to the project page!  
@@ -12,6 +8,12 @@ This site documents how to run experiments for generating traffic scenarios.
 🚧 Page Under Construction – More content coming soon! 🚧
 </p>
 ---
+## Code
+The code to run is available at:  
+[https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
+
+Before using it, please contact us at:  
+[michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it) or [miki_992@hotmail.it](mailto:miki_992@hotmail.it).
 
 ## Script Usage
 
@@ -65,3 +67,21 @@ To see the full list of available options, run:
 ```
 python3 test.py --h
 ```
+
+---
+
+## Acknowledgements
+
+The work presented code has been partially funded by :
+
+<table>
+  <tr>
+    <td style="vertical-align: middle; width: 220px;">
+      <img src="images/most-colore-412x291.webp" alt="MOST Logo" width="200" />
+    </td>
+    <td style="vertical-align: middle; padding-left: 15px;">
+      <strong>MOST - National Sustainable Mobility Center</strong>, part of the European Union’s NextGenerationEU project (MOST - National Sustainable Mobility Center CN00000023, Italian Ministry of University and Research Decree No. 1033-17/06/2022, Spoke 8).
+    </td>
+  </tr>
+</table>
+
