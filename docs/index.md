@@ -24,6 +24,8 @@ This repository contains a script for running traffic scenario generation experi
 1. **num_case** (type: int)
     - Description: The case number for the experiment. You can find the different experiment cases in `NeuroExperiment.py`.
     - Example: `--num_case 1`
+    <p>For more details about the available experiment cases, see the <a href="num_case.md">num_case documentation</a>.</p>
+
 
 2. **experiment_name_suffix** (type: string)
     - Description: Suffix to add to the experiment name for identification. When performing multiple repetitions of an experiment, this string will indicate the folder suffix, followed by the seed number used .
@@ -48,6 +50,9 @@ This repository contains a script for running traffic scenario generation experi
 7. **train_models** (type: yes/no)
     - Description: Whether to train the model again.
     - Example: `--train_models yes`
+## Studies Cases
+
+For more details about the available experiment cases, see the [num_case documentation](num_case.md).
 
 ## Example Usage
 
