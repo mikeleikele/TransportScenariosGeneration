@@ -63,10 +63,10 @@ python3 test.py --h
 ```
 ---
 
-# <span style="color:orange;">Publications and Conferences</span>
+## <span style="color:orange;">Publications and Conferences</span>
 
 ---
-# <span style="color:orange;">Code and contacts</span>
+## <span style="color:orange;">Code and contacts</span>
 The code to run is available at:  
 [https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
 
@@ -75,7 +75,7 @@ Before using it, please contact us at:
 
 ---
 
-# <span style="color:orange;">Acknowledgements</span>
+## <span style="color:orange;">Acknowledgements</span>
 
 The work presented code has been partially funded by :
 
