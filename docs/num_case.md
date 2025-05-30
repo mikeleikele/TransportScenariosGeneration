@@ -20,7 +20,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 ## METR-LA DATASET
 **Model: AE+GAN**
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-----|-----------|-----------------------------------|
 | 1   | PEMS_METR | AE>GAN_linear_pretrained_METR_16  |
 | 2   | PEMS_METR | AE>GAN_linear_pretrained_METR_32  |
@@ -32,7 +32,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 
 **Model: AE+GAN**
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-----|-----------|-----------------------------------|
 | 5   | PEMS_METR | AE>GAN_linear_pretrained_PEMS_16  |
 | 6   | PEMS_METR | AE>WGAN_linear_pretrained_PEMS_16 |
@@ -45,7 +45,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 
 **Model: AE+GAN Fully Connected**
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | 11    | CHENGDU_SMALLGRAPH| AE>GAN_CHENGDU_SMALLGRAPH_16_A_linear |
 | 12    | CHENGDU_SMALLGRAPH| AE>GAN_CHENGDU_SMALLGRAPH_32_A_linear |
@@ -59,7 +59,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 
 **Model: AE+GAN with GraphConvolutional layers**
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | gvae_0016 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph  |
 | gvae_0032 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_32_A_graph  |
@@ -74,7 +74,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 
 **Model: VAE with GraphConvolutional layers**
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | vae_0016 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_fix  |
 | vae_0032 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_fix  |
@@ -90,7 +90,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 **Model: B-VAE with GraphConvolutional layers**
 B-VAE with B funciotion: linear from 0 to 1
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | bvae_0016_lin | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_lin   |
 | bvae_0032_lin | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_lin   |
@@ -102,7 +102,7 @@ B-VAE with B funciotion: linear from 0 to 1
 
 B-VAE with B funciotion: cos with period 20 epochs
 
-| ID  | Case      | Model Case                          |
+| num_case | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | bvae_0016_cos | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_cos  |
 | bvae_0032_cos | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_cos  |
