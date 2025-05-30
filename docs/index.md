@@ -104,5 +104,16 @@ If you have any questions, please contact us at:
       <strong>MOST - National Sustainable Mobility Center</strong>, part of the European Union’s NextGenerationEU project (MOST - National Sustainable Mobility Center CN00000023, Italian Ministry of University and Research Decree No. 1033-17/06/2022, Spoke 8).
     </td>
   </tr>
+  <tr>
+    <td style="vertical-align: middle; width: 220px;">
+      <img src="images/Logo_ultraoptymal.png" alt="MOST Logo" width="200" />
+    </td>
+    <td style="vertical-align: middle; padding-left: 15px;">
+      <strong>ULTRA OPTYMAL - Urban Logistics and sustainable TRAnsportation: OPtimization under uncertainty and MAchine Learning}, a PRIN2020 project funded by the Italian University and Research Ministry (grant number 20207C8T9M).
+    </td>
+  </tr>
+
+
+  
 </table>
 
