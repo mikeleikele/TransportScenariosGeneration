@@ -77,7 +77,7 @@ Before using it, please contact us at:
 ---
 <h2 style="color:#c08c40;">Acknowledgements</h2>
 
-The work presented code has been partially funded by :
+**This work has been funded by:**
 
 <table>
   <tr>
