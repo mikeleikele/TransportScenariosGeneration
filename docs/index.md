@@ -64,7 +64,6 @@ python3 test.py --h
 ---
 <h2 style="color:orange;">Publications and Conferences</h2>
 
-
 ---
 <h2 style="color:orange;">Code and contacts</h2>
 
