@@ -19,7 +19,7 @@ This repository contains a script for running traffic scenario generation experi
 1. **num_case** (type: int)
     - Description: The case number for the experiment. You can find the different experiment cases in `NeuroExperiment.py`.
     - Example: `--num_case 1`
-    <p>For more details about the available experiment cases, see the <a href="num_case.md">num_case documentation</a>.</p>
+    <p>For more details about the available experiment cases, see the [num_case documentation](num_case.md).</p>
 
 
 2. **experiment_name_suffix** (type: string)
