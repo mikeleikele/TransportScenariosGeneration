@@ -70,6 +70,37 @@ python3 test.py --h
 ---
 <h2 style="color:#c08c40;">Publications and Conferences</h2>
 
+
+<div style="margin: 30px 0; font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px;">
+
+  <div style="margin-bottom: 20px;">
+    <strong>Carbonera, M., Ciavotta, M., Messina, E. (2024).</strong>  
+    Variational Autoencoders and Generative Adversarial Networks for Multivariate Scenario Generation.  
+    <em>DATA SCIENCE FOR TRANSPORTATION, 6(3)</em>  
+    [<a href="https://dx.doi.org/10.1007/s42421-024-00097-y" target="_blank" style="color: #c08c40; text-decoration: none;">10.1007/s42421-024-00097-y</a>].
+  </div>
+  
+  <a href="https://dx.doi.org/10.1007/s42421-024-00097-y" target="_blank"
+     style="background-color: #c08c40; color: white; padding: 10px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-bottom: 30px;">
+    Paper 2024 - DATA SCIENCE FOR TRANSPORTATION
+  </a>
+
+  <div style="margin-bottom: 20px;">
+    <strong>Carbonera, M., Ciavotta, M., Messina, V. (2023).</strong>  
+    Driving into Uncertainty: An Adversarial Generative Approach for Multivariate Scenario Generation.  
+    In <em>Proceedings - 2023 IEEE International Conference on Big Data, BigData 2023</em> (pp. 2578-2587).  
+    IEEE.  
+    [<a href="https://dx.doi.org/10.1109/BigData59044.2023.10386128" target="_blank" style="color: #c08c40; text-decoration: none;">10.1109/BigData59044.2023.10386128</a>].
+  </div>
+  
+  <a href="https://dx.doi.org/10.1109/BigData59044.2023.10386128" target="_blank"
+     style="background-color: #c08c40; color: white; padding: 10px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+    Paper 2023 - IEEE Big Data Conference
+  </a>
+
+</div>
+
+
 ---
 <h2 style="color:#c08c40;">Dataset, code and contacts</h2>
 
