@@ -31,6 +31,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 ## PEMS_BAY DATASET
 
 **Model: AE+GAN**
+
 | ID  | Case      | Model Case                          |
 |-----|-----------|-----------------------------------|
 | 5   | PEMS_METR | AE>GAN_linear_pretrained_PEMS_16  |
@@ -57,6 +58,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 | 19    | CHENGDU_SMALLGRAPH| AE>GAN_CHENGDU_SMALLGRAPH_512_A_linear|
 
 **Model: AE+GAN with GraphConvolutional layers**
+
 | ID  | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | gvae_0016 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph  |
@@ -71,6 +73,7 @@ This page describes the different values of the <code>num_case</code> parameter 
 | gvae_1024 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_1024_A_graph|
 
 **Model: VAE with GraphConvolutional layers**
+
 | ID  | Case      | Model Case                          |
 |-------|-------------------|---------------------------------------|
 | vae_0016 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_fix  |
