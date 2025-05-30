@@ -1,3 +1,8 @@
+---
+layout: default
+title: Traffic Scenarios Generation
+---
+
 <h1 style="color:#1d66ab;">Traffic Scenarios Generation</h1>
 
 Welcome to the project page!  
