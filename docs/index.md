@@ -104,7 +104,7 @@ If you have any questions, please contact us at:
       <img src="images/Logo_ultraoptymal.png" alt="MOST Logo" width="200" />
     </td>
     <td style="vertical-align: middle; padding-left: 15px;">
-      <strong>ULTRA OPTYMAL - Urban Logistics and sustainable TRAnsportation: OPtimization under uncertainty and MAchine Learning}, a PRIN2020 project funded by the Italian University and Research Ministry (grant number 20207C8T9M).
+      <strong>ULTRA OPTYMAL - Urban Logistics and sustainable TRAnsportation: OPtimization under uncertainty and MAchine Learning</strong>  PRIN2020 project funded by the Italian University and Research Ministry (grant number 20207C8T9M).
     </td>
   </tr>
 </table>
