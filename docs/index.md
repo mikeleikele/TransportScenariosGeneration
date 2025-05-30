@@ -1,10 +1,10 @@
-# Traffic Scenarios Generation
+<h1 style="color:#1d66ab;">Traffic Scenarios Generation</h1>
 
 Welcome to the project page!  
 This site documents how to run experiments for generating traffic scenarios.
 
 ---
-<p align="center" style="color:orange; font-weight:bold;">
+<p align="center" style="color:#c08c40; font-weight:bold;">
 🚧 Page Under Construction – More content coming soon! 🚧
 </p>
 ---
@@ -62,10 +62,10 @@ To see the full list of available options, run:
 python3 test.py --h
 ```
 ---
-<h2 style="color:orange;">Publications and Conferences</h2>
+<h2 style="color:#c08c40;">Publications and Conferences</h2>
 
 ---
-<h2 style="color:orange;">Code and contacts</h2>
+<h2 style="color:#c08c40;">Code and contacts</h2>
 
 
 The code to run is available at:  
@@ -75,7 +75,7 @@ Before using it, please contact us at:
 [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
 
 ---
-<h2 style="color:orange;">Acknowledgements</h2>
+<h2 style="color:#c08c40;">Acknowledgements</h2>
 
 The work presented code has been partially funded by :
 
