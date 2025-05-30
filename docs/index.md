@@ -55,18 +55,20 @@ Example
 python3 test.py --neuroD --num_case 1 --experiment_name_suffix 2024_07_10_METR_16 --main_folder 2024_07_10_METR_16__OPT_split --repeation 5 --optimization yes --load_model no --train_models yes
 ```
 
-# Help
+## Help
 
 To see the full list of available options, run:
 ```
 python3 test.py --h
 ```
 ---
+<h2 style="color:orange;">Publications and Conferences</h2>
 
-## <span style="color:orange;">Publications and Conferences</span>
 
 ---
-## <span style="color:orange;">Code and contacts</span>
+<h2 style="color:orange;">Code and contacts</h2>
+
+
 The code to run is available at:  
 [https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
 
@@ -74,8 +76,7 @@ Before using it, please contact us at:
 [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
 
 ---
-
-## <span style="color:orange;">Acknowledgements</span>
+<h2 style="color:orange;">Acknowledgements</h2>
 
 The work presented code has been partially funded by :
 
