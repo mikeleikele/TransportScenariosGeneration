@@ -65,13 +65,16 @@ python3 test.py --h
 <h2 style="color:#c08c40;">Publications and Conferences</h2>
 
 ---
-<h2 style="color:#c08c40;">Code and contacts</h2>
+<h2 style="color:#c08c40;">Dataset, code and contacts</h2>
 
 
 The code to run is available at:  
 [https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
 
-Before using it, please contact us at:  
+**Due to the large size of the dataset, it is not currently possible to host it on this page.**  
+If you are interested in accessing the dataset, please contact us at  [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
+
+Before using our code, please contact us at:  
 [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
 
 ---
