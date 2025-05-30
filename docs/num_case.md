@@ -20,85 +20,25 @@ This page describes the different values of the <code>num_case</code> parameter 
 ## METR-LA DATASET
 **Model: AE+GAN**
 
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Case</th>
-      <th>Model Case</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>1</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_METR_16</td>
-    </tr>
-    <tr>
-      <td>2</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_METR_32</td>
-    </tr>
-    <tr>
-      <td>3</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_METR_48</td>
-    </tr>
-    <tr>
-      <td>4</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_METR_64</td>
-    </tr>
-  </tbody>
-</table>
-
+| ID  | Case      | Model Case                          |
+|-----|-----------|-----------------------------------|
+| 1   | PEMS_METR | AE>GAN_linear_pretrained_METR_16  |
+| 2   | PEMS_METR | AE>GAN_linear_pretrained_METR_32  |
+| 3   | PEMS_METR | AE>GAN_linear_pretrained_METR_48  |
+| 4   | PEMS_METR | AE>GAN_linear_pretrained_METR_64  |
 
 
 ## PEMS_BAY DATASET
 
 **Model: AE+GAN**
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Case</th>
-      <th>Model Case</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>5</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_PEMS_16</td>
-    </tr>
-    <tr>
-      <td>6</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;WGAN_linear_pretrained_PEMS_16</td>
-    </tr>
-    <tr>
-      <td>7</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_PEMS_32</td>
-    </tr>
-    <tr>
-      <td>8</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;WGAN_linear_pretrained_PEMS_32</td>
-    </tr>
-    <tr>
-      <td>9</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_PEMS_48</td>
-    </tr>
-    <tr>
-      <td>10</td>
-      <td>PEMS_METR</td>
-      <td>AE&gt;GAN_linear_pretrained_PEMS_64</td>
-    </tr>
-  </tbody>
-</table>
-
+| ID  | Case      | Model Case                          |
+|-----|-----------|-----------------------------------|
+| 5   | PEMS_METR | AE>GAN_linear_pretrained_PEMS_16  |
+| 6   | PEMS_METR | AE>WGAN_linear_pretrained_PEMS_16 |
+| 7   | PEMS_METR | AE>GAN_linear_pretrained_PEMS_32  |
+| 8   | PEMS_METR | AE>WGAN_linear_pretrained_PEMS_32 |
+| 9   | PEMS_METR | AE>GAN_linear_pretrained_PEMS_48  |
+| 10  | PEMS_METR | AE>GAN_linear_pretrained_PEMS_64  |
 
 ## CHENGDU DATASET
 
