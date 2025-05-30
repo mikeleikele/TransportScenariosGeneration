@@ -62,6 +62,8 @@ This page describes the different values of the <code>num_case</code> parameter 
 | 19    | CHENGDU_SMALLGRAPH| AE>GAN_CHENGDU_SMALLGRAPH_512_A_linear|
 
 **Model: AE+GAN with GraphConvolutional layers**
+| ID  | Case      | Model Case                          |
+|-------|-------------------|---------------------------------------|
 | gvae_0016 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_16_A_graph  |
 | gvae_0032 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_32_A_graph  |
 | gvae_0048 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_48_A_graph  |
@@ -74,6 +76,8 @@ This page describes the different values of the <code>num_case</code> parameter 
 | gvae_1024 | CHENGDU_SMALLGRAPH | AE>GAN_CHENGDU_SMALLGRAPH_1024_A_graph|
 
 **Model: VAE with GraphConvolutional layers**
+| ID  | Case      | Model Case                          |
+|-------|-------------------|---------------------------------------|
 | vae_0016 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_fix  |
 | vae_0032 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_fix  |
 | vae_0048 | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_48_A_graph_kl_fix  |
@@ -88,6 +92,8 @@ This page describes the different values of the <code>num_case</code> parameter 
 **Model: B-VAE with GraphConvolutional layers**
 B-VAE with B funciotion: linear from 0 to 1
 
+| ID  | Case      | Model Case                          |
+|-------|-------------------|---------------------------------------|
 | bvae_0016_lin | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_lin   |
 | bvae_0032_lin | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_lin   |
 | bvae_0048_lin | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_48_A_graph_kl_lin   |
@@ -98,6 +104,8 @@ B-VAE with B funciotion: linear from 0 to 1
 
 B-VAE with B funciotion: cos with period 20 epochs
 
+| ID  | Case      | Model Case                          |
+|-------|-------------------|---------------------------------------|
 | bvae_0016_cos | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_16_A_graph_kl_cos  |
 | bvae_0032_cos | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_32_A_graph_kl_cos  |
 | bvae_0048_cos | CHENGDU_SMALLGRAPH | VAE_CHENGDU_SMALLGRAPH_48_A_graph_kl_cos  |
