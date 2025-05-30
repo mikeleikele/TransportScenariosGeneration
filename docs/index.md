@@ -74,8 +74,10 @@ The code to run is available at:
 **Due to the large size of the dataset, it is not currently possible to host it on this page.**  
 If you are interested in accessing the dataset, please contact us at  [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
 
-Before using our code, please contact us at:  
-[michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
+If you have any questions, please contact us at:  
+[michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it)
+
+**If you make use of this work, we kindly ask you to cite our related publications.**
 
 ---
 <h2 style="color:#c08c40;">Acknowledgements</h2>
