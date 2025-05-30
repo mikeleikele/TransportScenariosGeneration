@@ -8,12 +8,6 @@ This site documents how to run experiments for generating traffic scenarios.
 🚧 Page Under Construction – More content coming soon! 🚧
 </p>
 ---
-## Code
-The code to run is available at:  
-[https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
-
-Before using it, please contact us at:  
-[michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it) or [miki_992@hotmail.it](mailto:miki_992@hotmail.it).
 
 ## Script Usage
 
@@ -67,10 +61,21 @@ To see the full list of available options, run:
 ```
 python3 test.py --h
 ```
+---
+
+# <span style="color:orange;">Publications and Conferences</span>
+
+---
+# <span style="color:orange;">Code and contacts</span>
+The code to run is available at:  
+[https://github.com/mikeleikele/TransportScenariosGeneration](https://github.com/mikeleikele/TransportScenariosGeneration)
+
+Before using it, please contact us at:  
+[michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it).
 
 ---
 
-## Acknowledgements
+# <span style="color:orange;">Acknowledgements</span>
 
 The work presented code has been partially funded by :
 
