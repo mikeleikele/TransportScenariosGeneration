@@ -1,4 +1,4 @@
-<h1 style="color:#1d66ab;">Experiment Cases (num_case)</h1>
+<h1 style="color:#1d66ab;">Experiment Cases</h1>
 ---
 layout: default
 title: Available num_case Values
