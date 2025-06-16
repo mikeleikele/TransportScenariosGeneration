@@ -220,6 +220,7 @@ class InstancesGeneration():
         
     def experiment(self, num_case, main_folder, seed, experiment_name, optimization, load_model, loss_obj, time_slot=None):
         id_experiments = num_case
+        print(f"Experiment ID: {id_experiments}")
         experiments_list = self.getExperimentsList(seed, optimization)
         #experiments_selected = experiments_list["experiments_list"][id_experiments]
         

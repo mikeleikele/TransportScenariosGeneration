@@ -3,39 +3,25 @@ import numpy as np
 import pandas as pd
 from numpy.linalg import inv
 from termcolor import cprint 
-<<<<<<< HEAD
 from scipy.stats import wasserstein_distance
-=======
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
+
 
 class Optimization_functions():
     
     def __init__(self):
-<<<<<<< HEAD
         self.object_list = ['mahalanobis','mahalanobis+wasserstein','wasserstein']
-=======
-        self.object_list = ['mahalanobis']
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
         self.name_fun = None
         
     def set_object_fun(self, name_fun):
         if name_fun in self.object_list:
             self.name_fun = name_fun
         else:
-<<<<<<< HEAD
             raise Exception(f"Optimization function {name_fun} not exist.")
-=======
-            raise Exception("Optimization function not exist.")
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
         cprint(f"OPTIMIZATION OBJECT FUN: ", "red", end="\n")
         cprint(f"\t{name_fun}", "red", end="\n")
     
     def get_score(self, values):
-<<<<<<< HEAD
         scores = dict()
-=======
-        score = None
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
         if self.name_fun is None:
             raise Exception("No optimization function selected")
         elif self.name_fun == "mahalanobis":
@@ -43,7 +29,6 @@ class Optimization_functions():
             val_gen = values['out_data_vc'].to_numpy()
             dist_mahalanobis = self.mahalanobis(X=val_real, Y=val_gen)
             score = dist_mahalanobis
-<<<<<<< HEAD
             scores['mahalanobis'] = dist_mahalanobis
         
         elif self.name_fun == "mahalanobis+wasserstein" or self.name_fun == "mahala+wass":
@@ -72,12 +57,6 @@ class Optimization_functions():
         cprint(f"\t\t{scores}", "green", end="\n")
         scores['all'] = score
         return scores
-=======
-        else:
-            raise Exception(f"Optimization function {self.name_fun} non developed")
-        cprint(f"Optimization function score:\t{score}", "green", end="\n")
-        return score
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
     
     def mahalanobis(self, X, Y):
         mu_X = np.mean(X, axis=0)
@@ -90,7 +69,6 @@ class Optimization_functions():
         
         diff = mu_X - mu_Y
         dist_mahalanobis = np.sqrt(diff.T @ inv(cov_combined) @ diff)
-<<<<<<< HEAD
         return dist_mahalanobis
     
     def wasserstein(self, X, Y, aggregate="mean"):
@@ -103,6 +81,3 @@ class Optimization_functions():
             dist_wasserstein = np.linalg.norm(distances)
         print(dist_wasserstein, "distances")
         return dist_wasserstein
-=======
-        return dist_mahalanobis
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009

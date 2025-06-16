@@ -1,23 +1,17 @@
 import os
 from pathlib import Path
-<<<<<<< HEAD
 from src.NeuroCorrelation.Models.AutoEncoderModels import *
+from src.NeuroCorrelation.Models.VariationalAutoEncoderModels import *
 from src.NeuroCorrelation.Models.GenerativeAdversarialModels import *
+from src.NeuroCorrelation.Models.ConditionalVariationalAutoEncoderModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
-
-=======
-from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
-from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_models import *
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
 
 class PEMS_METR_settings():
     
-<<<<<<< HEAD
+
     def __init__(self, model_case, device, univar_count, lat_dim, dataset_setting, epoch, path_folder, corrCoeff, instaces_size, time_performance, time_slot=None):
-=======
-    def __init__(self, model_case, device, univar_count, lat_dim, dataset_setting, epoch, path_folder, corrCoeff, instaces_size, time_slot=None):
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
+
         self.model_case = model_case
         self.device = device
         self.dataset_setting = dataset_setting
@@ -29,7 +23,7 @@ class PEMS_METR_settings():
         self.path_folder = path_folder
         self.time_slot = time_slot
         self.model = dict()
-<<<<<<< HEAD
+
         self.model_settings = dict()
         self.time_performance = time_performance
         self.setting_model_case()
@@ -203,121 +197,9 @@ class PEMS_METR_settings():
                 self.model["WGAN"] = GenerativeAdversarialModels(device=self.device, load_from_file =self.model_settings["WGAN"]['load_from_file'],
                             json_filepath=self.model_settings["WGAN"]['json_filepath'],
                             edge_index=self.edge_index)
-=======
+
         self.setting_model_case()
     
-    def setting_model_case(self):
-        if   self.model_case == "AE>GAN_linear_pretrained_16_METR_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S16"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_16
-            self.model['GAN'] =PEMS_METR_GAN_16
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_32_METR_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_32
-            self.model['GAN'] =PEMS_METR_GAN_32
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_48_METR_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_48
-            self.model['GAN'] =PEMS_METR_GAN_48
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_64_METR_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "METR_LA_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_64
-            self.model['GAN'] =PEMS_METR_GAN_64
-            
-        if   self.model_case == "AE>GAN_linear_pretrained_16_PEMS_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S16"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_16
-            self.model['GAN'] =PEMS_METR_GAN_16
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_32_PEMS_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_32
-            self.model['GAN'] =PEMS_METR_GAN_32
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_48_PEMS_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_48
-            self.model['GAN'] =PEMS_METR_GAN_48
-            
-        elif self.model_case == "AE>GAN_linear_pretrained_64_PEMS_bt":
-            self.mode = "graph_roads"
-            self.name_dataset = "PEMS_BAY_S32"
-            self.nets = ['AE', 'GAN']
-            self.graph_topology = False
-            self.loss_dict = {
-                'AE':{"JENSEN_SHANNON_DIVERGENCE_LOSS":1, "MEDIAN_LOSS_batch":0.005, "VARIANCE_LOSS":0.5, "SPEARMAN_CORRELATION_LOSS":1},
-                'GAN': dict()
-                }
-            self.trainingMode = "AE>GAN"
-            self.model['AE'] = PEMS_METR_AE_64
-            self.model['GAN'] =PEMS_METR_GAN_64
-            
-        self.path_folder_nets = dict()
-        for key in self.nets:
-            self.path_folder_nets[key] = Path(self.path_folder,'AE')
-            if not os.path.exists(self.path_folder_nets[key]):
-                os.makedirs(self.path_folder_nets[key])
-    
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
     def get_trainingMode(self):
         return self.trainingMode
 
@@ -334,11 +216,8 @@ class PEMS_METR_settings():
         return self.graph_topology
     
     def get_DataLoader(self, seed_data):      
-<<<<<<< HEAD
         dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)
-=======
-        dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset="METR_LA_S16", time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, path_folder=self.path_folder)
->>>>>>> 6e047d3bc78e64be6f768228aef9fbe06679d009
+
         return dataloader
     
     def get_LossFunction(self):
