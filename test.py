@@ -4,7 +4,7 @@ from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 from src.SamplesGeneration.FlowSampling  import FlowSampling
 from src.SamplesGeneration.FlowVisualization  import FlowVisualization
 
-from src.NeuroCorrelation.NeuroExperiment import NeuroExperiment
+from src.NeuroCorrelation.InstancesGeneration import InstancesGeneration
 
 from pathlib import Path
 import sys
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     
     elif parsed_args.exp ==  "neuroD":        
     
-        neuroExp = NeuroExperiment(sys.argv[1:])
+        neuroExp = InstancesGeneration(sys.argv[1:])
         cprint(Style.BRIGHT + f"Folder :\t{parsed_args.main_folder}" + Style.RESET_ALL, 'red', attrs=["bold"])
     else:
         print(0," no opt recognized")
