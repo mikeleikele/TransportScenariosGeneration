@@ -103,7 +103,7 @@ class InstancesGeneration():
             gc.collect()
 
 
-    def getExperimentsList(self,seed,optimization):
+    def getExperimentsList(self, seed,optimization):
         experiments_list = [
             {"id":   0, "model_case":"autoencoder_3_copula_optimization", "epoch":{'AE':   3,'GAN':   2}, "univar_count": 7, "lat_dim": 3, "dataset_setting":{"batch_size":  32, "train_percentual":None,"starting_sample":None,"train_samples":None,"test_samples":None, "noise_samples":10000, "seed":seed}, "instaces_size" :1, "input_shape":"vector"},
 
