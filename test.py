@@ -90,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument('--par', type=str, required=False, help='par')
     
     
-    parser.add_argument('--num_case', type=int, required=True, help='Description for num_case')
+    parser.add_argument('--num_case', type=str, required=True, help='Description for num_case')
     parser.add_argument('--experiment_name_suffix', type=str, required=True, help='Description for experiment_name_suffix')
     parser.add_argument('--main_folder', type=str, required=True, help='Description for main_folder')
     parser.add_argument("--repeation_b", type=str, required=True, help='Description for repeation - begin')  

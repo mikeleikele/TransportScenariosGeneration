@@ -43,6 +43,7 @@ class DatasetTool:
                 if config[name_dataset][version_dataset]["filename"][self.time_slot] is not None:
                     dataset_settings["filename"] = Path(config[name_dataset][version_dataset]["filename"][self.time_slot])
             else:
+                print(config[name_dataset][version_dataset]["filename"])
                 dataset_settings["filename"] = Path(config[name_dataset][version_dataset]["filename"])
         else:
             dataset_settings["filename"] = None
