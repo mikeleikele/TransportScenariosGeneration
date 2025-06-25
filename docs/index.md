@@ -4,8 +4,11 @@
 
 
 <h1 style="color:#c08c40;">Generative AI for Traffic Modeling - Research Portal</h1>
+
+
 <h2 style="color:#c08c40;">Project Overview</h2>
 This page provides an overview of the research project, including methodology, results, and guidance for reproducing the experiments.
+
 
 ---
 <h2 style="color:#c08c40;">Publications and Conferences</h2>
