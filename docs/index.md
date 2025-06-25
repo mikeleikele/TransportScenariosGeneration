@@ -1,9 +1,4 @@
-
-<h1 style="color:#1d66ab;">Traffic Scenarios Generation</h1>
-
-
-
-<h1 style="color:#c08c40;">Generative AI for Traffic Modeling - Research Portal</h1>
+<h1 style="color:#1d66ab;">Generative AI for Traffic Scenarios Generation - Research Portal</h1>
 
 
 <h2 style="color:#c08c40;">Project Overview</h2>
