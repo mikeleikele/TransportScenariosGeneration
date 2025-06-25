@@ -4,7 +4,7 @@
 <h2 style="color:#c08c40;">Project Overview</h2>
 This page provides an overview of the research project, including methodology, results, and guidance for reproducing the experiments.
 
-
+<br>
 ---
 <h2 style="color:#c08c40;">Publications and Conferences</h2>
 
@@ -38,7 +38,7 @@ This page provides an overview of the research project, including methodology, r
 
 </div>
 
-
+<br>
 ---
 <h2 style="color:#c08c40;">Dataset, code and contacts</h2>
 
@@ -53,11 +53,11 @@ If you have any questions, please contact us at:
 [michele.carbonera@unimib.it](mailto:michele.carbonera@unimib.it)
 
 **If you make use of this work, we kindly ask you to cite our related publications.**
-
+<br>
 ---
 <p align="center" style="color:#c08c40; font-weight:bold;"> 🔧 Page in Progress – Additional content will be made available shortly. 🔧 </p>
 ---
-
+<br>
 ## Script Usage
 
 This repository contains a script for running traffic scenario generation experiments with several configurable parameters.
@@ -118,6 +118,8 @@ To see the full list of available options, run:
 ```
 python3 test.py --h
 ```
+
+<br>
 ---
 <h2 style="color:#c08c40;">Acknowledgements</h2>
 
