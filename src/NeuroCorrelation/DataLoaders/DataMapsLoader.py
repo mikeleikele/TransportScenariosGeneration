@@ -25,16 +25,17 @@ from colorama import init, Style
 
 class DataMapsLoader():
 
-    def __init__(self, torch_device, name_dataset, version_dataset, lat_dim, univar_count, path_folder, seed, time_performance, timeweather, timeweather_settings, name_key="ae", noise_distribution = "gaussian", univ_limit=150, time_slot=None):
+    def __init__(self, torch_device, name_dataset, version_dataset, key_value_list, lat_dim, univar_count, path_folder, seed, time_performance, timeweather, timeweather_settings, name_key="ae", noise_distribution = "gaussian", univ_limit=150, time_slot=None):
         self.torch_device = torch_device
+        self.key_value_list = key_value_list
         self.lat_dim = lat_dim
         self.name_key = name_key
         self.univar_count = univar_count
         self.name_dataset = name_dataset
         self.version_dataset = version_dataset
         self.seed = seed
-        self.min_val = None
-        self.max_val = None
+        self.min_val = dict()
+        self.max_val = dict()
         self.mean_vc_val = dict()
         self.median_vc_val = dict()
         self.variance_vc_val = dict()
@@ -90,15 +91,23 @@ class DataMapsLoader():
     def getTimeweatherCount(self):
         return self.timeweather_count
     
-    def getDataRange(self):
-        rangeData = {"max_val": self.max_val, "min_val":self.min_val}
-        return rangeData
+    def getDataRange(self, key_name=None):
+        if key_name is None:
+            return {"max_val": self.max_val, "min_val": self.min_val}
+        else:
+            return {"max_val": self.max_val.get(key_name), "min_val": self.min_val.get(key_name)}
+
     
-              
-    def getDataStats(self):
-        statsData = {"mean_val": self.mean_vc_val, "median_val":self.median_vc_val, "variance_val":self.variance_vc_val}
-        return statsData
-        
+    def getDataStats(self, key_name=None):
+        if key_name is None:
+            return {"mean_val": self.mean_vc_val, "median_val": self.median_vc_val, "variance_val": self.variance_vc_val}
+        else:
+            # Filtra le stats per la chiave specifica
+            mean_filtered = {k: v for k, v in self.mean_vc_val.items() if k.startswith(key_name)}
+            median_filtered = {k: v for k, v in self.median_vc_val.items() if k.startswith(key_name)}
+            variance_filtered = {k: v for k, v in self.variance_vc_val.items() if k.startswith(key_name)}
+            return {"mean_val": mean_filtered, "median_val": median_filtered, "variance_val": variance_filtered}
+ 
     def get_muR(self):
         if self.with_cov:
             return {"mu":self.mu, "r_psd": self.r_psd}
@@ -115,89 +124,99 @@ class DataMapsLoader():
         return self.edge_index
     
     def mapsVC_load(self, train_percentual=0.70, draw_plots=True, draw_correlationCoeff=False,  verbose=False):
-        all_values_vc = dict()
+        all_values_vc = {key_name: dict() for key_name in self.key_value_list}
         vc_mapping = list()
-        
         
         train_istance = None
 
-        for i, key_vc in enumerate(self.data_df['ref'].values):
-            vc_mapping.append(key_vc)
-            all_values_vc[key_vc] = dict()        
-            vc_values = [float(x) for x in self.data_df['traffic_speed'][i][0:-2].strip('[]').replace('"', '').replace(' ', '').split(',')]
-            if verbose:
-                print("\tkey",key_vc,"\t#istances:\t", len(vc_values))
-            all_values_vc[key_vc]['values'] = vc_values
-            
-            if self.min_val is None:
-                self.min_val = min(vc_values)
-            else:
-                min_vc = min(vc_values)
-                self.min_val = min(min_vc, self.min_val)
-            
-            if self.max_val is None:
-                self.max_val = max(vc_values)
-            else:
-                max_vc = max(vc_values)
-                self.max_val = max(max_vc, self.max_val)
-            self.mean_vc_val[key_vc] = statistics.mean(vc_values)
-            self.median_vc_val[key_vc] = statistics.median(vc_values)
-            self.variance_vc_val[key_vc] = statistics.variance(vc_values)
+        for key_value_name in self.key_value_list:
+            print(f"\nProcessing key: {key_value_name}")
+
+            for i, key_vc in enumerate(self.data_df['ref'].values):
+                if key_value_name not in all_values_vc:
+                    all_values_vc[key_value_name] = dict()
+
+                combined_key = f"{key_value_name}_{key_vc}"
+                if i == 0 and key_value_name == self.key_value_list[0]:
+                    vc_mapping.append(key_vc)
+                
+                all_values_vc[key_value_name][key_vc] = dict()
+                
+                vc_values = [float(x) for x in self.data_df[key_value_name][i][0:-2].strip('[]').replace('"', '').replace(' ', '').split(',')]
+                
+                if verbose:                    
+                    print(f"\tkey: {key_value_name} __ {key_vc}, vc: {key_vc}\t#istances:\t{len(vc_values)}")
+                
+                all_values_vc[key_value_name][key_vc]['values'] = vc_values
+
+                if self.min_val[key_value_name] is None:
+                    self.min_val[key_value_name] = min(vc_values)
+                else:
+                    min_vc = min(vc_values)
+                    self.min_val[key_value_name] = min(min_vc, self.min_val[key_value_name])
+                
+                if self.max_val[key_value_name] is None:
+                    self.max_val[key_value_name] = max(vc_values)
+                else:
+                    max_vc = max(vc_values)
+                    self.max_val[key_value_name] = max(max_vc, self.max_val[key_value_name])
+                
+                # Salva le statistiche con chiave combinata
+                self.mean_vc_val[combined_key] = statistics.mean(vc_values)
+                self.median_vc_val[combined_key] = statistics.median(vc_values)
+                self.variance_vc_val[combined_key] = statistics.variance(vc_values)
 
         
         self.mean_val = None
         self.median_val = None
         
-        mu = dict()
-        mu['train'] = list()
-        rho_train_list = list()
+        mu = {key_name: {'train': list(), 'test': list()} for key_name in self.key_value_list}
+        rho_train_dict = {key_name: list() for key_name in self.key_value_list}
+        rho_test_dict = {key_name: list() for key_name in self.key_value_list}
 
-        mu['test'] = list()
-        rho_test_list = list()
-
+        # Usa i valori della prima chiave per determinare train_istance
+        first_key = self.key_value_list[0]
+        first_vc = self.data_df['ref'].values[0]
+        vc_values = all_values_vc[first_key][first_vc]['values']
         train_istance = math.floor(len(vc_values) * train_percentual)
         
         shuffle_indexes = [i for i in range(len(vc_values))]
-        
         random.Random(self.seed).shuffle(shuffle_indexes)
         
-        
         if verbose:
-            print("\tglobal min :\t",self.min_val)
-            print("\tglobal max :\t",self.max_val)        
-            print("\tvc     mean:\t",self.mean_vc_val)
-            print("\tvc     median:\t",self.median_vc_val)
-            print("\tvc     variance:\t",self.variance_vc_val)
+            for key_name in self.key_value_list:
+                print(f"\n{key_name}:")
+                print(f"\tglobal min :\t{self.min_val[key_name]}")
+                print(f"\tglobal max :\t{self.max_val[key_name]}")
+            print("\tvc mean:", self.mean_vc_val)
+            print("\tvc median:", self.median_vc_val)
+            print("\tvc variance:", self.variance_vc_val)
             
-        train_values_vc = dict()
-        test_values_vc = dict()
+        train_values_vc = {key_name: dict() for key_name in self.key_value_list}
+        test_values_vc = {key_name: dict() for key_name in self.key_value_list}
         self.vc_mapping_list = self.data_df['ref'].values.tolist()
         
-        for key_vc in self.data_df['ref'].values:
-            train_values_vc[key_vc] = dict()
-            train_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc[key_vc]['values'])) if i in shuffle_indexes[:train_istance]]
-            train_values_vc[key_vc]['values'] = (np.array(train_istance_list) - self.min_val)/(self.max_val - self.min_val)
-            train_values_vc[key_vc]['mean'] = np.mean(train_values_vc[key_vc]['values'])
-            train_values_vc[key_vc]['std'] = np.std(train_values_vc[key_vc]['values'])
-            mu['train'] = train_values_vc[key_vc]['mean']
-            rho_train_list.append(train_values_vc[key_vc]['values'])
-            self.train_samples = len(train_values_vc[key_vc]['values'])
+        # Processa train/test per ogni chiave
+        for key_value_name in self.key_value_list:
+            for key_vc in self.data_df['ref'].values:
+                train_values_vc[key_value_name][key_vc] = dict()
+                train_istance_list = [all_values_vc[key_value_name][key_vc]['values'][i] for i in range(len(all_values_vc[key_value_name][key_vc]['values'])) if i in shuffle_indexes[:train_istance]]
+                train_values_vc[key_value_name][key_vc]['values'] = (np.array(train_istance_list) - self.min_val[key_value_name])/(self.max_val[key_value_name] - self.min_val[key_value_name])
+                train_values_vc[key_value_name][key_vc]['mean'] = np.mean(train_values_vc[key_value_name][key_vc]['values'])
+                train_values_vc[key_value_name][key_vc]['std'] = np.std(train_values_vc[key_value_name][key_vc]['values'])
+                mu[key_value_name]['train'] = train_values_vc[key_value_name][key_vc]['mean']
+                rho_train_dict[key_value_name].append(train_values_vc[key_value_name][key_vc]['values'])
+                self.train_samples = len(train_values_vc[key_value_name][key_vc]['values'])
 
-            test_values_vc[key_vc] = dict()
-            test_istance_list = [all_values_vc[key_vc]['values'][i] for i in range(len(all_values_vc[key_vc]['values'])) if i in shuffle_indexes[train_istance:]]
-            
-            test_values_vc[key_vc]['values'] = (np.array(test_istance_list) - self.min_val)/(self.max_val - self.min_val)
-            test_values_vc[key_vc]['mean'] = np.mean(test_values_vc[key_vc]['values'])
-            test_values_vc[key_vc]['std'] = np.std(test_values_vc[key_vc]['values'])
-            mu['test'] = test_values_vc[key_vc]['mean']
-            rho_test_list.append(test_values_vc[key_vc]['values'])
-            self.test_samples = len(test_values_vc[key_vc]['values'])
-            
-            #print("\t#istances train\tkey:",key_vc," :",len(train_values_vc[key_vc]['values']))
-            #print("\t#istances test\tkey:",key_vc," :",len(test_values_vc[key_vc]['values']))
-        
-        
-
+                test_values_vc[key_value_name][key_vc] = dict()
+                test_istance_list = [all_values_vc[key_value_name][key_vc]['values'][i] for i in range(len(all_values_vc[key_value_name][key_vc]['values'])) if i in shuffle_indexes[train_istance:]]
+                
+                test_values_vc[key_value_name][key_vc]['values'] = (np.array(test_istance_list) - self.min_val[key_value_name])/(self.max_val[key_value_name] - self.min_val[key_value_name])
+                test_values_vc[key_value_name][key_vc]['mean'] = np.mean(test_values_vc[key_value_name][key_vc]['values'])
+                test_values_vc[key_value_name][key_vc]['std'] = np.std(test_values_vc[key_value_name][key_vc]['values'])
+                mu[key_value_name]['test'] = test_values_vc[key_value_name][key_vc]['mean']
+                rho_test_dict[key_value_name].append(test_values_vc[key_value_name][key_vc]['values'])
+                self.test_samples = len(test_values_vc[key_value_name][key_vc]['values'])
         
         if self.timeweather:
             self.timeweather_df_train = self.timeweather_df.iloc[shuffle_indexes[:train_istance]]
@@ -206,35 +225,41 @@ class DataMapsLoader():
             self.timeweather_df_test.reset_index(drop=True, inplace=True)
 
 
-        filename_train = Path(self.path_folder,"samples_train.csv")
-        filename_test = Path(self.path_folder,"samples_test.csv")
-        tw_filename_train = Path(self.path_folder,"timeweather_train.csv")
-        tw_filename_test = Path(self.path_folder,"timeweather_test.csv")
-        idx_filename_train = Path(self.path_folder,"indexes_train.csv")
-        idx_filename_test = Path(self.path_folder,"indexes_test.csv")
+        # Salva i file per ogni chiave
+        for key_value_name in self.key_value_list:
+            key_folder = Path(self.path_folder, key_value_name)
+            if not os.path.exists(key_folder):
+                os.makedirs(key_folder)
+                
+            filename_train = Path(key_folder, "samples_train.csv")
+            filename_test = Path(key_folder, "samples_test.csv")
+            
+            # Usa l'ultimo key_vc per il salvataggio (come nell'originale)
+            np.savetxt(filename_train, train_values_vc[key_value_name][key_vc]['values'], delimiter=",")
+            np.savetxt(filename_test, test_values_vc[key_value_name][key_vc]['values'], delimiter=",")
+            
+            print(f"\t{key_value_name} train samples: done")
+            print(f"\t{key_value_name} test samples: done")
+
+        # Salva timeweather e indexes una sola volta (comuni a tutte le chiavi)
+        tw_filename_train = Path(self.path_folder, "timeweather_train.csv")
+        tw_filename_test = Path(self.path_folder, "timeweather_test.csv")
+        idx_filename_train = Path(self.path_folder, "indexes_train.csv")
+        idx_filename_test = Path(self.path_folder, "indexes_test.csv")
+        filename_vc_mapping = Path(self.path_folder, "vc_mapping.csv")
         
-        
-        filename_vc_mapping = Path(self.path_folder,"vc_mapping.csv")
-        list_vcmapping_str = list()
-        for item in self.vc_mapping_list:
-            list_vcmapping_str.append(f'{item}')
-        np.savetxt(filename_train, train_values_vc[key_vc]['values'], delimiter=",")
-        np.savetxt(filename_test, test_values_vc[key_vc]['values'], delimiter=",")
+        list_vcmapping_str = [f'{item}' for item in self.vc_mapping_list]
         df_vc_mapping = pd.DataFrame(list_vcmapping_str, columns=['vc_name'])
         df_vc_mapping.to_csv(filename_vc_mapping, sep='\t')
-
-        print("\ttrain samples: done")
-        print("\ttest samples: done")
         
         if self.timeweather:
             np.savetxt(tw_filename_train, self.timeweather_df_train.to_numpy(), delimiter=' ', fmt='%d')
             np.savetxt(tw_filename_test, self.timeweather_df_test.to_numpy(), delimiter=' ', fmt='%d')
             print("\ttrain samples timeweather: done")
             print("\ttest samples timeweather: done")
+            
         print("Save shuffled indexes")
-        
         train_idx = shuffle_indexes[:train_istance]
-        
         test_idx = shuffle_indexes[train_istance:]
 
         with open(idx_filename_train, mode='w', encoding='utf-8') as file:
@@ -242,52 +267,64 @@ class DataMapsLoader():
 
         with open(idx_filename_test, mode='w', encoding='utf-8') as file:
             file.write(','.join(map(str, test_idx)) + '\n')
-            
-            
+        
+        # Calcola e salva le correlazioni per ogni chiave
         ticks_list = np.concatenate([[''], self.data_df['ref'].values])
-        rho_train = np.corrcoef(rho_train_list)
         
-        if draw_correlationCoeff:  
-            self.plot_correlation(rho_corr=rho_train, ticks_list=ticks_list, name_plot="train", path_fold=self.path_folder, draw_plots=draw_plots)
-            print("\ttrain correlation: done")
-        
-            rho_test = np.corrcoef(rho_test_list)
-            self.plot_correlation(rho_corr=rho_test, ticks_list=ticks_list, name_plot="test", path_fold=self.path_folder, draw_plots=draw_plots)
-            print("\ttest correlation: done")
-        
-        self.train_data_vc = pd.DataFrame()
-        for key_vc in train_values_vc:
-            self.train_data_vc[key_vc] = train_values_vc[key_vc]['values']
-        
-        
-        self.test_data_vc = pd.DataFrame()
-        for key_vc in test_values_vc:
-            self.test_data_vc[key_vc] = test_values_vc[key_vc]['values']
-        
-        if draw_plots:         
-            self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=None, path_folder= self.path_folder, name_key=self.name_key)
+        for key_value_name in self.key_value_list:
+            rho_train = np.corrcoef(rho_train_dict[key_value_name])
+            
             if draw_correlationCoeff:
-                self.comparison_plot.plot_vc_analysis(self.train_data_vc,plot_name="mapsTrain")
-                print("\ttrain correlation plot: done")
-                self.comparison_plot.plot_vc_analysis(self.test_data_vc,plot_name="mapsTest")
-                print("\ttest correlation plot: done")
-            data_plot = {"train_data":self.train_data_vc,"test_data":self.test_data_vc}
-            #self.comparison_plot_syntetic.plot_vc_real2gen(data_plot, labels=["train","test"], plot_name="test_train")
+                key_folder = Path(self.path_folder, key_value_name)
+                self.plot_correlation(rho_corr=rho_train, ticks_list=ticks_list, name_plot=f"train_{key_value_name}",key_value_name=key_value_name, path_fold=key_folder, draw_plots=draw_plots)
+                print(f"\t{key_value_name} train correlation: done")
+            
+                rho_test = np.corrcoef(rho_test_dict[key_value_name])
+                self.plot_correlation(rho_corr=rho_test, ticks_list=ticks_list, name_plot=f"test_{key_value_name}", key_value_name=key_value_name, path_fold=key_folder, draw_plots=draw_plots)
+                print(f"\t{key_value_name} test correlation: done")
+        
+        # Salva i dataframe per ogni chiave
+        self.train_data_vc = {key_name: pd.DataFrame() for key_name in self.key_value_list}
+        self.test_data_vc = {key_name: pd.DataFrame() for key_name in self.key_value_list}
+        
+        for key_value_name in self.key_value_list:
+            for key_vc in train_values_vc[key_value_name]:
+                self.train_data_vc[key_value_name][key_vc] = train_values_vc[key_value_name][key_vc]['values']
+            
+            for key_vc in test_values_vc[key_value_name]:
+                self.test_data_vc[key_value_name][key_vc] = test_values_vc[key_value_name][key_vc]['values']
+        
+        if draw_plots:
+            for key_value_name in self.key_value_list:
+                key_folder = Path(self.path_folder, key_value_name)
+                if not os.path.exists(key_folder):
+                    os.makedirs(key_folder)
+                    
+                self.comparison_plot = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=None, path_folder=key_folder, name_key=self.name_key)
+                if draw_correlationCoeff:
+                    self.comparison_plot.plot_vc_analysis(self.train_data_vc[key_value_name], plot_name=f"mapsTrain_{key_value_name}")
+                    print(f"\t{key_value_name} train correlation plot: done")
+                    self.comparison_plot.plot_vc_analysis(self.test_data_vc[key_value_name], plot_name=f"mapsTest_{key_value_name}")
+                    print(f"\t{key_value_name} test correlation plot: done")
 
 
-    def mapsVC_getData(self, name_data="train",  draw_plots=True, instaces_size=1, draw_correlationCoeff=True):
-        path_fold_Analysis = Path(self.path_folder,name_data+"_data_analysis")
+    def mapsVC_getData(self, key_value_name=None, name_data="train", draw_plots=True, instaces_size=1, draw_correlationCoeff=True):
+        # Se non specificato, usa la prima chiave
+        if key_value_name is None:
+            key_value_name = self.key_value_list[0]
+            
+        path_fold_Analysis = Path(self.path_folder, key_value_name, name_data+"_data_analysis")
         if not os.path.exists(path_fold_Analysis):
             os.makedirs(path_fold_Analysis)
         
-        if name_data=="train":
-            data = self.train_data_vc
+        if name_data == "train":
+            data = self.train_data_vc[key_value_name]
             n_istances = self.train_samples
             if self.timeweather:
                 tw_data = self.timeweather_df_train
                 
-        elif name_data=="test":
-            data = self.test_data_vc
+        elif name_data == "test":
+            data = self.test_data_vc[key_value_name]
             n_istances = self.test_samples
             if self.timeweather:
                 tw_data = self.timeweather_df_test
@@ -307,15 +344,15 @@ class DataMapsLoader():
                 for j in range(instaces_size):
                     maps_data_vc[id_var].append(item['sample'][id_var].detach().cpu().numpy().tolist())
         
-        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.lat_dim, path_folder= path_fold_Analysis, name_key=self.name_key)
+        self.comparison_datamaps = DataComparison(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.lat_dim, path_folder=path_fold_Analysis, name_key=self.name_key)
         if draw_correlationCoeff:
             df_data = pd.DataFrame(maps_data_vc)
             rho = self.comparison_datamaps.correlationCoeff(df_data)
-            
         else:
             rho = None
         
         return dataset_couple, rho
+
 
     def getSample(self, data, key_sample):
         sample = []
@@ -472,26 +509,39 @@ class DataMapsLoader():
         return randomNoise.type(torch.float32)
 
     
-    def plot_dataDist(self):
-        path_fold_dist = Path(self.path_folder,"univar_distribution_synthetic")
+    def plot_dataDist(self, key_value_name=None):
+        # Se non specificato, usa la prima chiave
+        if key_value_name is None:
+            key_value_name = self.key_value_list[0]
+            
+        path_fold_dist = Path(self.path_folder, key_value_name, "univar_distribution_synthetic")
         if not os.path.exists(path_fold_dist):
             os.makedirs(path_fold_dist)
+            
         for univ_id in range(len(self.mu)):
             mean_val = self.mu[univ_id]
             data_vals = self.sample_synthetic[univ_id][0]
             plt.figure(figsize=(12,8))
-            plt.axvline(x = mean_val, color = 'b', label = 'mean')
+            plt.axvline(x=mean_val, color='b', label='mean')
             plt.hist(data_vals, density=True, bins=50)
             mean_plt_txt = f"      mean: {mean_val:.3f}"
-            plt.text(mean_val, 0, s=mean_plt_txt, rotation = 90)            
-            filename = Path(path_fold_dist,"dist_synthetic_"+str(univ_id)+".png")
+            plt.text(mean_val, 0, s=mean_plt_txt, rotation=90)            
+            filename = Path(path_fold_dist, f"dist_synthetic_{key_value_name}_{univ_id}.png")
             plt.savefig(filename)
 
-    def plot_correlation(self, rho_corr, ticks_list, name_plot, path_fold, draw_plots=True):
+
+
+    def plot_correlation(self, rho_corr, ticks_list, name_plot, path_fold, key_value_name=None, draw_plots=True):
         corrcoef_Path = Path(path_fold, name_plot+"_corrcoef_mapsData.csv")
-        
+        if key_value_name is None:
+            key_value_name = self.key_value_list[0]
        
+        path_fold_dist = Path(self.path_folder, key_value_name, "univar_distribution_synthetic")
+        if not os.path.exists(path_fold_dist):
+            os.makedirs(path_fold_dist)
         
+        
+        corrcoef_Path = Path(path_fold_dist, name_plot+"_corrcoef_mapsData.csv")
         np.savetxt(corrcoef_Path, rho_corr, delimiter=",")
         if draw_plots and self.univar_count<self.univ_limit: 
             fig, ax = plt.subplots(figsize=(14,14))
@@ -510,6 +560,6 @@ class DataMapsLoader():
             plt.locator_params(axis='x', nbins=len(ticks_list))
             plt.locator_params(axis='y', nbins=len(ticks_list))
             plt.setp( ax.xaxis.get_majorticklabels(), rotation=-90, ha="left")
-            filename = Path(path_fold, name_plot+"_corrcoef_mapsData.png")
+            filename = Path(path_fold_dist, name_plot+"_corrcoef_mapsData.png")
             plt.savefig(filename)
             

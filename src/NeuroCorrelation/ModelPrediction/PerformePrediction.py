@@ -13,6 +13,8 @@ class PerformePrediction():
     def __init__(self, model,device,  model_type, data, dataGenerator, input_shape, rangeData, vc_mapping, univar_count, latent_dim, path_folder_pred, path_folder_data, path_map, time_performance, copulaData_filename, data_metadata, load_copula, key_dataout, use_copula=True, draw_plot=True, draw_scenarios=True, draw_correlationCoeff= True, noise_samples=1000):
         self.model = model
         self.model_type = model_type
+        self.vc_mapping = vc_mapping
+        self.device=device
         self.data = data
         self.dataGenerator = dataGenerator 
         self.input_shape = input_shape

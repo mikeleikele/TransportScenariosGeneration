@@ -399,6 +399,7 @@ class DataComparison():
                 mu, sigma = 0, math.sqrt(1) # mean and standard deviation
                 s = np.random.normal(mu, sigma, n_var)  
                 distr.append({'sample': torch.Tensor(s), 'noise': torch.Tensor(s)})
+
         
 
         fig = plt.figure(figsize=(18,18))
@@ -466,7 +467,7 @@ class DataComparison_Advanced():
         self.use_copula = use_copula
         self.load_copula = load_copula
         self.copulaData_filename = copulaData_filename
-        self.copula_test = False
+        self.copula_test = True
         self.time_performance = time_performance
         self.alredy_select_data = False
         self.metrics_pd = None
@@ -497,12 +498,23 @@ class DataComparison_Advanced():
         
         #input used to train
         input_instances = Path(input_folder,f"{suffix_input}.csv")
+        print(f"| Load input data: {input_instances}")
         input_data = pd.read_csv(input_instances)
+        print("input_data")
+        print(input_data)
         
         for j in range(len(input_data['x_input'])):
             res = input_data['x_input'][j].strip('][').split(', ')
+            
+            
+            
             for i in range(self.univar_count):
-                self.rand_var_in[i].append(float(res[i]))
+                value_str = res[i]
+                if value_str.startswith("np.float32"):
+                    value_str = value_str.replace("np.float32(", "").replace(")", "")
+                value = float(value_str)
+    
+                self.rand_var_in[i].append(value)
         print("\tload truth data: done")
         
         self.np_dist['real'] = pd.DataFrame.from_dict(self.rand_var_in).to_numpy()
@@ -520,7 +532,7 @@ class DataComparison_Advanced():
         else: 
             real_data = pd.DataFrame.from_dict(self.rand_var_in)
             if self.copula_test:
-                j_range = 50
+                j_range = 5
             else:
                 j_range = len(self.rand_var_in[0])
             cprint(Style.BRIGHT +f"| Copula data   : Fitted on {j_range} instances" + Style.RESET_ALL, 'magenta', attrs=["bold"])
@@ -568,7 +580,12 @@ class DataComparison_Advanced():
         for j in range(len(output_data['x_output'])):
             res = output_data['x_output'][j].strip('][').split(', ')
             for i in range(self.univar_count):
-                self.rand_var_out[i].append(float(res[i]))
+                value_str = res[i]
+                if value_str.startswith("np.float32"):
+                    value_str = value_str.replace("np.float32(", "").replace(")", "")
+                value = float(value_str)
+    
+                self.rand_var_out[i].append(value)
         self.np_dist[key] = pd.DataFrame.from_dict(self.rand_var_out).to_numpy()
         self.select_data()
         
@@ -647,7 +664,7 @@ class DataComparison_Advanced():
                 variable_dict['std_COP'] = cop_std
                 variable_dict['diff_real_cop'] = abs(in_mean-cop_mean)                
 
-            pd_stats = pd_stats.append(variable_dict, ignore_index = True)
+            pd_stats = pd.concat([pd_stats, pd.DataFrame([variable_dict])], ignore_index=True)
 
         filename = Path(self.path_folder, f"wasserstein_compare_{self.suffix}.csv")
         pd_stats.to_csv(filename)
@@ -707,8 +724,8 @@ class DataComparison_Advanced():
                 measure = self.mahalanobis(self.np_dist[data_A], self.np_dist[data_B])
                 measures[comparison] = measure
                 print(measures)
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
-        
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
+
         if 'corr_matrix' in metrics:
             measures = {'metric':'corr_matrix'}
             for comparison in self.comparisons:
@@ -717,7 +734,9 @@ class DataComparison_Advanced():
                 measure = self.corr_matrix(self.np_dist[data_A], self.np_dist[data_B], label_A=data_A,label_B=data_B)
                 measures[comparison] = measure
                 print(measures)
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
+
             
         if 'wasserstein' in metrics:
             measures = {'metric':'wasserstein'}
@@ -726,8 +745,9 @@ class DataComparison_Advanced():
                 data_B = self.comparisons[comparison]['b']
                 measure = self.wasserstein(self.np_dist[data_A], self.np_dist[data_B])
                 measures[comparison] = measure
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
+
             
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
         if 'bhattacharyya' in metrics:
             measures = {'metric':'bhattacharyya'}
             for comparison in self.comparisons:
@@ -736,7 +756,7 @@ class DataComparison_Advanced():
                 measure = self.bhattacharyya(self.np_dist[data_A], self.np_dist[data_B])
                 measures[comparison] = measure
             
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
         
         if 'histogram_error'in metrics:
             measures = {'metric':'histogram_error'}
@@ -750,7 +770,7 @@ class DataComparison_Advanced():
                 
                 print("measure histogram_error:\tA",measure,"\t\t",data_A,"vs",data_B)
                 measures[comparison] = measure
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
         
         if 'frechet' in metrics:
             measures = {'metric':'frechet'}
@@ -760,7 +780,7 @@ class DataComparison_Advanced():
                 measure = self.frechet_inception_distance(self.np_dist[data_A], self.np_dist[data_B])
                 measures[comparison] = measure
             
-            self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+            self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
         
         print(self.metrics_pd)
         if save:
@@ -1056,7 +1076,8 @@ class DataComparison_Advanced():
                     overlap = np.sum(np.minimum(grid_A, grid_B))
                     measures_overlap[comparison] = overlap
                 
-                self.metrics_pd = self.metrics_pd.append(measures_overlap, ignore_index=True)
+                
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures_overlap])], ignore_index=True)
                 
                 if apply_pca:
                     measures_TSNE_mah = {'metric':'PCA_TSNE_2D_MAHALANOBIS'}
@@ -1073,7 +1094,7 @@ class DataComparison_Advanced():
                     data_B_Mahala = data_B.drop(columns=['labels'])
                     
                     measures_TSNE_mah[comparison] = self.mahalanobis(data_A_Mahala,data_B_Mahala)
-                self.metrics_pd = self.metrics_pd.append(measures_TSNE_mah, ignore_index=True)
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures_TSNE_mah])], ignore_index=True)
             
                         
         
@@ -1124,7 +1145,8 @@ class DataComparison_Advanced():
                     
                     
                     measures_TSNE_mah[comparison] = self.mahalanobis(data_A_Mahala,data_B_Mahala)
-                self.metrics_pd = self.metrics_pd.append(measures_TSNE_mah, ignore_index=True)
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures_TSNE_mah])], ignore_index=True)
+
             if False:
                 if apply_pca:
                     measures = {'metric':'PCA_TSNE_3D_SpatialOverlapping'}
@@ -1157,7 +1179,7 @@ class DataComparison_Advanced():
                     overlap = np.sum(np.minimum(grid_A, grid_B))
                     measures[comparison] = overlap
                 
-                self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
         
         
         
@@ -1203,7 +1225,8 @@ class DataComparison_Advanced():
                     overlap = np.sum(np.minimum(grid_A, grid_B))
                     measures[comparison] = overlap
                 
-                self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+                
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
 
         if "3D" in PACMAP_components:
             embedding = pacmap.PaCMAP(n_components=3, n_neighbors=10, MN_ratio=0.5, FP_ratio=2.0) 
@@ -1267,7 +1290,7 @@ class DataComparison_Advanced():
                     overlap = np.sum(np.minimum(grid_A, grid_B))
                     measures[comparison] = overlap
                 
-                self.metrics_pd = self.metrics_pd.append(measures, ignore_index=True)
+                self.metrics_pd = pd.concat([self.metrics_pd, pd.DataFrame([measures])], ignore_index=True)
 
         if "3D" in UMAP_components:
             embedding = umap.UMAP(n_components=3, metric='euclidean', random_state=42, repulsion_strength=1.0) 
@@ -1337,7 +1360,7 @@ class CorrelationComparison():
             cosin_sim_val = self.cosineSimilarity(key_a,key_b)
 
             new_row = {'matrix_A':self.keyToSting(key_a), 'matrix_B':self.keyToSting(key_b), 'frobenius':frobenius_val,'spearmanr_statistic':spearmanr_val[0],'spearmanr_pvalue':spearmanr_val[1], 'cosineSimilarity':cosin_sim_val}
-            df = df.append(new_row, ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         csv_path = Path(self.path_fold, 'correlation_comparison.csv')
         df.to_csv(csv_path)
 

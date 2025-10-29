@@ -14,10 +14,11 @@ import pandas as pd
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, timeweather, timeweather_settings, noise_distribution="gaussian", vc_dict=None, univ_limit=150,  time_slot=None):
+    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, timeweather, timeweather_settings, key_value_list, noise_distribution="gaussian", vc_dict=None, univ_limit=150,  time_slot=None):
         
         self.mode = mode
         self.seed = seed
+        self.key_value_list = key_value_list
         self.name_dataset = name_dataset
         self.version_dataset = version_dataset
         self.vc_mapping = None
@@ -94,8 +95,8 @@ class DataLoader:
                 print("DATASET PHASE: Load maps data")
             print("draw_plots ",draw_plots)
             
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
-            self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, key_value_list=self.key_value_list, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
+            self.dataGenerator.mapsVC_load( train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)

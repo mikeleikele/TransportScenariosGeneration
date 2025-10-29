@@ -1,5 +1,6 @@
 from src.NeuroCorrelation.Models.CHENGDU_models.CHENGDU_SMALLGRAPH_settings.CHENGDU_SMALLGRAPH_settings import CHENGDU_SMALLGRAPH_settings
 from src.NeuroCorrelation.Models.CHENGDU_models.CHENGDU_URBAN_ZONE_settings.CHENGDU_URBAN_ZONE_settings import CHENGDU_URBAN_ZONE_settings
+from src.NeuroCorrelation.Models.SEOUL_models.SEOUL_SMALLGRAPH_settings.SEOUL_SMALLGRAPH_settings import SEOUL_SMALLGRAPH_settings
 from src.NeuroCorrelation.Models.PEMS_METR_models.PEMS_METR_settings import PEMS_METR_settings
 from src.NeuroCorrelation.Models.SP500_models.SP500_settings import SP500_settings
 
@@ -38,7 +39,7 @@ class InstancesGenerationCore():
 
     def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, do_optimization, opt_settings, num_gen_samples, load_copula, seed=0, run_mode="all", time_slot="A", loss_obj=None):
         device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
-        device = "cpu"
+        #device = "cpu"
         self.noise_distribution ="gaussian"
         self.seed_torch = seed
         self.seed_data = seed
@@ -151,12 +152,15 @@ class InstancesGenerationCore():
         self.model_case = model_case
         self.case = case
         
-        if self.case == "PEMS_METR" or self.case == "CHENGDU_SMALLGRAPH" or self.case == "CHENGDU_ZONE":
+        if self.case in ["PEMS_METR", "CHENGDU_SMALLGRAPH", "CHENGDU_ZONE", "SEOUL_SMALLGRAPH"]:
             if self.case == "PEMS_METR":
                 self.case_setting =   PEMS_METR_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance)
             elif self.case == "CHENGDU_SMALLGRAPH":
                 self.time_slot = time_slot
                 self.case_setting =   CHENGDU_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot, noise_distribution=self.noise_distribution)
+            elif self.case == "SEOUL_SMALLGRAPH":
+                self.time_slot = time_slot
+                self.case_setting =   SEOUL_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot, noise_distribution=self.noise_distribution)
             elif self.case == "CHENGDU_ZONE":
                 self.time_slot = time_slot
                 self.case_setting =   CHENGDU_URBAN_ZONE_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot)
@@ -219,7 +223,13 @@ class InstancesGenerationCore():
         print("rangeData:\t",self.rangeData)
         self.statsData = dataloader.get_statsData()
         self.path_map = dataloader.get_pathMap()
-        self.edge_index = dataloader.get_edgeIndex()
+        if self.graph_topology:
+            self.edge_index = dataloader.get_edgeIndex()
+        else:
+            self.edge_index = None
+        print("----------------------------------------")
+        print("edge_index",self.edge_index)
+        print("----------------------------------------")
         self.case_setting.set_edge_index(self.edge_index)
         
         self.copulaData_filename  = dataloader.get_copulaData_filename()

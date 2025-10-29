@@ -23,6 +23,8 @@ class DatasetTool:
             filepath = Path(folderpath,"CHENGDU_dataset.json")
         elif name_dataset == "SP500":
             filepath = Path(folderpath,"SP500_dataset.json")
+        elif name_dataset == "SEOUL":
+            filepath = Path(folderpath,"SEOUL_dataset.json")
         else:
             filepath = Path()
         return filepath
@@ -43,7 +45,6 @@ class DatasetTool:
                 if config[name_dataset][version_dataset]["filename"][self.time_slot] is not None:
                     dataset_settings["filename"] = Path(config[name_dataset][version_dataset]["filename"][self.time_slot])
             else:
-                print(config[name_dataset][version_dataset]["filename"])
                 dataset_settings["filename"] = Path(config[name_dataset][version_dataset]["filename"])
         else:
             dataset_settings["filename"] = None

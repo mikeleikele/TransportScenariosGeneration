@@ -1125,14 +1125,14 @@ class ModelTraining():
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
             os.makedirs(path_fold_lossplot)
-        #dftrainingTime = pd.DataFrame(columns=['epoch',"time"])
-        training_time_records = []
-        for item in list_training_time:
-            #dftrainingTime = dftrainingTime.append({'epoch': item["epoch"], 'time': item["time"] }, ignore_index=True)
-            training_time_records.append({'epoch': item["epoch"], 'time': item["time"] })
-        time_file = Path(path_fold_lossplot ,"epochs_time.csv")
-        dftrainingTime = pd.DataFrame(training_time_records)
-        dftrainingTime.to_csv(time_file, sep='\t')  
+
+        dftrainingTime = pd.DataFrame(list_training_time, columns=['epoch', 'time'])
+
+        # Salvataggio su file
+        time_file = Path(path_fold_lossplot, "epochs_time.csv")
+        dftrainingTime.to_csv(time_file, sep="\t", index=False)
+
+
 
     def plot_grad_flow(self, named_parameters, epoch, model_section):
         
