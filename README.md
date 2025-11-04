@@ -7,6 +7,8 @@ This repository contains a script for running Traffic Scenarios Generation exper
 
 ## Command-Line Arguments
 
+0. **exp** 
+#DA COMPILARE 
 
 1. **num_case** (type: int)
     - Description: The case number for the experiment. You can find the different experiment cases in `NeuroExperiment.py`.
@@ -41,9 +43,9 @@ This repository contains a script for running Traffic Scenarios Generation exper
 To run the script with specific arguments, use the following command format:
 
 ```sh
-python script_name.py --num_case <num_case> --experiment_name_suffix <experiment_name_suffix> --main_folder <main_folder> --repeat <repeat> --optimization <optimization> --load_model <load_model> --train_models <train_models>
+python test.py --exp <exp> --num_case <num_case> --experiment_name_suffix <experiment_name_suffix> --main_folder <main_folder> --repeat <repeat> --optimization <optimization> --load_model <load_model> --train_models <train_models>
 ```
 Example
 ```sh
-python3 test.py --neuroD --num_case 1 --experiment_name_suffix 2024_07_10_METR_16 --main_folder 2024_07_10_METR_16__OPT_split --repeation 5 --optimization yes --load_model no --train_models yes
+python3 test.py --exp neuroD --num_case 1 --experiment_name_suffix 2024_07_10_METR_16 --main_folder 2024_07_10_METR_16__OPT_split --repeation 5 --optimization yes --load_model no --train_models yes
 ```

@@ -681,7 +681,7 @@ class DataComparison_Advanced():
         self.use_copula = use_copula
         self.load_copula = load_copula
         self.copulaData_filename = copulaData_filename
-        self.copula_test = False
+        self.copula_test = True
         self.time_performance = time_performance
         self.alredy_select_data = False
         self.metrics_pd = None

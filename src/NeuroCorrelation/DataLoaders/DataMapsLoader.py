@@ -363,7 +363,6 @@ class DataMapsLoader():
         if draw_correlationCoeff:
             df_data = pd.DataFrame(maps_data_vc)
             rho = self.comparison_datamaps.correlationCoeff(df_data)
-            
         else:
             rho = None
         return dataset_couple, rho
