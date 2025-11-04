@@ -1,4 +1,4 @@
-from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
+#from src.test import GeoGraph_test,SUMO_test, Orienteering_test, ML
 from src.GeoSimulation.SUMO_roadstats import SUMO_roadstats
 from src.GeoSimulation.SUMO_mapsstats import SUMO_mapsstats
 from src.SamplesGeneration.FlowSampling  import FlowSampling
@@ -93,8 +93,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_case', type=str, required=True, help='Description for num_case')
     parser.add_argument('--experiment_name_suffix', type=str, required=True, help='Description for experiment_name_suffix')
     parser.add_argument('--main_folder', type=str, required=True, help='Description for main_folder')
-    parser.add_argument("--repeation_b", type=str, required=True, help='Description for repeation - begin')  
-    parser.add_argument("--repeation_e", type=str, required=True, help='Description for repeation - end')  
+    parser.add_argument('--repeation_b', type=int, required=True, help='Description for repeation')
+    parser.add_argument('--repeation_e', type=int, required=True, help='Description for repeation')
     parser.add_argument('--optimization', type=str2bool, required=True, help='Enable or disable optimization')
     parser.add_argument('--load_model', type=str2bool, required=True, help='Description for load_model')
     parser.add_argument('--train_models', type=str2bool, required=True, help='Description for train_models')
@@ -102,14 +102,13 @@ if __name__ == "__main__":
         
     parsed_args = parser.parse_args(sys.argv[1:])
     
-    print(f"\n")
+    
     cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan', attrs=["bold"])
     cprint(Style.BRIGHT + "|        Traffic         |" + Style.RESET_ALL, 'cyan', attrs=["bold"])
     cprint(Style.BRIGHT + "|  Scenarios Generation  |" + Style.RESET_ALL, 'cyan', attrs=["bold"])
     cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan', attrs=["bold"])
     cprint(Style.BRIGHT +f"| Process: {parsed_args.exp}" + Style.RESET_ALL, 'cyan')
     cprint(Style.BRIGHT + "|------------------------|" + Style.RESET_ALL, 'cyan')
-    print(f"\n")
     
     if parsed_args.exp ==  "orienteering" or parsed_args.exp == "o":
         orient_test()
@@ -168,10 +167,10 @@ if __name__ == "__main__":
         print(10)
     
     
-    elif parsed_args.exp ==  "neuroD":        
+    elif parsed_args.exp ==  "generation" or parsed_args.exp == "gen":        
     
         neuroExp = InstancesGeneration(sys.argv[1:])
         cprint(Style.BRIGHT + f"Folder :\t{parsed_args.main_folder}" + Style.RESET_ALL, 'red', attrs=["bold"])
     else:
         print(0," no opt recognized")
-        
+    

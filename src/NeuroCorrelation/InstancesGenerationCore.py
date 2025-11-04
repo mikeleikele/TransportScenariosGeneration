@@ -37,25 +37,28 @@ import os
 
 class InstancesGenerationCore():
 
-    def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, instaces_size, input_shape, do_optimization, opt_settings, num_gen_samples, load_copula, seed=0, run_mode="all", time_slot="A", loss_obj=None):
+    def __init__(self, device, path_folder, epoch, case, model_case, dataset_setting, univar_count, lat_dim, prior_channels, instaces_size, input_shape, do_optimization, opt_settings, num_gen_samples, load_copula, seed=0, run_mode="all", time_slot="A", loss_obj=None):
         device = ("cuda:0" if (torch.cuda.is_available()) else "cpu")
         #device = "cpu"
         self.noise_distribution ="gaussian"
         self.seed_torch = seed
         self.seed_data = seed
         self.seed_noise = seed
-        print("SETTING PHASE: Seed ")
-        print("seed torch:\t",self.seed_torch)
-        print("seed data:\t",self.seed_data)
-        print("seed noise:\t",self.seed_noise)
+        cprint(Style.BRIGHT + f"| SETTING PHASE:" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        cprint(Style.BRIGHT + f"| \tSeed" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        cprint(Style.BRIGHT + f"| \t\tseed torch :\t {self.seed_torch}" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        cprint(Style.BRIGHT + f"| \t\tseed data  :\t {self.seed_data}" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        cprint(Style.BRIGHT + f"| \t\tseed noise :\t {self.seed_noise}" + Style.RESET_ALL, 'magenta', attrs=["bold"])
         torch.manual_seed(self.seed_torch)
 
         self.device = device
-        print("SETTING PHASE: Device selection")
-        print("\tdevice:\t",self.device)
+        cprint(Style.BRIGHT + f"| \tDevice selection" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        cprint(Style.BRIGHT + f"| \t\tdevice :\t {self.device}" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+
         
         self.univar_count = univar_count        
         self.lat_dim = lat_dim
+        self.prior_channels = prior_channels
         self.epoch = epoch
         self.dataset_setting = dataset_setting
         self.batch_size = dataset_setting['batch_size']
@@ -79,7 +82,6 @@ class InstancesGenerationCore():
         if not os.path.exists(self.summary_path):
             os.makedirs(self.summary_path)
         self.time_performance = TimeAnalysis(folder_path=self.summary_path)
-        
         if run_mode=="fast":   
             self.performace_cases = {
                 "AE":['train'],
@@ -157,7 +159,7 @@ class InstancesGenerationCore():
                 self.case_setting =   PEMS_METR_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance)
             elif self.case == "CHENGDU_SMALLGRAPH":
                 self.time_slot = time_slot
-                self.case_setting =   CHENGDU_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot, noise_distribution=self.noise_distribution)
+                self.case_setting =   CHENGDU_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, prior_channels=self.prior_channels, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot, noise_distribution=self.noise_distribution)
             elif self.case == "SEOUL_SMALLGRAPH":
                 self.time_slot = time_slot
                 self.case_setting =   SEOUL_SMALLGRAPH_settings(model_case=self.model_case, device=self.device, univar_count=self.univar_count, lat_dim=self.lat_dim, dataset_setting=self.dataset_setting, epoch=self.epoch, path_folder=self.path_folder, corrCoeff=self.corrCoeff, instaces_size=self.instaces_size, time_performance = self.time_performance, time_slot=self.time_slot, noise_distribution=self.noise_distribution)
@@ -170,6 +172,7 @@ class InstancesGenerationCore():
             dataloader = self.case_setting.get_DataLoader(seed_data=self.seed_data)
             self.graph_topology = self.case_setting.get_graph_topology()
             self.learning_rate = self.case_setting.get_learning_rate()
+            self.key_value_list = self.case_setting.get_key_value_list()
             print("self.learning_rate---",self.learning_rate)
             #se ho ottimizzato la loss, prendo quella
             if loss_obj is None:
@@ -188,6 +191,7 @@ class InstancesGenerationCore():
             dataloader = self.case_setting.get_DataLoader(seed_data=self.seed_data)
             self.graph_topology = self.case_setting.get_graph_topology()
             self.learning_rate = self.case_setting.get_learning_rate()
+            self.key_value_list = self.case_setting.get_key_value_list()
             print("self.learning_rate---",self.learning_rate)
             #se ho ottimizzato la loss, prendo quella
             if loss_obj is None:
@@ -220,16 +224,18 @@ class InstancesGenerationCore():
         self.dataGenerator = dataloader.getDataGenerator()
         self.vc_mapping = dataloader.get_vcMapping()
         self.rangeData = dataloader.getRangeData()
-        print("rangeData:\t",self.rangeData)
         self.statsData = dataloader.get_statsData()
         self.path_map = dataloader.get_pathMap()
         if self.graph_topology:
             self.edge_index = dataloader.get_edgeIndex()
+            self.edge_weight = dataloader.get_edgeWeight()
         else:
             self.edge_index = None
-        print("----------------------------------------")
-        print("edge_index",self.edge_index)
-        print("----------------------------------------")
+            self.edge_weight = None
+
+        RED = "\033[31m"
+        print(f"{Style.BRIGHT}{RED}| edge index :\t{self.edge_index}{Style.RESET_ALL}")
+
         self.case_setting.set_edge_index(self.edge_index)
         
         self.copulaData_filename  = dataloader.get_copulaData_filename()
@@ -284,7 +290,7 @@ class InstancesGenerationCore():
                 model_ae_trained = trained_obj_ae[0]
                 key_dataout = "ae"
                 self.data_metadata = [{"acronym":"ae", "color":(1.0, 0.498, 0.055), "label":key_dataout}]
-                self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout=key_dataout)   
+                self.predict_model(model=model_ae_trained, model_type="AE", key_value_list=self.key_value_list, data=self.data_splitted, path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout=key_dataout)   
                 model_ae_decoder, model_ae_decoder_size, model_ae_decoder_permutation_forward = model_ae_trained.getModel("decoder", train=True, extra_info=True)
             if self.trainingMode == "AE>GAN":
                 model_key = "GAN"
@@ -313,7 +319,7 @@ class InstancesGenerationCore():
                 
                 key_dataout = "vae"
                 self.data_metadata = [{"acronym":"vae", "color":(1.0, 0.498, 0.055), "label":"VAE"}]
-                self.predict_model(model=model_trained, model_type="VAE", data=self.data_splitted, path_folder_pred=self.path_folder_nets["VAE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout = key_dataout)   
+                self.predict_model(model=model_trained, model_type="VAE", key_value_list=self.key_value_list, data=self.data_splitted, path_folder_pred=self.path_folder_nets["VAE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout = key_dataout)   
             
         elif self.trainingMode in ["CVAE"]:
             
@@ -328,7 +334,7 @@ class InstancesGenerationCore():
             model_trained = trained_obj[0]
             key_dataout = "CVAE"
             self.data_metadata = [{"acronym":"cvae", "color":(1.0, 0.498, 0.055), "label":key_dataout}]
-            self.predict_model(model=model_trained, model_type="CVAE", data=self.data_splitted, path_folder_pred=self.path_folder_nets["CVAE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout=key_dataout)   
+            self.predict_model(model=model_trained, model_type="CVAE", key_value_list=self.key_value_list, data=self.data_splitted, path_folder_pred=self.path_folder_nets["CVAE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff, key_dataout=key_dataout)   
 
         ''' 
         #ESG
@@ -337,12 +343,12 @@ class InstancesGenerationCore():
             self.graph_topology = False
             trained_obj_ae = self.training_model(data_dict=self.data_splitted, model_type="AE", model=self.model['AE'], loss_obj=self.loss_obj['AE'], epoch=self.epoch, graph_topology = self.graph_topology, optimization=self.do_optimization, optimizer_trial=self.optimization)
             model_ae_trained = trained_obj_ae[0]
-            self.predict_model(model=model_ae_trained, model_type="AE", data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
+            self.predict_model(model=model_ae_trained, model_type="AE", key_value_list=self.key_value_list, data=self.data_splitted,path_folder_pred=self.path_folder_nets["AE"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
             model_ae_decoder = model_ae_trained.getModel("decoder",train=True)            
             self.model['GAN'] = ESG__GAN_neural_mixed_35(generator=model_ae_decoder)
             trained_obj_gan = self.training_model(self.data_splitted, model_type="GAN", model=self.model['GAN'], loss_obj=self.loss_obj['GAN'], pre_trained_decoder=True,epoch=self.epoch)
             model_gan_trained = trained_obj_gan[0]
-            self.predict_model(model=model_gan_trained, model_type="GAN", data=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
+            self.predict_model(model=model_gan_trained, model_type="GAN", key_value_list=self.key_value_list, data=self.data_splitted, path_folder_pred=self.path_folder_nets["GAN"], path_folder_data=self.path_folder, noise_samples=self.num_gen_samples, input_shape="vector", draw_plot=self.draw_plot, draw_scenarios=self.draw_scenarios, draw_correlationCoeff=self.draw_correlationCoeff)   
         ''' 
         
         
@@ -356,7 +362,8 @@ class InstancesGenerationCore():
             loss_obj = self.loss_obj
         if model is None:
             model = self.model
-        print("\t\tGRAPH TOPOLOGY:\t",self.graph_topology)
+        cprint(Style.BRIGHT + f"| Graph topology: {self.graph_topology}" + Style.RESET_ALL, 'black', attrs=["bold"])
+
     
         print("\tOPTIMIZATION:\tTrue")
         
@@ -373,17 +380,19 @@ class InstancesGenerationCore():
             model = self.model
         if epoch is None:
             epoch=self.epoch
-        print("\t\tGRAPH TOPOLOGY:\t",self.graph_topology)
-    
-        
             
-        print("TRAINING PHASE: Training data - ", model_type)
+        cprint(Style.BRIGHT + f"| Graph topology: {self.graph_topology}" + Style.RESET_ALL, 'black', attrs=["bold"])
+        
+        cprint(Style.BRIGHT + f"| TRAINING PHASE: Training data  {model_type}" + Style.RESET_ALL, 'black', attrs=["bold"])
+        
         train_data = data_dict['train_data']   
         test_data = data_dict['test_data'] 
         noise_data = data_dict['noise_data'] 
         edge_index = data_dict['edge_index']
             
-        training_obj = ModelTraining(model=model, device=self.device, loss_obj=loss_obj, epoch=epoch, learning_rate=self.learning_rate, train_data=train_data, test_data=test_data, dataGenerator=self.dataGenerator, path_folder=self.path_folder, univar_count_in = self.univar_count, univar_count_out = self.univar_count, latent_dim=self.lat_dim, timeweather_count = self.timeweather_count, model_type=model_type, pre_trained_decoder=pre_trained_decoder, vc_mapping = self.vc_mapping,input_shape=self.input_shape, rangeData=self.rangeData,batch_size=self.batch_size, optimization=False, graph_topology=graph_topology, edge_index=edge_index, time_performance=self.time_performance, noise_data=noise_data)
+        
+                    
+        training_obj = ModelTraining(model=model, device=self.device, loss_obj=loss_obj, epoch=epoch, learning_rate=self.learning_rate, train_data=train_data, test_data=test_data, dataGenerator=self.dataGenerator, path_folder=self.path_folder, univar_count_in = self.univar_count, univar_count_out = self.univar_count, latent_dim=self.lat_dim, timeweather_count = self.timeweather_count, model_type=model_type, pre_trained_decoder=pre_trained_decoder, key_value_list = self.key_value_list, vc_mapping = self.vc_mapping,input_shape=self.input_shape, rangeData=self.rangeData,batch_size=self.batch_size, optimization=False, graph_topology=graph_topology, edge_index=edge_index, time_performance=self.time_performance, noise_data=noise_data)
         if model_type =="AE":
             optim_score = training_obj.training(training_name=f"MAIN_",model_flatten_in=model_flatten_in,load_model=load_model)
         if model_type =="VAE":
@@ -400,8 +409,8 @@ class InstancesGenerationCore():
         else:
             return training_obj, optim_score
 
-    def predict_model(self, model, model_type,  data, input_shape, path_folder_data, path_folder_pred, noise_samples, key_dataout, draw_plot=True, draw_scenarios=True, draw_correlationCoeff=True):
-        print("load copula--------------",self.load_copula)
-        predMod = PerformePrediction(model=model, device=self.device, model_type=model_type, univar_count=self.univar_count, latent_dim=self.lat_dim, data=data, dataGenerator=self.dataGenerator, input_shape = input_shape, rangeData=self.rangeData, vc_mapping=self.vc_mapping, draw_plot=draw_plot, draw_scenarios=draw_scenarios, draw_correlationCoeff= draw_correlationCoeff, noise_samples=noise_samples, path_folder_pred=path_folder_pred, path_folder_data= path_folder_data, path_map=self.path_map, copulaData_filename=self.copulaData_filename, load_copula=self.load_copula, use_copula=self.use_copula, time_performance=self.time_performance, data_metadata=self.data_metadata,key_dataout=key_dataout)
+    def predict_model(self, model, model_type, key_value_list, data, input_shape, path_folder_data, path_folder_pred, noise_samples, key_dataout, draw_plot=True, draw_scenarios=True, draw_correlationCoeff=True):
+        cprint(Style.BRIGHT +f"| Load Copula data : {self.load_copula}" + Style.RESET_ALL, 'magenta', attrs=["bold"])
+        predMod = PerformePrediction(model=model, key_value_list=key_value_list, device=self.device, model_type=model_type, univar_count=self.univar_count, latent_dim=self.lat_dim, data=data, dataGenerator=self.dataGenerator, input_shape = input_shape, rangeData=self.rangeData, vc_mapping=self.vc_mapping, draw_plot=draw_plot, draw_scenarios=draw_scenarios, draw_correlationCoeff= draw_correlationCoeff, noise_samples=noise_samples, path_folder_pred=path_folder_pred, path_folder_data= path_folder_data, path_map=self.path_map, copulaData_filename=self.copulaData_filename, load_copula=self.load_copula, use_copula=self.use_copula, time_performance=self.time_performance, data_metadata=self.data_metadata,key_dataout=key_dataout)
         predMod.predict_model(cases_list = self.performace_cases[model_type])
         self.time_performance.save_time()

@@ -6,10 +6,12 @@ from src.NeuroCorrelation.Models.GenerativeAdversarialModels import *
 from src.NeuroCorrelation.Models.ConditionalVariationalAutoEncoderModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
+from termcolor import cprint
+from colorama import init, Style
 
 class CHENGDU_SMALLGRAPH_settings():
     
-    def __init__(self, model_case, device, univar_count, lat_dim, dataset_setting, epoch, path_folder, corrCoeff, time_performance, instaces_size,noise_distribution="gaussian", time_slot=None):
+    def __init__(self, model_case, device, univar_count, lat_dim, prior_channels, dataset_setting, epoch, path_folder, corrCoeff, time_performance, instaces_size,noise_distribution="gaussian", time_slot=None):
         self.model_case = model_case
         self.device = device
         self.dataset_setting = dataset_setting
@@ -25,7 +27,7 @@ class CHENGDU_SMALLGRAPH_settings():
         self.time_performance = time_performance
         self.noise_distribution = noise_distribution
         self.setting_model_case()
-        
+        self.prior_channels = prior_channels
     
     def setting_model_case(self):
         
@@ -38,7 +40,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"            
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -56,7 +58,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -74,7 +76,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -92,7 +94,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_64"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {                
@@ -111,7 +113,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_96"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -129,7 +131,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_128"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -147,7 +149,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_192"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -165,7 +167,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_256"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -183,7 +185,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_512"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = False
             self.loss_dict = {
@@ -207,7 +209,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -226,7 +228,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -246,7 +248,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -265,7 +267,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_64"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
 
             self.graph_topology = True
             self.loss_dict = {
@@ -284,7 +286,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_96"
-            self.key_value_names = ['traffic_speed']
+            self.key_value_list = ['traffic_speed']
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -302,7 +304,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_128"
-            self.key_value_names = ['traffic_speed']
+            self.key_value_list = ['traffic_speed']
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -320,7 +322,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_192"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -338,7 +340,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_256"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -356,7 +358,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_512"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -374,7 +376,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_1024"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['AE', 'GAN']
             self.graph_topology = True
             self.loss_dict = {
@@ -393,7 +395,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -409,7 +411,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -425,7 +427,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -441,7 +443,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -458,7 +460,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -474,7 +476,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_32"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -490,7 +492,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -506,7 +508,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -522,7 +524,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_48"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {
@@ -538,7 +540,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_64"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -555,7 +557,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_96"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -571,7 +573,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_128"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -588,7 +590,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_192"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -605,7 +607,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_256"
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['VAE']
             self.graph_topology = True
             self.loss_dict = {   
@@ -623,7 +625,7 @@ class CHENGDU_SMALLGRAPH_settings():
             self.mode = "graph_roads"
             self.name_dataset = "CHENGDU"
             self.version_dataset = "SMALLGRAPH_16"            
-            self.key_value_names = ['traffic_speed']    
+            self.key_value_list = ['traffic_speed']    
             self.nets = ['CVAE']            
             self.graph_topology = True
             self.loss_dict = {
@@ -639,6 +641,34 @@ class CHENGDU_SMALLGRAPH_settings():
                 'Normalized_temp_0','Normalized_temp_1','Normalized_temp_2','Normalized_temp_3','Normalized_temp_4','Normalized_dwpt_0','Normalized_dwpt_1','Normalized_dwpt_2','Normalized_dwpt_3','Normalized_dwpt_4','Normalized_rhum_0','Normalized_rhum_1','Normalized_rhum_2','Normalized_rhum_3','Normalized_rhum_4','Normalized_wspd_0','Normalized_wspd_1','Normalized_wspd_2','Normalized_wspd_4'
                 ]}
         
+        #3some
+        elif self.model_case == "3some":
+            self.mode = "graph_roads"
+            self.name_dataset = "CHENGDU"
+            self.version_dataset = "3some"
+            self.key_value_list = ['UNO', 'DUE', 'TRE']    
+            self.nets = ['VAE']
+            self.graph_topology = False
+            self.loss_dict = {   
+                'VAE':{
+                    "VARIANCE_LOSS": {"type": "fixed","value": 0.8},
+                    "MEDIAN_LOSS_batch": {"type": "fixed","value": 1},
+                    "MSE_LOSS": {"type": "fixed","value": 0.3},
+                    "PEARSON_CORRELATION_LOSS": {"type": "fixed","value":  1e-3} ,
+                    "SPEARMAN_CORRELATION_LOSS": {"type": "fixed","value":  1e-3},
+                    "KL_DIVERGENCE_LOSS": {"type": "fixed","value": 1},
+                    "JENSEN_SHANNON_DIVERGENCE_LOSS":{"type":"fixed","value":1e2}
+                }
+            }
+            self.trainingMode = "VAE"
+            self.model_settings['VAE']  = {"load_from_file":True, "json_filepath":Path('src','NeuroCorrelation','Models','CHENGDU_models', 'CHENGDU_SMALLGRAPH_settings', 'CHENGDU_SMALLGRAPH_3some.json')}
+            self.timeweather = False
+            self.timeweather_settings = {"column_selected":[]}
+            self.learning_rate['VAE'] = 1e-2       
+            
+            
+            
+
         if self.learning_rate is None:
             self.learning_rate['AE'] = 1e-2  
             self.learning_rate['VAE'] = 1e-2              
@@ -657,6 +687,13 @@ class CHENGDU_SMALLGRAPH_settings():
         self.edge_index = edge_index
     
     def deploy_models(self):
+        self.channels_dim = {"encoder":{"in":len(self.key_value_list), "out":1},
+                            "decoder":{"in":1, "out":len(self.key_value_list)}}
+        RED = "\033[31m"
+        RESET = "\033[0m"
+        
+        print(f"{Style.BRIGHT}{RED}| channels dim set to {self.channels_dim}{Style.RESET_ALL}")
+        
         for key in self.model_settings:
             if key == "AE":
                 self.model["AE"] = AutoEncoderModels(device=self.device, load_from_file =self.model_settings["AE"]['load_from_file'],
@@ -677,6 +714,7 @@ class CHENGDU_SMALLGRAPH_settings():
             elif key=="VAE":
                 self.model["VAE"] = VariationalAutoEncoderModels(device=self.device, load_from_file =self.model_settings["VAE"]['load_from_file'],
                             json_filepath=self.model_settings["VAE"]['json_filepath'],
+                            channels_dim = self.channels_dim,
                             edge_index=self.edge_index)
             elif key=="CVAE":
                 self.model["CVAE"] = ConditionalVariationalAutoEncoderModels(device=self.device, load_from_file =self.model_settings["CVAE"]['load_from_file'],
@@ -704,15 +742,15 @@ class CHENGDU_SMALLGRAPH_settings():
     def get_graph_topology(self):
         return self.graph_topology
     
+    def get_key_value_list(self):
+        return self.key_value_list
+
     def get_DataLoader(self, seed_data):      
-        print("self.timeweather_settings",self.timeweather_settings)
-        print("self.timeweather",self.timeweather)
-        print("******************")
-        dataloader = DataLoader(mode="graph_roads",  key_value_names=self.key_value_names,  seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
+        dataloader = DataLoader(mode="graph_roads",  key_value_list=self.key_value_list,  seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, prior_channels=self.prior_channels, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
         return dataloader
     
     def get_LossFunction(self):
         loss_obj = dict()
         for key in self.nets:    
-            loss_obj[key] = LossFunction(self.loss_dict[key], univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
+            loss_obj[key] = LossFunction(self.loss_dict[key], key_value_list=self.key_value_list, univar_count=self.univar_count, latent_dim=self.lat_dim, device=self.device)
         return loss_obj

@@ -5,5 +5,4 @@ sudo export SUMO_HOME=/usr/share/sumo
 
 sudo add-apt-repository ppa:ubuntugis/ppa
 sudo apt-get update
-
 sudo apt-get install gdal-bin

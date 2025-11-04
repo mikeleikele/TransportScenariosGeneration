@@ -1,5 +1,7 @@
 from torchsummary import summary
 from pathlib import Path
+from termcolor import cprint
+from colorama import init, Style
 
 class NetworkDetails():
     
@@ -23,7 +25,7 @@ class NetworkDetails():
         filename = Path(self.path, "summary_network.txt")
         with open(filename, 'w') as file:
             file.write(file_str)
-        print("SETTING PHASE: Summary model file - DONE")
+        cprint(Style.BRIGHT + f"| SETTING PHASE Summary model saved in: {file_str}" + Style.RESET_ALL, 'black', attrs=["bold"])
     
     def saveModel_structure(self, key, model_net):
         net_summary = model_net.summary()

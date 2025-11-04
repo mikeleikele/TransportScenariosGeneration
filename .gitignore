@@ -1,4 +1,5 @@
 data/
+!/tvae/*
 !/data/neuroCorrelation_data
 !/data/neuroCorrelation_data/CHENGDU_SMALLGRAPH/*
 *.pyc
@@ -12,7 +13,19 @@ cache/
 mind gpu.txt
 download/
 ESPERIMENTI/
-
+*.csv
+*.png
+*.jpg
 *.pyc
-
+*.txt
 *.sh
+*pth
+*xls
+*.xlsx
+*.log
+__pycache__/
+*.sh
+*.npy
+tvae/*
+*doc
+*.docx

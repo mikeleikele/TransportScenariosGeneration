@@ -9,4 +9,4 @@ python test.py --exp neuroD --repeation 10 --optimization no --load_model no --t
 python test.py --exp neuroD --repeation 10 --optimization yes --load_model no --train_models yes --num_case 16 --experiment_name_suffix 2024_09_10_Chengdu_A_48_Graph_opt   --main_folder 2024_09_10_Chengdu_A_48_Graph_opt
 python test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes  --num_case 17 --experiment_name_suffix 2024_09_10_Chengdu_A_64_Linear      --main_folder 2024_09_10_Chengdu_A_64_Linear
 python test.py --exp neuroD --repeation 10 --optimization no --load_model no --train_models yes  --num_case 18 --experiment_name_suffix 2024_09_10_Chengdu_A_64_Graph       --main_folder 2024_09_10_Chengdu_A_64_Graph
-python test.py --exp neuroD --repeation 10 --optimization yes --load_model no --train_models yes --num_case 18 --experiment_name_suffix 2024_09_10_Chengdu_A_64_Graph_opt   --main_folder 2024_09_10_Chengdu_A_64_Graph_opt
+python3 test.py --exp neuroD --repeation_b 1 --repeation_e 2 --optimization yes --load_model no --train_models yes --num_case 18 --experiment_name_suffix test   --main_folder test

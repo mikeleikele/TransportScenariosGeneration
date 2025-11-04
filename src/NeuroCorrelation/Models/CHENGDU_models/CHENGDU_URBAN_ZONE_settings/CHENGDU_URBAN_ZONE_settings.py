@@ -141,7 +141,7 @@ class CHENGDU_URBAN_ZONE_settings():
         return self.learning_rate
     
     def get_DataLoader(self, seed_data):      
-        dataloader = DataLoader(mode="graph_roads",  key_value_names=self.key_value_names, seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)
+        dataloader = DataLoader(mode="graph_roads",  key_value_names="traffic_speed", seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)
         return dataloader
     
     def get_LossFunction(self):

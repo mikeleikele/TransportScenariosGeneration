@@ -343,8 +343,12 @@ class DataSyntheticGeneration():
         self.time_performance.compute_time(time_key_gen, fun = "sum") 
         print("\t"+name_data+"\tcopula.sample : end")
         
-        print(f"\tTIME to copula fit:\t",self.time_performance.get_time(time_key_fit, fun = "mean"))
-        print(f"\tTIME to copula gen:\t",self.time_performance.get_time(time_key_gen, fun = "mean"))
+        
+        t_copula_fit = self.time_performance.get_time(time_key_fit, fun = "mean")
+        t_copula_gen = self.time_performance.get_time(time_key_gen, fun = "mean")
+
+        print(f"{Style.BRIGHT}\033[38;2;121;212;242m| time \tfit gaussian copula:\t{t_copula_fit}{Style.RESET_ALL}")
+        print(f"{Style.BRIGHT}\033[38;2;121;212;242m| time \tgen gaussian copula:\t{t_copula_gen}{Style.RESET_ALL}")
 
         
         self.sample_synthetic =  [ [[]]  for i in range(univar_count)]

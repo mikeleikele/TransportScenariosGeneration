@@ -12,6 +12,7 @@ from src.NeuroCorrelation.Analysis.NeuroDistributions import NeuroDistributions
 from src.NeuroCorrelation.ModelPrediction.ModelPrediction import ModelPrediction
 from src.NeuroCorrelation.Analysis.TimeAnalysis import TimeAnalysis
 from termcolor import colored, cprint 
+from colorama import init, Style
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -26,13 +27,13 @@ from torch import autograd
 from torch.autograd import Variable
 from matplotlib.pyplot import cm
 from torch.nn.utils import parameters_to_vector
-from termcolor import colored, cprint 
 from torch_geometric.nn import GCNConv
 import csv
 
+
 class ModelTraining():
 
-    def __init__(self, model, device, loss_obj, epoch, train_data, test_data, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim,   vc_mapping, input_shape, rangeData, batch_size, time_performance, timeweather_count, learning_rate, optimizer_name="Adam", model_type="AE", pre_trained_decoder=False, optimization=False, graph_topology=False, edge_index=None, is_optimization=False, noise_data = None):
+    def __init__(self, model, device, loss_obj, epoch, train_data, test_data, dataGenerator, path_folder, univar_count_in, univar_count_out, latent_dim, key_value_list,   vc_mapping, input_shape, rangeData, batch_size, time_performance, timeweather_count, learning_rate, optimizer_name="Adam", model_type="AE", pre_trained_decoder=False, optimization=False, graph_topology=False, edge_index=None, is_optimization=False, noise_data = None):
         self.loss_obj = loss_obj
         self.epoch = epoch
         self.train_data = train_data
@@ -51,13 +52,16 @@ class ModelTraining():
         self.opt_scheduler_ae = "ReduceLROnPlateau"
         self.opt_scheduler_gen = "ReduceLROnPlateau"
         self.opt_scheduler_dis = "ReduceLROnPlateau"
-        cprint(f"PAY ATTENTION: GEN is update every {self.n_critic} batches", "magenta", end="\n")
+        
+        cprint(f"{Style.BRIGHT}| GEN is update every {self.n_critic} batches", "magenta")
+
         self.GAN_loss = "MSELoss"
         self.univar_count_in = univar_count_in 
         self.univar_count_out = univar_count_out
         self.latent_dim = latent_dim
         self.edge_index = edge_index
         self.batchsize = batch_size[self.model_type]
+        self.key_value_list = key_value_list
         self.graph_topology = graph_topology
         self.path_save_model_gradients = Path(self.path_folder, self.model_type,"model_gradients", )
         self.time_performance = time_performance
@@ -69,7 +73,7 @@ class ModelTraining():
             os.makedirs(self.path_save_model_gradients)
         self.checkWeightsUpdate = True    
         if self.checkWeightsUpdate:
-            cprint(f"PAY ATTENTION: check weights update is on", "magenta", end="\n")
+            cprint(f"{Style.BRIGHT}| Weights update is on", "magenta")
         if self.model_type in ["AE", "VAE", "CVAE"]:
             self.model = model
             self.model.to(device=self.device)
@@ -83,9 +87,17 @@ class ModelTraining():
                 self.optimizer = optim.Adam(params=model_params, lr=self.learning_rate[self.model_type])
             elif optimizer_name == "SGD":
                 self.optimizer = optim.SGD(params=model_params, lr=0.01, momentum=0.9, weight_decay=0.0001)
-            cprint(f"\tOptimizer\t{optimizer_name}", "green", end="\n")
-            cprint(f"\tLearning_rate\t{self.learning_rate}", "green", end="\n")
             
+            
+            
+            
+            cprint(f"{Style.BRIGHT}| Optimizer:\t{optimizer_name}", "green")
+            cprint(f"{Style.BRIGHT}| Learning Rate(s)", "green")
+            for model_name, lr in self.learning_rate.items():
+                cprint(f"{Style.BRIGHT}|\t{model_name:<12} → {lr}", "green")
+
+
+
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.1)
             if self.opt_scheduler_ae == "ReduceLROnPlateau":
                 self.scheduler_ae = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=5)
@@ -146,6 +158,8 @@ class ModelTraining():
         return torch.stack(edge_indices, dim=0)
     
     def training(self,  training_name, noise_size=None, shuffle_data=True, plot_loss=True, model_flatten_in = True, save_model=True, load_model=False, optimization=False, optimization_name=None):
+        print(f"{Style.BRIGHT}\033[38;5;208m| Batch size: {self.batchsize}{Style.RESET_ALL}")
+        
         self.dataLoaded_train = DataBatchGenerator(dataset=self.train_data, batch_size=self.batchsize, shuffle=shuffle_data)
         self.dataLoaded_test = DataBatchGenerator(dataset=self.test_data, batch_size=self.batchsize, shuffle=shuffle_data)
         if self.noise_data is not None:
@@ -161,16 +175,30 @@ class ModelTraining():
                 path_save_model = Path(path_opt_result, f"model_weights_trial_{optimization_name}.pth")
             else:
                 path_save_model = Path(self.path_folder, self.model_type, "model_save", 'model_weights.pth')
-            print("\tLOAD TRAINED MODEL:\t",path_save_model)
+            print(f"{Style.BRIGHT}\033[38;5;208m| Load trained model: {path_save_model}{Style.RESET_ALL}")
+        
             
             self.model.load_state_dict(torch.load(path_save_model, map_location=self.device))
         else:
-            print("\tTRAIN TRAINED MODEL:\t")
+            print(f"{Style.BRIGHT}\033[38;5;208m| Training {self.model_type}{Style.RESET_ALL}")
+
+            loss_terms = self.loss_obj.get_lossTerms()
+            cprint(f"{Style.BRIGHT}\033[38;5;208m| Loss Terms: {Style.RESET_ALL}", 'cyan', attrs=['bold'])
+            for name, config in loss_terms.items():
+                if config['type'] == 'fixed':
+                    value_str = f"{config['value']:.4f}"
+                elif config['type'] == 'linear':
+                    rng = config['range']
+                    value_str = f"linear [{rng['begin']} → {rng['end']}]"
+                else:
+                    value_str = str(config)
+
+                # Costruzione della riga con stile solo sulla parte iniziale
+                print(f"{Style.BRIGHT}\033[38;5;208m|  • {name:<35} →{Style.RESET_ALL} {config['type']:>6} | {value_str}")
+            print(f"{Style.BRIGHT}\033[38;5;208m|------------------------------------------------------------------{Style.RESET_ALL}")
+            
+
             self.getModeModel()
-            print("--------------------------------------------------------------------------------------------------------------------------",self.model_type)
-            
-            
-            print(f"\ttraining {self.model_type} loss:\t", self.loss_obj.get_lossTerms())
             
             if self.model_type in ["AE", "VAE", "CVAE"]:
                 self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
@@ -184,8 +212,12 @@ class ModelTraining():
                     self.training_CVAE(training_name=training_name, plot_loss=plot_loss, model_flatten_in=model_flatten_in)
                 self.time_performance.stop_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 self.time_performance.compute_time(f"{training_name}_{self.model_type}_TRAINING_global", fun = "diff")                
-                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first"))
                 
+                
+                t_print = self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first")
+                print(f"{Style.BRIGHT}\033[38;2;121;212;242m| time \ttrain model:\t{t_print}{Style.RESET_ALL}")
+        
+
             elif self.model_type in ["GAN", "WGAN"]:
                 self.time_performance.start_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 if self.model_type == "GAN":
@@ -194,7 +226,10 @@ class ModelTraining():
                     self.training_WGAN_GP(training_name=training_name, noise_size=noise_size)
                 self.time_performance.stop_time(f"{training_name}_{self.model_type}_TRAINING_global")
                 self.time_performance.compute_time(f"{training_name}_{self.model_type}_TRAINING_global", fun = "diff")  
-                print("\tTIME TRAIN MODEL:\t",self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first"))
+
+                t_print = self.time_performance.get_time(f"{training_name}_{self.model_type}_TRAINING_global", fun="first")
+                print(f"{Style.BRIGHT}\033[38;2;121;212;242m| time \ttrain model:\t{t_print}{Style.RESET_ALL}")
+
                 #model_opt_prediction = self.getModel('all')
            
             if save_model:
@@ -242,12 +277,10 @@ class ModelTraining():
             
                
     def training_AE(self, model_flatten_in, training_name, plot_loss=True, save_trainingTime=True):
-        
-        
         self.loss_dict = dict()
         self.model.train()
         epoch_train = list()
-        print("\tepoch:\t",0,"/",self.epoch['AE'],"\t -")
+        print(f"{Style.BRIGHT}\033[38;5;208m\tepoch:\t{0} / {self.epoch['AE']}\t-{Style.RESET_ALL}")
         for epoch in range(self.epoch['AE']):
             self.time_performance.start_time(f"{training_name}_AE_TRAINING_epoch")
             self.model.train()
@@ -371,8 +404,7 @@ class ModelTraining():
                 lay_tens = list(self.model_dis.parameters())[lay].clone().detach().cpu().numpy()
                 layer_dis_notrained[f"lay_{lay}"] = lay_tens
                 
-        print("\tepoch:\t",0,"/",self.epoch['GAN']," - ")
-        
+        print(f"{Style.BRIGHT}\033[38;5;208m\tepoch:\t{0} / {self.epoch['GAN']}\t-{Style.RESET_ALL}")
         err_D_all = list()
         err_D_r_all = list()
         err_D_f_all = list()
@@ -686,13 +718,16 @@ class ModelTraining():
         self.loss_dict = dict()
         self.model.train()
         epoch_train = list()
-        print("\tepoch:\t",0,"/",self.epoch['VAE'],"\t -")
+        print(f"{Style.BRIGHT}\033[38;5;208m|\tepoch:\t{0} / {self.epoch['VAE']}\t - BEGIN{Style.RESET_ALL}")
+
         for epoch in range(self.epoch['VAE']):
             self.time_performance.start_time(f"{training_name}_VAE_TRAINING_epoch")
             self.model.train()
             loss_batch = list()
             loss_batch_test = list()
             loss_batch_partial = dict()
+            for k in self.key_value_list:
+                loss_batch_partial[k] = dict()
             
             dataBatches_train = self.dataLoaded_train.generate()
             
@@ -703,21 +738,33 @@ class ModelTraining():
                     self.optimizer.zero_grad()
                     y_hat_list_train = list()
                     sample_list = list()
+                    
                     for i, item in enumerate(dataBatch):
                         sample = item['sample'].type(torch.float32)
-                        
+
 
                         sample_list.append(sample)
                         #noise = noisef.type(torch.float32)
-                    x_in = torch.Tensor(1, item_batch, self.univar_count_in).to(device=self.device)
-                    torch.cat(sample_list, out=x_in) 
+                    
+                                           
+                    ''''item_batch = len(sample_list)
+                    seq_len = sample_list[0].shape[0]
+                    univar_count = sample_list[0].shape[1]
+                    
+                    self.univar_count_in
+                    self.batchsize
+                    self.key_value_list
+                    '''
+                    x_in = torch.stack(sample_list, dim=0).to(device=self.device)
+
+                    '''torch.cat(sample_list, out=x_in) 
                     if model_flatten_in:
                         x_in = x_in.view(-1,self.univar_count_in)
-                        x_in.unsqueeze_(1)
+                        x_in.unsqueeze_(1)'''
                     y_hat = self.model.forward(x=x_in)
                     y_hat_list_train = list()
                     for i in range(item_batch):                        
-                        item_dict = {"x_input": {"data": y_hat['x_input']['data'][i][0]}, "x_latent":{"mu":y_hat['x_latent']["mu"][i][0], "logvar":y_hat['x_latent']["logvar"][i][0], "z":y_hat['x_latent']["z"][i][0]},"x_output": {"data": y_hat['x_output']['data'][i][0]}}
+                        item_dict = {"x_input": {"data": y_hat['x_input']['data'][i]}, "x_latent":{"mu":y_hat['x_latent']["mu"][i], "logvar":y_hat['x_latent']["logvar"][i], "z":y_hat['x_latent']["z"][i]},"x_output": {"data": y_hat['x_output']['data'][i]}}
                         y_hat_list_train.append(item_dict)
                     
                     loss_dict = self.loss_obj.computate_loss(y_hat_list_train,epoch )
@@ -728,15 +775,24 @@ class ModelTraining():
                         loss_batch.append(loss.detach().cpu().numpy())
                     
                     for loss_part in loss_dict:
-                        if loss_part not in loss_batch_partial:
-                            loss_batch_partial[loss_part] = list()
-                        if batch_num%self.append_count == 0:
-                            loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
-                            loss_batch_partial[loss_part].append(loss_part_value)
-                    
+                        if loss_part not in ['loss_total']:
+                            for k in self.key_value_list:                        
+                                if loss_part not in loss_batch_partial[k]:
+                                    loss_batch_partial[k][loss_part] = list()
+                                if batch_num%self.append_count == 0:                          
+                                    loss_part_value = loss_dict[loss_part][k].detach().cpu().numpy()
+                                    loss_batch_partial[k][loss_part].append(loss_part_value)
+                        else:
+                            if loss_part not in loss_batch_partial[k]:
+                                loss_batch_partial[loss_part] = list()
+                            if batch_num%self.append_count == 0:                          
+                                loss_part_value = loss_dict[loss_part].detach().cpu().numpy()
+                                loss_batch_partial[loss_part].append(loss_part_value)
+
                     loss.backward()
                     self.optimizer.step()
             
+            '''
             dataBatches_noise = self.dataLoaded_noise.generate()
             self.model.eval() 
             generator = self.model.get_decoder()
@@ -770,10 +826,16 @@ class ModelTraining():
                 
                 #if batch_num%self.append_count == 0:
                 #    loss_batch_test.append(loss.detach().cpu().numpy())
-            
+            '''
             self.loss_dict[epoch] = {"GLOBAL_loss": np.mean(loss_batch), "values_list": loss_batch, "TEST_loss": np.mean(loss_batch_test)}
             for loss_part in loss_dict:
-                self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
+                self.loss_dict[epoch][loss_part] = dict()
+                if loss_part not in ['loss_total']:
+                    for k in self.key_value_list:    
+                        self.loss_dict[epoch][loss_part][k] = np.mean(loss_batch_partial[k][loss_part])
+                else:
+                    self.loss_dict[epoch][loss_part] = np.mean(loss_batch_partial[loss_part])
+        
             
             self.time_performance.stop_time(f"{training_name}_VAE_TRAINING_epoch")
             epoch_time = self.time_performance.get_time(f"{training_name}_VAE_TRAINING_epoch", fun="last")
@@ -785,14 +847,16 @@ class ModelTraining():
             
             self.plot_grad_flow(named_parameters = self.model.named_parameters(), epoch= f"{epoch+1}", model_section="AE")
             #cprint("\tepoch:\t",epoch+1,"/",self.epoch['VAE'],"\t - time tr epoch: ", epoch_time ,"\tloss: ",np.mean(loss_batch),"\tloss_test: ",np.mean(loss_batch_test),"\tlr: ",self.optimizer.param_groups[0]['lr'], "cyan"))
-            cprint(f"\tepoch:\t{epoch+1}/{self.epoch['VAE']}\t - time tr epoch: {epoch_time} \tloss: {np.mean(loss_batch)} \tloss_test: {np.mean(loss_batch_test)} \tlr: {self.optimizer.param_groups[0]['lr']}", "black")
-            #cprint(f"\t\t\t{self.loss_dict[epoch]}","cyan")
+            
+            print(f"{Style.BRIGHT}\033[38;5;208m|\tepoch:\t{epoch+1} / {self.epoch['VAE']}\t - time tr epoch: {epoch_time} \tloss: {np.mean(loss_batch)} \tloss_test: {np.mean(loss_batch_test)} \tlr: {self.optimizer.param_groups[0]['lr']}{Style.RESET_ALL}")
+            
 
             if epoch+1 == self.epoch['VAE']:
                 self.save_intermediate_results(y_hat_list_train,epoch)
-            
+        print(f"{Style.BRIGHT}\033[38;5;208m|\tepoch:\t{epoch+1} / {self.epoch['VAE']}\t - END{Style.RESET_ALL}")
+        
         if plot_loss:
-            self.loss_plot(self.loss_dict)
+            self.loss_plot(self.loss_dict, )
         if save_trainingTime:
             self.time_performance.compute_time(f"{training_name}_VAE_TRAINING_epoch", fun = "mean")
             self.save_training_time(epoch_train)
@@ -801,7 +865,8 @@ class ModelTraining():
         self.loss_dict = dict()
         self.model.train()
         epoch_train = list()
-        print("\tepoch:\t",0,"/",self.epoch['CVAE'],"\t -")
+        print(f"{Style.BRIGHT}\033[38;5;208m|\tepoch:\t{0} / {self.epoch['CVAE']}\t-{Style.RESET_ALL}")
+
         for epoch in range(self.epoch['CVAE']):
             self.time_performance.start_time(f"{training_name}_CVAE_TRAINING_epoch")
             self.model.train()
@@ -837,7 +902,7 @@ class ModelTraining():
                         x_in_timeweather.unsqueeze_(1)
                         
                     y_hat = self.model.forward(x=x_in, condition= x_in_timeweather)
-                    print("y_hat", y_hat)
+                    
                     raise Exception("-")
                     y_hat_list_train = list()
                     for i in range(item_batch):
@@ -1072,67 +1137,204 @@ class ModelTraining():
 
         df = pd.DataFrame(data)
         df.to_csv(filepath, index=False)
-    
-    
-    def loss_plot(self, loss_dict):
-        path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
-        if not os.path.exists(path_fold_lossplot):
-            os.makedirs(path_fold_lossplot)
-            
-        if "TEST_loss" in loss_dict[0]:
-            color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])-1))
-        else:
-            color = cm.rainbow(np.linspace(0, 1, len(loss_dict[0])))
+     
 
-        loss_plot_dict = dict()
-        i = 0
-        for key in loss_dict[0]:
-            if key != "values_list" and key!='loss_total':
-                loss_list = list()
-                for mean_val in loss_dict:
-                    loss_list.append(loss_dict[mean_val][key])
-                loss_plot_dict[key] = loss_list
-                plt.figure(figsize=(12,8))  
-                if key!='TEST_loss':
-                    cls_loss = color[i]
-                    i += 1
+    def loss_plot(self, loss_dict, save_per_k=True):
+        """
+        loss_dict: struttura { epoch: { loss_part: { k: value, ... }, ... }, ... }
+        Salva:
+        - loss_training_allLosses.png (tutti i loss_part mediati su k)
+        - loss_training_{loss_part}.png per ogni loss_part (serie mediata su k)
+        - opzionale: per ogni k salva in cartella <base>/<k>/ i plot per loss_part e allLosses se save_per_k True
+
+        Stampa messaggi colorati (#F67403) quando termina i plot per ogni k e quando termina gli aggregati.
+        """
+ 
+
+        # ANSI 24-bit foreground color for #F67403
+        ORANGE_ANSI = "\033[38;2;246;116;3m"
+        RESET_ANSI = Style.RESET_ALL
+
+        base_path = Path(self.path_folder, self.model_type, "loss_plot")
+        base_path.mkdir(parents=True, exist_ok=True)
+
+        # epoche ordinate
+        epochs = sorted(list(loss_dict.keys()))
+        if len(epochs) == 0:
+            return
+
+        # individua top-level loss_part (escludo "values_list" se presente)
+        sample_epoch = loss_dict[epochs[0]]
+        loss_parts = [lp for lp in sample_epoch.keys() if lp != "values_list"]
+
+        # palette colori
+        palette = cm.rainbow(np.linspace(0, 1, max(1, len(loss_parts))))
+
+        # Costruisco una matrice: mean_over_k[lp] = [val_epoch0, val_epoch1, ...]
+        mean_over_k = {lp: [] for lp in loss_parts}
+
+        # Per ogni epoca, per ogni loss_part calcolo la media su tutte le self.key_value_list
+        for e in epochs:
+            epoch_node = loss_dict[e]
+            for lp in loss_parts:
+                node = epoch_node.get(lp, None)
+                vals_k = []
+                if isinstance(node, dict):
+                    for k in self.key_value_list:
+                        val = node.get(k, np.nan)
+                        try:
+                            if hasattr(val, "detach"):
+                                vnum = float(val.detach().cpu().numpy().ravel()[0])
+                            else:
+                                vnum = float(np.array(val).ravel()[0])
+                        except Exception:
+                            vnum = np.nan
+                        vals_k.append(vnum)
                 else:
-                    cls_loss = [0, 0, 0, 1]
-                    
-                plt.plot(loss_list, color=cls_loss, marker='o', mfc=cls_loss, label=str(key))
-                plt.legend(loc="upper right")
-                filename = Path(path_fold_lossplot, "loss_training_"+str(key)+".png")
-                plt.savefig(filename)
-                
-        i = 0
-        plt.figure(figsize=(12,8))
-        for key in loss_plot_dict:  
-            if key != "allLosses":
-                if key!='TEST_loss':
-                    cls_loss = color[i]
-                    i += 1
-                else:
-                    cls_loss = [0, 0, 0, 1]
-                plt.plot(loss_plot_dict[key], color=cls_loss, marker='o', mfc=cls_loss, label=str(key))
-                
-                
+                    try:
+                        if hasattr(node, "detach"):
+                            vnum = float(node.detach().cpu().numpy().ravel()[0])
+                        else:
+                            vnum = float(np.array(node).ravel()[0])
+                    except Exception:
+                        vnum = np.nan
+                    vals_k = [vnum for _ in self.key_value_list]
+
+                # media ignorando NaN
+                mean_val = float(np.nanmean(vals_k)) if len(vals_k) > 0 else np.nan
+                mean_over_k[lp].append(mean_val)
+
+        # Salvo un plot per ogni loss_part con la serie mediata su k
+        idx = 0
+        for lp in loss_parts:
+            series = mean_over_k[lp]
+            plt.figure(figsize=(10, 6))
+            cls = palette[idx % len(palette)]
+            if lp == "TEST_loss":
+                cls = (0.0, 0.0, 0.0, 1.0)
+            plt.plot(epochs, series, color=cls, marker='o', mfc=cls, label=str(lp))
+            plt.title(f"Mean over k — {lp}")
+            plt.xlabel("epoch")
+            plt.ylabel("value")
+            plt.grid(True)
+            plt.legend(loc="upper right")
+            fname = base_path / f"loss_AGGRETATED_{lp}.png"
+            plt.savefig(fname)
+            plt.close()
+            idx += 1
+
+        # Plot riepilogativo: tutti i loss_parts mediati su k in un'unica immagine (loss_training_allLosses.png)
+        plt.figure(figsize=(12, 8))
+        idx = 0
+        for lp in loss_parts:
+            series = mean_over_k[lp]
+            cls = palette[idx % len(palette)]
+            if lp == "TEST_loss":
+                cls = (0.0, 0.0, 0.0, 1.0)
+            plt.plot(epochs, series, color=cls, marker='o', mfc=cls, label=str(lp))
+            idx += 1
+        plt.title("Mean over k — allLosses")
+        plt.xlabel("epoch")
+        plt.ylabel("value")
+        plt.grid(True)
         plt.legend(loc="upper right")
-        filename = Path(path_fold_lossplot,"loss_training_allLosses.png")
-        plt.savefig(filename)
-        df = pd.DataFrame(loss_plot_dict).T.reset_index()
+        fname_all = base_path / "loss_AGGRETATED_allLosses.png"
+        plt.savefig(fname_all)
+        plt.close()
 
+        # Stampa stilizzata in #F67403: plot aggregati completati
+        print(f"{Style.BRIGHT}{ORANGE_ANSI}|{RESET_ANSI}")
+        print(f"{Style.BRIGHT}{ORANGE_ANSI}| LOSS PLOT{RESET_ANSI}")
+        print(f"{Style.BRIGHT}{ORANGE_ANSI}|\tplot saved: \tAGGRETATED\t{base_path}{RESET_ANSI}")
+
+        
+        # opzionale: salva i plot per singola variabile k (stesso formato) se richiesto
+        if save_per_k:
+            for k in self.key_value_list:
+                folder_k = base_path / str(k)
+                folder_k.mkdir(parents=True, exist_ok=True)
+                # costruisci serie per ogni loss_part per questa k
+                series_per_lp = {}
+                for lp in loss_parts:
+                    seq = []
+                    for e in epochs:
+                        node = loss_dict[e].get(lp, None)
+                        if isinstance(node, dict):
+                            val = node.get(k, np.nan)
+                        else:
+                            val = node
+                        try:
+                            if hasattr(val, "detach"):
+                                vnum = float(val.detach().cpu().numpy().ravel()[0])
+                            else:
+                                vnum = float(np.array(val).ravel()[0])
+                        except Exception:
+                            vnum = np.nan
+                        seq.append(vnum)
+                    series_per_lp[lp] = seq
+
+                # salva ogni lp per k
+                idx = 0
+                for lp, seq in series_per_lp.items():
+                    plt.figure(figsize=(10, 6))
+                    cls = palette[idx % len(palette)]
+                    if lp == "TEST_loss":
+                        cls = (0.0, 0.0, 0.0, 1.0)
+                    plt.plot(epochs, seq, color=cls, marker='o', mfc=cls, label=str(lp))
+                    plt.title(f"{k} — {lp}")
+                    plt.xlabel("epoch")
+                    plt.ylabel("value")
+                    plt.grid(True)
+                    plt.legend(loc="upper right")
+                    fname = folder_k / f"loss_{k}_{lp}.png"
+                    plt.savefig(fname)
+                    plt.close()
+                    idx += 1
+
+                # salva allLosses per k
+                plt.figure(figsize=(12, 8))
+                idx = 0
+                for lp, seq in series_per_lp.items():
+                    cls = palette[idx % len(palette)]
+                    if lp == "TEST_loss":
+                        cls = (0.0, 0.0, 0.0, 1.0)
+                    plt.plot(epochs, seq, color=cls, marker='o', mfc=cls, label=str(lp))
+                    idx += 1
+                plt.title(f"{k} — allLosses")
+                plt.xlabel("epoch")
+                plt.ylabel("value")
+                plt.grid(True)
+                plt.legend(loc="upper right")
+                fname_all_k = folder_k / f"loss_{k}_allLosses.png"
+                plt.savefig(fname_all_k)
+                plt.close()
+
+                # Stampa stilizzata per ogni k completato in #F67403
+                print(f"{Style.BRIGHT}{ORANGE_ANSI}|\tplot saved\t{k}:\t{folder_k}{RESET_ANSI}")
+                
+        # salvo CSV riepilogativo delle medie
+        rows = []
+        for i, e in enumerate(epochs):
+            row = {"epoch": e}
+            for lp in loss_parts:
+                row[lp] = mean_over_k[lp][i]
+            rows.append(row)
+        df = pd.DataFrame(rows)
+        df.to_csv(base_path / "loss_training_means.csv", index=False)
+
+    
     def save_training_time(self, list_training_time):
         path_fold_lossplot = Path(self.path_folder, self.model_type, "loss_plot")
         if not os.path.exists(path_fold_lossplot):
             os.makedirs(path_fold_lossplot)
-
-        dftrainingTime = pd.DataFrame(list_training_time, columns=['epoch', 'time'])
-
-        # Salvataggio su file
-        time_file = Path(path_fold_lossplot, "epochs_time.csv")
-        dftrainingTime.to_csv(time_file, sep="\t", index=False)
-
-
+        #dftrainingTime = pd.DataFrame(columns=['epoch',"time"])
+        training_time_records = []
+        for item in list_training_time:
+            #dftrainingTime = dftrainingTime.append({'epoch': item["epoch"], 'time': item["time"] }, ignore_index=True)
+            training_time_records.append({'epoch': item["epoch"], 'time': item["time"] })
+        time_file = Path(path_fold_lossplot ,"epochs_time.csv")
+        dftrainingTime = pd.DataFrame(training_time_records)
+        dftrainingTime.to_csv(time_file, sep='\t')  
 
     def plot_grad_flow(self, named_parameters, epoch, model_section):
         
@@ -1177,5 +1379,4 @@ class ModelTraining():
         path_save_gradients_list = Path(self.path_save_model_gradients,f"{model_section}_gradientlist_epoch_{epoch_str}.csv")
         df = pd.DataFrame(gradients_list)
         df.to_csv(path_save_gradients_list, index=False)
-
 

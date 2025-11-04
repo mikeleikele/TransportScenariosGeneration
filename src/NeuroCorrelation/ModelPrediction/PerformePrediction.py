@@ -10,10 +10,11 @@ from colorama import init, Style
 
 class PerformePrediction():
 
-    def __init__(self, model,device,  model_type, data, dataGenerator, input_shape, rangeData, vc_mapping, univar_count, latent_dim, path_folder_pred, path_folder_data, path_map, time_performance, copulaData_filename, data_metadata, load_copula, key_dataout, use_copula=True, draw_plot=True, draw_scenarios=True, draw_correlationCoeff= True, noise_samples=1000):
+    def __init__(self, model,device, key_value_list,  model_type, data, dataGenerator, input_shape, rangeData, vc_mapping, univar_count, latent_dim, path_folder_pred, path_folder_data, path_map, time_performance, copulaData_filename, data_metadata, load_copula, key_dataout, use_copula=True, draw_plot=True, draw_scenarios=True, draw_correlationCoeff= True, noise_samples=1000):
         self.model = model
         self.model_type = model_type
         self.vc_mapping = vc_mapping
+        self.key_value_list = key_value_list
         self.device=device
         self.data = data
         self.dataGenerator = dataGenerator 
@@ -35,7 +36,7 @@ class PerformePrediction():
         self.path_input = Path(self.path_folder_data, "datasplit")
         self.suffix_input = "datasplit_train_data_sample"
         self.key_dataout = key_dataout
-        self.res_CompareAdvance = DataComparison_Advanced(univar_count=self.univar_count, input_folder=self.path_input, suffix_input=self.suffix_input, time_performance=self.time_performance, data_metadata=self.data_metadata, use_copula=use_copula, load_copula=load_copula, copulaData_filename=copulaData_filename, name_key=self.key_dataout)
+        self.res_CompareAdvance = DataComparison_Advanced(univar_count=self.univar_count, key_value_list=self.key_value_list, input_folder=self.path_input, suffix_input=self.suffix_input, time_performance=self.time_performance, data_metadata=self.data_metadata, use_copula=use_copula, load_copula=load_copula, copulaData_filename=copulaData_filename, name_key=self.key_dataout)
         self.rangeData = rangeData
         self.predict = dict()
         self.corrCoeff = dict()
@@ -44,20 +45,35 @@ class PerformePrediction():
         
         
     def predict_model(self, cases_list=None):
-        cprint(Style.BRIGHT + "SETTING PHASE: Compare tool" + Style.RESET_ALL, 'green')
         if cases_list is None:
                 if self.model_type =="AE":
                     cases_list = ['train', 'test', 'noise_copula', 'noise_gaussian', 'noise_gaussian_reduced']
                 elif self.model_type =="VAE":
-                    cases_list = ['train']
+                    cases_list = ['train','noise_gaussian']
                 elif self.model_type =="GAN":
                     cases_list = ['noise_gaussian', 'noise_gaussian_reduced']
+        cprint(Style.BRIGHT + f"| SETTING PHASE: Compare tool cases: {cases_list}" + Style.RESET_ALL, 'green')   
+        if self.model_type =="AE":
+                cprint(Style.BRIGHT + "| PHASE: AutoEncoder" + Style.RESET_ALL, 'green')
+                model_pred = self.model.getModel("all")
+                self.key_dataout = "ae"
+        elif self.model_type =="VAE":
+                cprint(Style.BRIGHT + "| PHASE: VariationalAutoEncoder" + Style.RESET_ALL, 'green')
+                model_pred = self.model.getModel("all")
+                self.key_dataout = "vae"
 
+
+        model_pred.get_model_mode()
+        model_pred.set_model_mode(eval_mode=True)    
+        self.predict_model_cases(model_pred=model_pred, cases_list=cases_list)
+    
+    def predict_model_cases(self, model_pred, cases_list):
+        
+        
+
+        cprint(Style.BRIGHT + f"| SETTING PHASE: Compare tool cases: {cases_list}" + Style.RESET_ALL, 'green')   
         for case in cases_list:     
             if self.model_type =="AE":
-                self.key_dataout = "ae"
-                cprint(Style.BRIGHT + "PHASE: AutoEncoder" + Style.RESET_ALL, 'green')
-                modelAE = self.model.getModel("all")
                 
                 if case == 'train':
                     cprint("AE - PREDICT PHASE: Training data", 'green')
@@ -67,10 +83,10 @@ class PerformePrediction():
                     datastats_latent = True
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
-                    modelPrediction = ModelPrediction(model=modelAE, device=self.device, dataset=self.train_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
-                    self.predict['train'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
+                    modelPrediction = ModelPrediction(model=model_pred, device=self.device, dataset=self.train_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
+                    self.predict['train'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True, latent_key_toplot="latent")
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data=self.predict['train'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, key_value_list=self.key_value_list, latent_dim=self.latent_dim, data=self.predict['train'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
                     distribution_compare = {"train_input":{'data':self.predict['train']['prediction_data_byvar']['input'], 'color':plot_colors['input']}, "train_reconstructed":{'data':self.predict['train']['prediction_data_byvar']['output'], 'color':plot_colors['output']}}
 
@@ -82,10 +98,10 @@ class PerformePrediction():
                     datastats_latent = True
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
-                    modelPrediction = ModelPrediction(model=modelAE, device=self.device, dataset=self.test_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
+                    modelPrediction = ModelPrediction(model=model_pred, device=self.device, dataset=self.test_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
                     self.predict['test'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data=self.predict['test'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, key_value_list=self.key_value_list, latent_dim=self.latent_dim, data=self.predict['test'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
                     if "train" not in self.predict:
                         self.predict_model(cases_list=["train"])
@@ -99,11 +115,11 @@ class PerformePrediction():
                     datastats_latent=False
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
-                    modelTrainedDecoder = modelAE.get_decoder()
+                    modelTrainedDecoder = model_pred.get_decoder()
                     modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=self.noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in=True, model_type=self.model_type)
                     self.predict['noise_gaussian'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type)
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, key_value_list=self.key_value_list, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type)
                     plot_colors = {"input":"green","output":"m"}
                     if "train" not in self.predict:
                         self.predict_model(cases_list=["train"])
@@ -117,11 +133,11 @@ class PerformePrediction():
                     datastats_latent=False
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
-                    modelTrainedDecoder = modelAE.get_decoder()
+                    modelTrainedDecoder = model_pred.get_decoder()
                     modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=self.reduced_noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in=True, model_type=self.model_type)
                     self.predict['noise_gaussian_reduced'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian_reduced'], path_folder=analysis_folder, model_type=self.model_type)
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count,key_value_list=self.key_value_list,  latent_dim=None, data=self.predict['noise_gaussian_reduced'], path_folder=analysis_folder, model_type=self.model_type)
                     plot_colors = {"input":"green","output":"m"}
                     if "train" not in self.predict:
                         self.predict_model(cases_list=["train"])
@@ -139,12 +155,12 @@ class PerformePrediction():
                         self.predict_model(cases_list=["train"])
                     copulaLat_samples_starting = self.predict['train']['latent_data_input']['latent']
                     copulaLat_data, self.corrCoeff['copulaLatent_data_AE'] = self.dataGenerator.casualVC_generation(name_data=predict_file_suffix, real_data=copulaLat_samples_starting, univar_count=self.latent_dim, num_of_samples = self.noise_samples,  draw_plots=True, draw_correlationCoeff=self.draw_correlationCoeff)
-                    modelTrainedDecoder = modelAE.get_decoder()
+                    modelTrainedDecoder = model_pred.get_decoder()
                     
                     modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=copulaLat_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in =True, model_type=self.model_type)
                     self.predict['noise_copula'] = modelPrediction.compute_prediction(experiment_name="_copulaLatent_data", time_key=plot_name, remapping_data=True)
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_copula'], path_folder=analysis_folder, model_type=self.model_type)
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count,key_value_list=self.key_value_list,  latent_dim=None, data=self.predict['noise_copula'], path_folder=analysis_folder, model_type=self.model_type)
                     
                     plot_colors = {"input":"green", "output":"darkviolet"}
                     if "train" not in self.predict:
@@ -152,49 +168,45 @@ class PerformePrediction():
                     distribution_compare = {"train_input":{'data':self.predict['train']['prediction_data_byvar']['input'],'color':'cornflowerblue', 'alpha':0.5}, "copulaLatent_generated":{'data':self.predict['noise_copula']['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
 
             elif self.model_type =="VAE":
-                self.key_dataout = "vae"
-                cprint(Style.BRIGHT + "PHASE: VariationalAutoEncoder" + Style.RESET_ALL, 'green')
-                modelAE = self.model.getModel("all")
                 
+                if "train" not in cases_list:
+                        self.predict_model(cases_list=["train"])
                 
+                cprint(Style.BRIGHT + f"| \tpredict PHASE: \t{case}" + Style.RESET_ALL, 'green')   
                 if case == 'train':
-                    cprint("AE - PREDICT PHASE: Training data", 'green')
-                    plot_name = "AE_train"
+                    plot_name = "VAE_train"
                     predict_file_suffix ="train_test_data"
                     analysis_folder = Path(self.path_folder,"train_analysis")
                     datastats_latent = True
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
+                    _modelPrediction = ModelPrediction(model=model_pred,key_value_list=self.key_value_list, device=self.device, dataset=self.train_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
+                    self.predict['train'] = _modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True, latent_key_toplot="z")
                     
-                    print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data=self.predict['train'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    cprint(Style.BRIGHT +"| \tSTATS PHASE:\t data structure for comparison", 'green')
+                    datastats = DataStatistics(univar_count_in=self.univar_count, univar_count_out=self.univar_count, key_value_list=self.key_value_list, latent_dim=self.latent_dim, data=self.predict['train'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"blue", "latent":"green", "output":"orange"}
                     distribution_compare = {"train_input":{'data':self.predict['train']['prediction_data_byvar']['input'], 'color':plot_colors['input']}, "train_reconstructed":{'data':self.predict['train']['prediction_data_byvar']['output'], 'color':plot_colors['output']}}
-
                     
-                if case == 'noise_gaussian':
-                    cprint("VAE - PREDICT PHASE: Noised data generation", 'green')
-                    plot_name = "VAE_noise_test_data"
-                    
+                if case == 'noise_gaussian':                    
+                    plot_name = "VAE_noise_test_data"                    
                     predict_file_suffix ="noise_test_data"
                     analysis_folder = Path(self.path_folder,"noise_data_analysis")
                     datastats_latent = False
                     if not os.path.exists(analysis_folder):
                         os.makedirs(analysis_folder)
-                    
-                    _modelPrediction = ModelPrediction(model=modelAE, device=self.device, dataset=self.train_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.univar_count, univar_count_out=self.univar_count, latent_dim=self.latent_dim, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, model_type=self.model_type)
-                    self.predict['train'] = _modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True, force_noLatent=True)
-                    
-                    modelTrainedDecoder = modelAE.get_decoder()
-                    modelPrediction = ModelPrediction(model=modelTrainedDecoder, device=self.device, dataset=self.noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in=True, model_type=self.model_type)
+                    modelTrainedDecoder = model_pred.get_decoder()
+                    modelPrediction = ModelPrediction(model=modelTrainedDecoder, key_value_list=self.key_value_list, device=self.device, dataset=self.noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in=True, model_type=self.model_type)
                     self.predict['noise_gaussian'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
-                    print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    
+                    cprint(Style.BRIGHT +"| \tSTATS PHASE:\t data structure for comparison", 'green')
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, key_value_list=self.key_value_list, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"green","output":"m"}
-                    if "train" not in self.predict:
-                        self.predict_model(cases_list=["train"])
+                    
                     distribution_compare = {"train_input":{'data':self.predict['train']['prediction_data_byvar']['input'], 'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data': self.predict['noise_gaussian']['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
 
+            
+            
             elif self.model_type in ["GAN","WGAN"]:
                 cprint(Style.BRIGHT + "PHASE: Generative Adversarial Network" + Style.RESET_ALL, 'green')
                 modelGEN = self.model.getModel(selection="gen", eval=True)
@@ -212,7 +224,7 @@ class PerformePrediction():
                     modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=self.noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in = True, model_type=self.model_type)
                     self.predict['noise_gaussian']  = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True)
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, key_value_list=self.key_value_list, latent_dim=None, data=self.predict['noise_gaussian'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"green", "output":"m"}
                     
                     traindata_input = self.dataset2var(self.train_data)
@@ -229,17 +241,19 @@ class PerformePrediction():
                     modelPrediction = ModelPrediction(model=modelGEN, device=self.device, dataset=self.reduced_noise_data, vc_mapping= self.vc_mapping, time_performance=self.time_performance, univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data_range=self.rangeData, input_shape=self.input_shape, path_folder=analysis_folder, isnoise_in =True, model_type=self.model_type)
                     self.predict['noise_gaussian_reduced'] = modelPrediction.compute_prediction(experiment_name=predict_file_suffix, time_key=plot_name, remapping_data=True) 
                     print("\t\t Statistics data")
-                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count, latent_dim=None, data=self.predict['noise_gaussian_reduced'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
+                    datastats = DataStatistics(univar_count_in=self.latent_dim, univar_count_out=self.univar_count,key_value_list=self.key_value_list, latent_dim=None, data=self.predict['noise_gaussian_reduced'], path_folder=analysis_folder, model_type=self.model_type, name_key=self.key_dataout)
                     plot_colors = {"input":"green","output":"m"}
                     traindata_input = self.dataset2var(self.train_data)
                     distribution_compare = {"train_input":{'data':traindata_input,'color':'cornflowerblue', 'alpha':0.5}, "noise_generated":{'data':self.predict['noise_gaussian_reduced']['prediction_data_byvar']['output'],'color':plot_colors['output'], 'alpha':0.5}}
 
             if self.draw_correlationCoeff:
-                print("\tSTATS PHASE:  Correlation")
+                cprint(Style.BRIGHT +"| \tSTATS PHASE:\t Correlation", 'green')
                 self.corrCoeff[plot_name] = datastats.get_corrCoeff(latent=datastats_latent)
-
+            
             if self.draw_plot:
-                print("\tSTATS PHASE:  Plots")
+                cprint(Style.BRIGHT +"| \tSTATS PHASE:\t Plots", 'green')
+                
+                
                 datastats.plot(plot_colors=plot_colors, plot_name=plot_name, distribution_compare=distribution_compare, latent=datastats_latent, draw_correlationCoeff=self.draw_correlationCoeff)
                 self.res_CompareAdvance.loadPrediction_OUTPUT(output_folder=analysis_folder, suffix_output=predict_file_suffix, key=self.key_dataout)
                 self.res_CompareAdvance.comparison_measures(measures=['metrics', 'swarm_distributions', 'wasserstein_dist', 'tsne_plots', 'pca_tsne_plots', 'umap_plots','pacmap_plots'])
@@ -251,7 +265,7 @@ class PerformePrediction():
                     datastats.draw_point_overDistribution(plotname="noise_reduced_sampled_generated", n_var=self.univar_count, points=reduced_noise_dict,  distr=self.train_data)
 
             if self.draw_scenarios:
-                print("\tSTATS PHASE:  Scenarios on map")
+                cprint(Style.BRIGHT +"| \tSTATS PHASE:\t Scenarios on map", 'green')
                 instance_filename = f"prediced_instances_{predict_file_suffix}"
                 
                 scenariosMap = ScenariosMap(data_range=self.rangeData, vc_mapping= self.vc_mapping, path_folder_map= self.path_map, path_folder=analysis_folder, instance_file=instance_filename, label="x_output")
