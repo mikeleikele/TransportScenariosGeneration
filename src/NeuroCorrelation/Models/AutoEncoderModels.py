@@ -41,8 +41,8 @@ class AutoEncoderModels(nn.Module):
     def deploy_nnModel(self):
         
         if self.edge_index is not None:
-            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], permutation_forward = self.permutation_forward['encoder'], edge_index= self.edge_index ,graph_forward=self.graph_forward['encoder'])
-            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], permutation_forward = self.permutation_forward['decoder'], edge_index= self.edge_index ,graph_forward=self.graph_forward['decoder'])
+            self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'], permutation_forward = self.permutation_forward['encoder'], edge_index= self.edge_index, graph_forward= self.graph_forward['encoder'] )
+            self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'], permutation_forward = self.permutation_forward['decoder'], edge_index= self.edge_index, graph_forward= self.graph_forward['decoder'] )
         else:
             self.models['encoder'] = nn_Model(layers= self.models_layers['encoder'])
             self.models['decoder'] = nn_Model(layers= self.models_layers['decoder'])
@@ -131,18 +131,20 @@ class AutoEncoderModels(nn.Module):
         return layers_list
    
 class nn_Model(nn.Module):
-    def __init__(self, layers, permutation_forward=None, edge_index=None):
+    def __init__(self, layers, permutation_forward=None, edge_index=None, graph_forward=None):
         super().__init__()
+        self.graph_forward = graph_forward
         self.permutation_forward = permutation_forward
         self.layers = nn.Sequential(*layers)
         self.edge_index = edge_index
         self.apply(self.weights_init_normal)
         print("Layers initialized:", self.layers)
         
-        unique_nodes = torch.unique(edge_index)
-        num_nodes = unique_nodes.size(0)
-        print(num_nodes)
-        self.x_zeros = torch.zeros((num_nodes, 1), dtype=torch.float)
+        if self.edge_index is not None:
+            unique_nodes = torch.unique(edge_index)
+            num_nodes = unique_nodes.size(0)
+            print(num_nodes)
+            self.x_zeros = torch.zeros((num_nodes, 1), dtype=torch.float)
     
     def weights_init_normal(self, m):
         if isinstance(m, nn.Linear):

@@ -1,6 +1,7 @@
 from src.NeuroCorrelation.DataLoaders.DataSynteticGeneration import DataSyntheticGeneration
 from src.NeuroCorrelation.DataLoaders.DataMapsLoader import DataMapsLoader
 
+import csv
 import math
 from pathlib import Path
 import os
@@ -11,13 +12,16 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from termcolor import cprint
+from colorama import init, Style
 
 class DataLoader:
     
-    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, timeweather, timeweather_settings, noise_distribution="gaussian", vc_dict=None, univ_limit=150,  time_slot=None):
+    def __init__(self, mode, seed,  name_dataset, version_dataset, device, dataset_setting, epoch, univar_count, lat_dim, corrCoeff, instaces_size, path_folder, time_performance, timeweather, timeweather_settings, key_value_list, prior_channels, noise_distribution="gaussian", vc_dict=None, univ_limit=150,  time_slot=None):
         
         self.mode = mode
         self.seed = seed
+        self.key_value_list = key_value_list
         self.name_dataset = name_dataset
         self.version_dataset = version_dataset
         self.vc_mapping = None
@@ -48,7 +52,7 @@ class DataLoader:
         self.edge_index = None
         self.timeweather = timeweather
         self.timeweather_settings = timeweather_settings
-        
+        self.prior_channels = prior_channels
         self.time_slot = time_slot
         self.time_performance = time_performance
         
@@ -94,32 +98,33 @@ class DataLoader:
                 print("DATASET PHASE: Load maps data")
             print("draw_plots ",draw_plots)
             
-            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
-            self.dataGenerator.mapsVC_load(train_percentual=self.train_percentual, draw_plots=draw_plots)
+            self.dataGenerator = DataMapsLoader(torch_device=self.device, seed=self.seed, name_dataset=self.name_dataset, version_dataset=self.version_dataset, key_value_list=self.key_value_list, time_performance=self.time_performance, time_slot=self.time_slot,lat_dim=self.lat_dim, univar_count=self.univar_count, path_folder=self.path_folder, univ_limit=self.univ_limit, timeweather=self.timeweather, timeweather_settings=self.timeweather_settings, noise_distribution=self.noise_distribution)
+            self.dataGenerator.mapsVC_load( train_percentual=self.train_percentual, draw_plots=draw_plots)
             
             train_data, self.corrCoeff['data']['train'] = self.dataGenerator.mapsVC_getData(name_data="train", draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
+            
+
             test_data, self.corrCoeff['data']['test'] = self.dataGenerator.mapsVC_getData(name_data="test",  draw_plots=draw_plots, draw_correlationCoeff=draw_correlationCoeff)
-            noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", num_of_samples = self.noise_samples, draw_plots=draw_plots)
+            noise_data = self.dataGenerator.get_synthetic_noise_data(name_data="noise", n_channels=self.prior_channels, num_of_samples = self.noise_samples, draw_plots=draw_plots)
             self.vc_mapping = self.dataGenerator.get_vc_mapping()
             self.pathMap = self.dataGenerator.get_pathMap()
             self.edge_index = self.dataGenerator.get_edgeIndex()
             self.timeweather_count = self.dataGenerator.getTimeweatherCount()
             self.copulaData_filename = self.dataGenerator.get_copulaData_filename()
             
-            
-            
-                 
-        print("----------------------timeweather_count-----------------------:  ",self.timeweather_count)
+        
         self.rangeData = self.dataGenerator.getDataRange()
         self.statsData = self.dataGenerator.getDataStats()
         
         reduced_noise_data = self.generateNoiseReduced(method="percentile", percentile_points=10)
         
-        self.export_datasplit(data=train_data, name_split="train_data", key="sample")
-        self.export_datasplit(data=train_data, name_split="train_data", key="sample_timeweather")
+       
         
+        self.export_datasplit(data=train_data, name_split="train_data", key="sample")
+        self.export_datasplit(data=train_data, name_split="train_data", key="sample_timeweather") 
         self.export_datasplit(data=test_data, name_split="test_data", key="sample")
         self.export_datasplit(data=test_data, name_split="test_data", key="sample_timeweather")
+         
         
         data_dict = {"train_data":train_data, "test_data":test_data, "noise_data":noise_data, "reduced_noise_data":reduced_noise_data, "edge_index":self.edge_index}
         
@@ -174,14 +179,15 @@ class DataLoader:
             settings_list.append(f"time_slot:: {self.time_slot}") 
         settings_list.append(f"mode_dataset:: {self.epoch}") 
         
-         
+        cprint(Style.BRIGHT + f"| Export settings:" + Style.RESET_ALL, 'black', attrs=["bold"])
         for key in self.dataset_setting:
-            print("saveDataset_setting\t",key)
+            print("|\t",key)
             data_summary = self.dataset_setting[key]         
             summary_str = f"{key}:: {data_summary}"
             settings_list.append(summary_str)
             
         
+
         if self.loss is not None:
             settings_list.append(f" ") 
             settings_list.append(f"loss settings") 
@@ -196,7 +202,7 @@ class DataLoader:
         filename = Path(self.summary_path, "summary_dataset.txt")
         with open(filename, 'w') as file:
             file.write(setting_str)
-        print("SETTING PHASE: Summary dataset file - DONE")
+        cprint(Style.BRIGHT + f"| SETTING PHASE: Summary dataset saved in: {filename}" + Style.RESET_ALL, 'black', attrs=["bold"])
     
     
     
@@ -268,28 +274,59 @@ class DataLoader:
                         a.append(redux_noise_values[i])
                         recur_list.append(a)
                 return recur_list    
-        
+  
+    
+    def export_key_datasplit(self, data, name_split, key='sample', key_value_name=None, remapping=True):
+        """
+        Estrae per ogni instance la colonna key_value_name (nelle posizioni self.key_value_list),
+        converte in liste di float, applica optional remapping e salva CSV con indice e colonna
+        x_input contenente la lista formattata come stringa pulita.
+        """
+        if key_value_name is None:
+            raise ValueError("È necessario specificare key_value_name.")
+
+        # controllo NaN (su tutto il primo sample)
+        if torch.any(torch.isnan(data[0][key])):
+            cprint(Style.BRIGHT + f"| Export failed: {key} - {name_split} - {key_value_name}" + Style.RESET_ALL, 'black', attrs=["bold"])
+            return
+
+        # estrai liste per ogni instance
+        extracted = []
+        var_idx = self.key_value_list.index(key_value_name)
+        for instance in data:
+            tensor_data = instance[key]                     # shape: (n_rows, n_vars) o (n_rows, D)
+            np_data = tensor_data.detach().cpu().numpy()    # ndarray
+            column_values = np_data[:, var_idx]             # tutti i valori per questa variabile
+            # garantisco float Python
+            extracted.append([float(x) for x in column_values.tolist()])
+
+        # remapping se necessario (valori normalizzati -> original scale)
+        if remapping and key_value_name in getattr(self, "rangeData", {}):
+            min_val = self.rangeData[key_value_name]['min_val']
+            max_val = self.rangeData[key_value_name]['max_val']
+            diff = max_val - min_val
+            extracted = [[float(v * diff + min_val) for v in sublist] for sublist in extracted]
+
+        # costruisco DataFrame e salvo: voglio prima colonna indice vuota e seconda colonna "x_input"
+        out_path = Path(self.path_folder, 'datasplit', key_value_name)
+        out_path.mkdir(parents=True, exist_ok=True)
+        file_path = out_path / f"datasplit_{name_split}_{key}_{key_value_name}.csv"
+
+        # preparo la stringa pulita per ogni riga (numeri formattati)
+        def list_to_clean_string(lst):
+            return "[" + ", ".join(f"{float(v):.6f}" for v in lst) + "]"
+
+        df_csv = pd.DataFrame({"x_input": [list_to_clean_string(r) for r in extracted]})
+
+        # salvo con indice (index_label="" produce header ",x_input")
+        df_csv.to_csv(file_path, index=True, index_label="", header=True, quoting=csv.QUOTE_MINIMAL)
+
+        cprint(Style.BRIGHT + f"| Saved {name_split} {key_value_name} to: {file_path}" + Style.RESET_ALL, 'green', attrs=["bold"])
+
+
     def export_datasplit(self, data, name_split, key='sample'):
-        if not torch.any(torch.isnan(data[0][key])):
-            list_data = list()
-            for inp in range(len(data)):            
-                list_data.append(data[inp][key])
-                
-            data_byVar = dict()
-            for univ_id in range(self.univar_count):
-                data_byVar[univ_id] = list()
-            
-            df_export = pd.DataFrame(columns=['x_input']) 
-            max_val = self.rangeData["max_val"]
-            min_val = self.rangeData["min_val"]
-            diff_minmax = max_val - min_val
-            for x in list_data:
-                x_list = [(i*diff_minmax)+ min_val for i in x.detach().cpu().numpy()]
-                new_row = {'x_input': x_list}
-                df_export.loc[len(df_export)] = new_row
-            
-            datasplit_path = Path(self.path_folder,'datasplit')
-            if not os.path.exists(datasplit_path):
-                os.makedirs(datasplit_path)
-            path_file = Path(datasplit_path,f"datasplit_{name_split}_{key}.csv")
-            df_export.to_csv(path_file)
+        """
+        Wrapper che chiama export_key_datasplit per ogni key_value_name in self.key_value_list.
+        """
+        for key_value_name in self.key_value_list:
+            self.export_key_datasplit(data=data, name_split=name_split, key=key, key_value_name=key_value_name)

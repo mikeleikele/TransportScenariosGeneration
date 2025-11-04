@@ -1,14 +1,17 @@
 import os
 from pathlib import Path
 from src.NeuroCorrelation.Models.AutoEncoderModels import *
+from src.NeuroCorrelation.Models.VariationalAutoEncoderModels import *
 from src.NeuroCorrelation.Models.GenerativeAdversarialModels import *
+from src.NeuroCorrelation.Models.ConditionalVariationalAutoEncoderModels import *
 from src.NeuroCorrelation.DataLoaders.DataLoader import DataLoader
-
 from src.NeuroCorrelation.ModelTraining.LossFunctions import LossFunction
 
 class PEMS_METR_settings():
     
+
     def __init__(self, model_case, device, univar_count, lat_dim, dataset_setting, epoch, path_folder, corrCoeff, instaces_size, time_performance, time_slot=None):
+
         self.model_case = model_case
         self.device = device
         self.dataset_setting = dataset_setting
@@ -20,6 +23,7 @@ class PEMS_METR_settings():
         self.path_folder = path_folder
         self.time_slot = time_slot
         self.model = dict()
+
         self.model_settings = dict()
         self.time_performance = time_performance
         self.setting_model_case()
@@ -193,6 +197,9 @@ class PEMS_METR_settings():
                 self.model["WGAN"] = GenerativeAdversarialModels(device=self.device, load_from_file =self.model_settings["WGAN"]['load_from_file'],
                             json_filepath=self.model_settings["WGAN"]['json_filepath'],
                             edge_index=self.edge_index)
+
+        self.setting_model_case()
+    
     def get_trainingMode(self):
         return self.trainingMode
 
@@ -209,7 +216,8 @@ class PEMS_METR_settings():
         return self.graph_topology
     
     def get_DataLoader(self, seed_data):      
-        dataloader = DataLoader(mode="graph_roads", seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)
+        dataloader = DataLoader(mode="graph_roads",  key_value_names="traffic_speed",  seed=seed_data, name_dataset=self.name_dataset, version_dataset=self.version_dataset, time_slot=self.time_slot, device=self.device, dataset_setting=self.dataset_setting, epoch = self.epoch, univar_count=self.univar_count, lat_dim=self.lat_dim, corrCoeff = self.corrCoeff, instaces_size=self.instaces_size, time_performance=self.time_performance, path_folder=self.path_folder)
+
         return dataloader
     
     def get_LossFunction(self):

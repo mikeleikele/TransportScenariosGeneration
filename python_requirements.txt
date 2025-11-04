@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 osmnx
 ogr2osm
 shapely
@@ -17,7 +16,6 @@ seaborn
 torch_geometric
 torchmetrics
 visdom
-=======
 osmnx
 ogr2osm
 sklearn
@@ -37,5 +35,3 @@ seaborn
 torch_geometric
 torchmetrics
 colormap
->>>>>>> 37fbe91 (old)
-folium

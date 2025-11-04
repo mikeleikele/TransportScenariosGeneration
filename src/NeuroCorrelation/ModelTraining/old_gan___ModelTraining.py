@@ -1,4 +1,5 @@
 
+
             for batch_num, dataBatch in enumerate(dataBatches):
                 ###########################
                 # 1  Update D network: maximize log(D(x)) + log(1 - D(G(z)))

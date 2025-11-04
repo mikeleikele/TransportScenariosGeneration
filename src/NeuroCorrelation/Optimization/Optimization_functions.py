@@ -5,6 +5,7 @@ from numpy.linalg import inv
 from termcolor import cprint 
 from scipy.stats import wasserstein_distance
 
+
 class Optimization_functions():
     
     def __init__(self):
